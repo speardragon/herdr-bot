@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "engines": { "node": ">=24.0.0" },
-  "workspaces": ["core"],
+  "workspaces": ["core", "cli"],
   "scripts": {
-    "test": "node --test \"core/test/**/*.test.ts\"",
-    "typecheck": "tsc -p core/tsconfig.json",
+    "test": "node --test \"core/test/**/*.test.ts\" \"cli/test/**/*.test.ts\"",
+    "typecheck": "tsc -p core/tsconfig.json && tsc -p cli/tsconfig.json",
     "check": "npm run typecheck && npm test"
   },
   "devDependencies": {
