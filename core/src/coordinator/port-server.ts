@@ -21,84 +21,102 @@ export interface RendererPortServer {
   readonly settled: Promise<RendererPortSettlement>;
 }
 
+interface ServerState {
+  phase: "awaiting-hello" | "serving" | "settled";
+  readonly inFlight: Map<string, AbortController>;
+  readonly port: RendererPort;
+  readonly options: RendererPortServerOptions;
+  resolveSettled: (settlement: RendererPortSettlement) => void;
+}
+
+function settle(state: ServerState, settlement: RendererPortSettlement): void {
+  if (state.phase === "settled") return;
+  state.phase = "settled";
+  for (const controller of state.inFlight.values()) controller.abort();
+  state.inFlight.clear();
+  state.port.close();
+  state.resolveSettled(settlement);
+}
+
+function breach(state: ServerState, detail: string): void {
+  if (state.phase === "settled") return;
+  state.port.post({ kind: "lifecycle", phase: "shutdown", reason: "protocol-error", detail });
+  settle(state, { outcome: "protocol-breach", detail });
+}
+
+function reply(state: ServerState, requestId: string, outcome: CoordinatorReplyOutcome): void {
+  state.port.post({ kind: "reply", requestId, outcome });
+}
+
+function dispatch(state: ServerState, requestId: string, method: string, args: unknown): void {
+  const dispatchRequest = state.options.dispatchRequest;
+  if (dispatchRequest == null) {
+    reply(state, requestId, { status: "failed", failure: { code: COORDINATOR_UNKNOWN_METHOD, message: "no method table serves this session yet" } });
+    return;
+  }
+  const controller = new AbortController();
+  state.inFlight.set(requestId, controller);
+  void dispatchRequest(method, args, controller.signal).then(
+    (outcome) => {
+      if (state.phase !== "serving" || state.inFlight.get(requestId) !== controller) return;
+      state.inFlight.delete(requestId);
+      reply(state, requestId, outcome);
+    },
+    () => breach(state, `request ${requestId} dispatch rejected instead of settling`),
+  );
+}
+
+function handleHello(state: ServerState, frame: CoordinatorFrame): void {
+  // `frame.phase === "shutdown"` here is unreachable in practice (handleFrame routes shutdown
+  // frames to settle() before this is ever called); the check exists only so TS can narrow
+  // `frame` down to the {phase: "hello" | "ready"} variant that has `protocolVersion`.
+  if (frame.kind !== "lifecycle" || frame.phase === "shutdown") return breach(state, `${frame.kind} frame before hello`);
+  if (frame.protocolVersion !== COORDINATOR_PROTOCOL_VERSION) return breach(state, `hello.protocolVersion ${frame.protocolVersion} is not the supported ${COORDINATOR_PROTOCOL_VERSION}`);
+  state.phase = "serving";
+  state.port.post({ kind: "lifecycle", phase: "ready", protocolVersion: COORDINATOR_PROTOCOL_VERSION });
+  state.options.onServing?.();
+}
+
+function handleCancel(state: ServerState, requestId: string): void {
+  const controller = state.inFlight.get(requestId);
+  if (controller == null) return;
+  state.inFlight.delete(requestId);
+  controller.abort();
+  reply(state, requestId, { status: "failed", failure: { code: COORDINATOR_CANCELLED, message: "request cancelled" } });
+}
+
+function handleFrame(state: ServerState, frame: CoordinatorFrame): void {
+  if (frame.kind === "lifecycle" && frame.phase === "shutdown") return settle(state, { outcome: "shutdown-requested" });
+  if (frame.kind === "reply" || frame.kind === "event") return breach(state, `client posted a server-direction ${frame.kind} frame`);
+  if (frame.kind === "lifecycle" && frame.phase === "ready") return breach(state, "client posted a server-direction ready frame");
+  if (state.phase === "awaiting-hello") return handleHello(state, frame);
+  if (frame.kind === "lifecycle") return breach(state, "hello repeated on a live session");
+  if (frame.kind === "request") {
+    if (state.inFlight.has(frame.requestId)) return breach(state, `request.requestId ${frame.requestId} reused while in flight`);
+    return dispatch(state, frame.requestId, frame.method, frame.args);
+  }
+  return handleCancel(state, frame.requestId);
+}
+
 /** Serves one renderer MessagePort: hello → ready, then requests/replies/events until shutdown. */
 export function createRendererPortServer(port: RendererPort, options: RendererPortServerOptions = {}): RendererPortServer {
-  let phase: "awaiting-hello" | "serving" | "settled" = "awaiting-hello";
-  const inFlight = new Map<string, AbortController>();
-  let resolveSettled: (settlement: RendererPortSettlement) => void = () => undefined;
+  const state: ServerState = { phase: "awaiting-hello", inFlight: new Map(), port, options, resolveSettled: () => undefined };
   const settled = new Promise<RendererPortSettlement>((resolve) => {
-    resolveSettled = resolve;
+    state.resolveSettled = resolve;
   });
-
-  const settle = (settlement: RendererPortSettlement): void => {
-    if (phase === "settled") return;
-    phase = "settled";
-    for (const controller of inFlight.values()) controller.abort();
-    inFlight.clear();
-    port.close();
-    resolveSettled(settlement);
-  };
-  const breach = (detail: string): void => {
-    if (phase === "settled") return;
-    port.post({ kind: "lifecycle", phase: "shutdown", reason: "protocol-error", detail });
-    settle({ outcome: "protocol-breach", detail });
-  };
-  const reply = (requestId: string, outcome: CoordinatorReplyOutcome): void => port.post({ kind: "reply", requestId, outcome });
-
-  const dispatch = (requestId: string, method: string, args: unknown): void => {
-    const dispatchRequest = options.dispatchRequest;
-    if (dispatchRequest == null) {
-      reply(requestId, { status: "failed", failure: { code: COORDINATOR_UNKNOWN_METHOD, message: "no method table serves this session yet" } });
-      return;
-    }
-    const controller = new AbortController();
-    inFlight.set(requestId, controller);
-    void dispatchRequest(method, args, controller.signal).then(
-      (outcome) => {
-        if (phase !== "serving" || inFlight.get(requestId) !== controller) return;
-        inFlight.delete(requestId);
-        reply(requestId, outcome);
-      },
-      () => breach(`request ${requestId} dispatch rejected instead of settling`),
-    );
-  };
-
-  const handleFrame = (frame: CoordinatorFrame): void => {
-    if (frame.kind === "lifecycle" && frame.phase === "shutdown") return settle({ outcome: "shutdown-requested" });
-    if (frame.kind === "reply" || frame.kind === "event") return breach(`client posted a server-direction ${frame.kind} frame`);
-    if (frame.kind === "lifecycle" && frame.phase === "ready") return breach("client posted a server-direction ready frame");
-    if (phase === "awaiting-hello") {
-      if (frame.kind !== "lifecycle") return breach(`${frame.kind} frame before hello`);
-      if (frame.protocolVersion !== COORDINATOR_PROTOCOL_VERSION) return breach(`hello.protocolVersion ${frame.protocolVersion} is not the supported ${COORDINATOR_PROTOCOL_VERSION}`);
-      phase = "serving";
-      port.post({ kind: "lifecycle", phase: "ready", protocolVersion: COORDINATOR_PROTOCOL_VERSION });
-      options.onServing?.();
-      return;
-    }
-    if (frame.kind === "lifecycle") return breach("hello repeated on a live session");
-    if (frame.kind === "request") {
-      if (inFlight.has(frame.requestId)) return breach(`request.requestId ${frame.requestId} reused while in flight`);
-      return dispatch(frame.requestId, frame.method, frame.args);
-    }
-    const controller = inFlight.get(frame.requestId);
-    if (controller == null) return;
-    inFlight.delete(frame.requestId);
-    controller.abort();
-    reply(frame.requestId, { status: "failed", failure: { code: COORDINATOR_CANCELLED, message: "request cancelled" } });
-  };
 
   return {
     handleMessage(value) {
-      if (phase === "settled") return;
+      if (state.phase === "settled") return;
       const intake = parseCoordinatorFrame(value);
-      if (!intake.accepted) return breach(intake.rejection.detail);
-      handleFrame(intake.frame);
+      if (!intake.accepted) return breach(state, intake.rejection.detail);
+      handleFrame(state, intake.frame);
     },
     handlePortClosed() {
-      settle({ outcome: "port-closed" });
+      settle(state, { outcome: "port-closed" });
     },
     postEvent(family, payload) {
-      if (phase === "serving") port.post({ kind: "event", family, payload });
+      if (state.phase === "serving") port.post({ kind: "event", family, payload });
     },
     settled,
   };
