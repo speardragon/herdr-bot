@@ -11,6 +11,7 @@ import { log } from "../log.ts";
 import type { ChatService } from "./chat-service.ts";
 import type { RosterService } from "./roster-service.ts";
 import type { RunQueue } from "./run-queue.ts";
+import type { BotProfile } from "../store/profile-store.ts";
 
 export interface TurnServiceDeps {
   readonly config: HostConfig;
@@ -53,9 +54,7 @@ export class TurnService {
   }
 
   handleSay(paneId: string, chatId: string, text: string): { entryId: string; mode: "in-turn" | "late" } {
-    const bot = this.#deps.roster.resolveBotByPane(paneId);
-    if (bot == null) throw new ControlError("unknown_pane", `pane ${paneId} is not a herdr-bot bot`);
-    this.#assertMember(bot.id, chatId);
+    const bot = this.#requireBot(paneId, chatId);
     const mode = this.#deps.inbox.accept(chatId, bot.id, text);
     if (mode === "over-cap") throw new ControlError("over_cap", "you already said the maximum number of messages this turn; wait for your next turn");
     const entry = this.#deps.chat.appendBot(chatId, { id: bot.id, name: bot.name }, text);
@@ -63,9 +62,14 @@ export class TurnService {
   }
 
   handlePass(paneId: string, chatId: string): void {
+    this.#requireBot(paneId, chatId);
+  }
+
+  #requireBot(paneId: string, chatId: string): BotProfile {
     const bot = this.#deps.roster.resolveBotByPane(paneId);
     if (bot == null) throw new ControlError("unknown_pane", `pane ${paneId} is not a herdr-bot bot`);
     this.#assertMember(bot.id, chatId);
+    return bot;
   }
 
   #assertMember(botId: string, chatId: string): void {
