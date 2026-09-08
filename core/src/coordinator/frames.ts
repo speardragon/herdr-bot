@@ -2,6 +2,7 @@ export const COORDINATOR_PROTOCOL_VERSION = 1;
 export const COORDINATOR_UNKNOWN_METHOD = "unknown-method";
 export const COORDINATOR_CANCELLED = "cancelled";
 export const COORDINATOR_INVALID_ARGS = "invalid-args";
+export const COORDINATOR_UNSUPPORTED = "unsupported";
 export const COORDINATOR_TRANSPORT_STATE_FAMILY = "coordinator-transport-state";
 
 export interface CoordinatorFailure {

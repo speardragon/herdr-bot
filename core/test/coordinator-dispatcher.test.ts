@@ -78,6 +78,8 @@ test("stubs and unknown methods behave as the renderer expects", async () => {
     assert.equal(unknown.status === "failed" && unknown.failure.code, "unknown-method");
     const invalid = await h.dispatch("sendPrompt", { agentId: 42 });
     assert.equal(invalid.status === "failed" && invalid.failure.code, "invalid-args");
+    const duplicate = await h.dispatch("duplicateAgent", { id: "reviewer" });
+    assert.equal(duplicate.status === "failed" && duplicate.failure.code, "unsupported");
   } finally {
     await h.cleanup();
   }
