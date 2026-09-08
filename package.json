@@ -6,12 +6,15 @@
   "engines": { "node": ">=24.0.0" },
   "workspaces": ["core", "cli", "renderer", "desktop"],
   "scripts": {
-    "test": "node --test \"core/test/**/*.test.ts\" \"cli/test/**/*.test.ts\"",
-    "typecheck": "tsc -p core/tsconfig.json && tsc -p cli/tsconfig.json",
+    "test": "node --test \"core/test/**/*.test.ts\" \"cli/test/**/*.test.ts\" \"desktop/test/**/*.test.ts\"",
+    "typecheck": "tsc -p core/tsconfig.json && tsc -p cli/tsconfig.json && tsc -p desktop/tsconfig.json --noEmit && tsc -p renderer/tsconfig.json",
     "check": "npm run typecheck && npm test",
     "renderer:typecheck": "tsc -p renderer/tsconfig.json",
     "renderer:build": "npm run build -w @herdr-bot/renderer",
-    "renderer:dev": "npm run dev -w @herdr-bot/renderer"
+    "renderer:dev": "npm run dev -w @herdr-bot/renderer",
+    "desktop:build": "npm run renderer:build && npm run build -w @herdr-bot/desktop",
+    "desktop:start": "npm run build -w @herdr-bot/desktop && npm run start -w @herdr-bot/desktop",
+    "desktop:dev": "npm run build -w @herdr-bot/desktop && HERDR_BOT_RENDERER_URL=http://localhost:5173 HERDR_BOT_DEV=1 npm run start -w @herdr-bot/desktop"
   },
   "devDependencies": {
     "@types/node": "^24",

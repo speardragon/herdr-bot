@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "..",
+    "outDir": "dist",
+    "erasableSyntaxOnly": false,
+    "verbatimModuleSyntax": false,
+    "esModuleInterop": true,
+    "types": ["node"]
+  },
+  "include": ["src", "../core/src"],
+  "exclude": ["test"]
+}

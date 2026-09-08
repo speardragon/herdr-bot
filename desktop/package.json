@@ -1,1 +1,17 @@
-{"name":"@herdr-bot/desktop","version":"0.1.0","private":true,"type":"module"}
+{
+  "name": "@herdr-bot/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/desktop/src/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "electron .",
+    "test": "node --test \"test/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "electron": "42.1.0",
+    "electron-builder": "^26"
+  }
+}
