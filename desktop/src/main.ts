@@ -66,14 +66,14 @@ app.whenReady().then(async () => {
     const mounted = await window.webContents.executeJavaScript("document.getElementById('root')?.childElementCount > 0");
     process.stdout.write(`smoke: ${mounted === true ? "ok" : "empty-root"}\n`);
     await host.stop();
-    app.quit();
+    app.exit(mounted === true ? 0 : 1);
     return;
   }
   app.on("before-quit", () => { void host.stop(); });
 }).catch((error: unknown) => {
   log("desktop", "startup failed", error instanceof Error ? error.stack ?? error.message : String(error));
   dialog.showErrorBox("herdr-bot could not start", error instanceof Error ? error.message : String(error));
-  app.quit();
+  app.exit(1);
 });
 
 app.on("window-all-closed", () => {
