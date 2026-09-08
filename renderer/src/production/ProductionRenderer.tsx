@@ -135,6 +135,7 @@ import { createStrictModeDisposalGuard, type StrictModeDisposable } from "./stri
 import { MessageReactionAction, ReactionPills } from "../recovered/features/conversation/cards/transcript-card/reaction-picker";
 import type { TranscriptMessageReactionSlotProps } from "../recovered/features/conversation/cards/transcript-card/message-actions";
 import { LocalToolPermissionDock, type LocalToolPermissionRequest } from "../recovered/features/permissions/local-tool/view";
+import { NewChatDialog, type AdoptableAgent, type CreateBotRequest, type CreateRoomRequest } from "./NewChatDialog";
 import {
   parseDesktopIntent,
   projectRendererAgent,
@@ -2807,18 +2808,33 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     return () => { active = false; window.removeEventListener("focus", onFocus); };
   }, [client, refreshRoster, transport]);
 
-  const createAgent = async () => {
-    if (client == null) return;
-    setBusy(true);
-    try {
-      const result = await client.call("createAgent", { name: "New chat", description: "", origin: "user", isKickstartRequested: false, clientNonce: makeClientNonce() });
-      const created = result && typeof result === "object" && "agent" in result ? (result as { agent: unknown }).agent : result;
-      const projected = projectRendererAgent(created);
-      await refreshRoster();
-      if (projected != null) await openAgent(projected.id);
-    } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); }
-    finally { setBusy(false); }
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  const openNewChat = () => setNewChatOpen(true);
+  const createAgent = async () => { openNewChat(); };
+  const createBotFromDialog = async (request: CreateBotRequest): Promise<void> => {
+    if (client == null) throw new Error("coordinator is unavailable");
+    const result = await client.call("createAgent", {
+      name: request.name, description: request.description, origin: "user", isKickstartRequested: false, clientNonce: makeClientNonce(),
+      herdrBot: { id: request.id, kind: request.kind, cwd: request.cwd, permissionMode: request.permissionMode, ...(request.adoptPaneId == null ? {} : { adoptPaneId: request.adoptPaneId }) },
+    });
+    const created = result && typeof result === "object" && "agent" in result ? (result as { agent: unknown }).agent : result;
+    const projected = projectRendererAgent(created);
+    await refreshRoster();
+    if (projected != null) await openAgent(projected.id);
   };
+  const createRoomFromDialog = async (request: CreateRoomRequest): Promise<void> => {
+    if (client == null) throw new Error("coordinator is unavailable");
+    const result = await client.call("createGroup", { name: request.name, description: request.description, memberIds: request.memberIds });
+    const created = result && typeof result === "object" && "agent" in result ? (result as { agent: unknown }).agent : result;
+    const projected = projectRendererAgent(created);
+    await refreshRoster();
+    if (projected != null) await openAgent(projected.id);
+  };
+  const listAdoptable = useCallback(async (): Promise<AdoptableAgent[]> => {
+    if (client == null) return [];
+    const value = await client.call("herdrBot.listAdoptable");
+    return Array.isArray(value) ? (value as AdoptableAgent[]) : [];
+  }, [client]);
 
   createAgentRef.current = createAgent;
   openAgentRef.current = openAgent;
@@ -3317,6 +3333,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       id: "view:org-chart", label: "Org Chart", keywords: ["open", "organization", "network", "graph"], detail: "Views",
       run: () => { setOverlay(null); setWorkspaceRoute("org-chart"); }
     });
+    commands.push({ id: "new:chat", label: "New bot or room", icon: "plus", keywords: ["new", "bot", "room", "group", "create", "spawn", "adopt"], detail: "Sidebar", run: openNewChat });
     if (hiddenAgents.length > 0) commands.push({
       id: "open-hidden-chats", label: "Open Hidden Bots", keywords: ["hidden", "unhide", "hide", "sidebar", "bots"], detail: "Sidebar",
       run: () => setOverlay("hidden-chats")
@@ -3727,6 +3744,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         onSearchQueryChange={updatePaletteSearchQuery}
       />
       <AgentDeleteConfirmation agent={deleteAgent} onClose={() => setDeleteAgent(null)} onConfirm={deleteAgentById} />
+      <NewChatDialog agents={agents} defaultCwd="" listAdoptable={listAdoptable} onClose={() => setNewChatOpen(false)} onCreateBot={createBotFromDialog} onCreateRoom={createRoomFromDialog} open={newChatOpen} />
       <SidebarSectionDeleteConfirmation section={deleteSection} onClose={() => setDeleteSection(null)} onConfirm={deleteSectionById} />
       <Suspense fallback={null}><ComputerOverlayRouteView params={{}} /></Suspense>
     </div>

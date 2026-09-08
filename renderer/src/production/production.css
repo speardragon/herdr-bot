@@ -330,3 +330,12 @@ button, textarea, input { font: inherit; }
   outline: 2px solid var(--cursor-stroke-focused);
   outline-offset: 1px;
 }
+
+/* herdr-bot: New (bot / room) dialog */
+.sand-new-chat-dialog__title { margin: 0 0 12px; font-size: var(--cursor-font-size-lg); font-weight: 600; }
+.sand-new-chat-dialog__form { display: grid; gap: 12px; margin-top: 14px; }
+.sand-new-chat-dialog__row { display: grid; gap: 6px; font-size: var(--cursor-font-size-sm); color: var(--cursor-text-secondary); }
+.sand-new-chat-dialog__members { display: grid; gap: 8px; margin: 0; padding: 10px 12px; border: 1px solid var(--cursor-border-secondary); border-radius: var(--cursor-radius-lg); }
+.sand-new-chat-dialog__members legend { padding: 0 4px; color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-xs); }
+.sand-new-chat-dialog__error { margin: 12px 0 0; color: var(--cursor-danger); font-size: var(--cursor-font-size-sm); }
+.sand-new-chat-dialog__footer { display: flex; justify-content: flex-end; gap: 8px; margin: 18px -20px -20px; padding: 12px 16px; border-top: 1px solid var(--cursor-border-secondary); }

@@ -10,3 +10,9 @@ Local modifications are listed in docs/superpowers/plans/2026-09-08-herdr-bot-de
 - `renderer/src/production/runtime-assets.ts`: resolves runtime asset URLs against `renderer/public/assets` in both dev (`/assets/`) and production (relative to the emitted module).
 - `renderer/src/recovered/features/conversation/cards/transcript-card/emoji-catalog.ts`: `loadShippedEmojiCatalog` now degrades to `EMPTY_EMOJI_CATALOG` instead of rejecting when the unshippable emoji data chunks fail to load.
 - `renderer/public/assets/*` (18 files) + `scripts/make-placeholder-assets.mjs`: generated placeholder stand-ins for the hashed upstream assets (app icon, plugin logos, onboarding wallpaper), which are not redistributable.
+
+## Task 6 modifications
+
+- `renderer/src/production/NewChatDialog.tsx` (new): the "New" dialog (Bot / Room tabs) for spawning or adopting bots and creating rooms, composed entirely from existing `recovered/ui/*` primitives.
+- `renderer/src/production/ProductionRenderer.tsx`: sidebar "New" and command-palette "New chat" now open `NewChatDialog` instead of immediately creating a "New chat" agent; added `createBotFromDialog` (`createAgent` with `herdrBot`), `createRoomFromDialog` (`createGroup`), and `listAdoptable` (`herdrBot.listAdoptable`) handlers, plus the dialog's render-tree mount and a `new:chat` command-palette entry.
+- `renderer/src/production/production.css`: appended `.sand-new-chat-dialog__*` styles for the new dialog.
