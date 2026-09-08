@@ -239,19 +239,20 @@ export async function loadShippedEmojiChunks(): Promise<EmojiChunkModules> {
 let shippedCatalog: EmojiCatalog | null = null;
 let shippedLoad: Promise<EmojiCatalog> | null = null;
 
+export const EMPTY_EMOJI_CATALOG: EmojiCatalog = { categories: [], skinTones: [], subgroups: [] };
+
 export function loadShippedEmojiCatalog(): Promise<EmojiCatalog> {
   if (shippedCatalog != null) return Promise.resolve(shippedCatalog);
   if (shippedLoad == null) {
     const pending = loadShippedEmojiChunks()
       .then(buildEmojiCatalog)
+      // herdr-bot cannot ship the upstream emoji data chunks; degrade to an empty picker instead of an error state.
+      .catch(() => EMPTY_EMOJI_CATALOG)
       .then((catalog) => {
         shippedCatalog = catalog;
         return catalog;
       });
     shippedLoad = pending;
-    pending.catch(() => {
-      if (shippedLoad === pending) shippedLoad = null;
-    });
   }
   return shippedLoad;
 }
