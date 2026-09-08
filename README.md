@@ -7,6 +7,22 @@ herdr 위에서 돌아가는 코딩 에이전트(claude / codex / grok …)들�
 - herdr ≥ 0.9.0 (실행 중), Node ≥ 24
 - 봇으로 쓸 에이전트 CLI가 로그인된 상태 (claude, codex, grok …)
 
+## 앱 (macOS)
+
+```bash
+npm install
+npm run renderer:build
+npm run desktop:start          # 개발 실행 (~/.herdr-bot 사용)
+npm run desktop:dev:fake       # 가짜 herdr로 UI만 시험
+npm run desktop:package        # .build/desktop/mac-arm64/herdr-bot.app
+```
+
+- `+` → **Bot**: herdr에 새 에이전트를 띄우거나(Start) 이미 떠 있는 에이전트를 채택(Adopt).
+- `+` → **Room**: 봇을 골라 단체방을 만든다. 방에 쓰면 봇들이 라운드로빈으로 답하고, `@id`로 특정 봇만 부를 수 있다.
+- 봇 DM 헤더의 터미널 버튼은 herdr에서 그 봇의 pane으로 이동한다.
+
+UI는 grok-bot 0.18 재구성 렌더러를 포크한 것이다(`renderer/UPSTREAM.md`). 원본 번들의 에셋(아이콘·이모지 데이터 등)은 포함하지 않으며 개인 용도 빌드다.
+
 ## 빠른 시작 (헤드리스)
 
 ```bash

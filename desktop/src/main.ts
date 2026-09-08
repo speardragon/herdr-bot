@@ -12,7 +12,9 @@ import { SettingsStore } from "./settings-store.ts";
 import { DEFAULT_WINDOW_SIZE, MIN_WINDOW_SIZE, WINDOW_BACKGROUND, windowChromeOptions } from "./window-chrome.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const rendererIndex = join(here, "..", "..", "..", "..", "renderer", "dist", "index.html");
+const rendererIndex = app.isPackaged
+  ? join(process.resourcesPath, "app", "renderer", "dist", "index.html")
+  : join(here, "..", "..", "..", "..", "renderer", "dist", "index.html");
 const preloadPath = join(here, "preload.cjs");
 
 async function bootHost(): Promise<Host> {
