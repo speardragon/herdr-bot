@@ -77,7 +77,7 @@ herdr-bot/
 - [ ] **Step 1: upstream 클론 + 복사**
 
 ```bash
-cd /Users/goorm/Desktop/ray/workspace/herdr-bot
+cd /Users/goorm/Desktop/ray/workspace/herdr-bot/herdr-bot-claude
 mkdir -p .upstream
 git clone --depth 1 https://github.com/b-nnett/grok-bot-0.18-reconstructed .upstream/grok-bot
 UP=.upstream/grok-bot

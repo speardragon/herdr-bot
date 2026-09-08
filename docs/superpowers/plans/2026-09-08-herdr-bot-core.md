@@ -12,7 +12,7 @@
 
 - **Node ≥ 24.0.0.** `node --version`이 24 미만이면 중단. `.node-version` = `24`.
 - **Erasable TypeScript only** (Node 타입 스트리핑 규칙): `enum`, `namespace`, 생성자 파라미터 프로퍼티(`constructor(readonly x: T)`), `import x = require()` **금지**. 타입만 쓰는 import는 반드시 `import type` 또는 `import { type X }`. 상대 import는 확장자까지 적는다: `from "./foo.ts"`. tsconfig에 `erasableSyntaxOnly`, `verbatimModuleSyntax`, `allowImportingTsExtensions`, `rewriteRelativeImportExtensions` 켜져 있음.
-- **테스트 러너:** `node --test` (node:test + node:assert/strict). 실행은 항상 레포 루트 `/Users/goorm/Desktop/ray/workspace/herdr-bot`에서 `npm test` 또는 `node --test "core/test/**/*.test.ts"`. pytest/vitest 등 설치 금지.
+- **테스트 러너:** `node --test` (node:test + node:assert/strict). 실행은 항상 레포 루트 `/Users/goorm/Desktop/ray/workspace/herdr-bot/herdr-bot-claude`에서 `npm test` 또는 `node --test "core/test/**/*.test.ts"`. pytest/vitest 등 설치 금지.
 - **런타임 의존성 0** (core, cli). devDependencies는 `typescript@7.0.2`, `@types/node@^24`만.
 - **herdr 접근은 `core/src/herdr/cli.ts`(CLI 래퍼)와 `core/src/herdr/socket.ts`(구독 전용)로만.** 다른 모듈에서 `child_process`로 herdr 직접 호출 금지. 테스트는 `HERDR_BIN_PATH`에 가짜 바이너리(`core/test/helpers/fake-herdr.mjs`)를 주입한다. 실제 herdr는 마지막 태스크(라이브 E2E)에서만 건드린다.
 - **상태 루트:** `$HERDR_BOT_HOME` (기본 `~/.herdr-bot`). **모든 테스트는 임시 디렉터리를 `HERDR_BOT_HOME`으로 넘긴다.** 실제 `~/.herdr-bot` 오염 금지. 유닉스 소켓 경로 길이 제한(macOS 104바이트) 때문에 테스트 임시 홈은 `mkdtempSync(join(tmpdir(), "hb-"))`처럼 짧게 만든다.
@@ -194,7 +194,7 @@ herdr-bot/
 - [ ] **Step 1: git init + Node 버전 확인**
 
 ```bash
-cd /Users/goorm/Desktop/ray/workspace/herdr-bot
+cd /Users/goorm/Desktop/ray/workspace/herdr-bot/herdr-bot-claude
 node --version   # v24.x 이상이어야 함
 git init -b main
 ```
@@ -6346,7 +6346,7 @@ git commit -m "feat(cli): add herdr-bot command line for bots, admins, serve, an
 - [ ] **Step 1: 호스트 띄우기 (별도 pane)**
 
 ```bash
-cd /Users/goorm/Desktop/ray/workspace/herdr-bot
+cd /Users/goorm/Desktop/ray/workspace/herdr-bot/herdr-bot-claude
 export HERDR_BOT_HOME=/tmp/hb-live
 HOST_PANE=$(herdr pane split --current --direction down --cwd "$PWD" --no-focus | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
 herdr pane run "$HOST_PANE" "HERDR_BOT_HOME=/tmp/hb-live node cli/src/main.ts serve"
