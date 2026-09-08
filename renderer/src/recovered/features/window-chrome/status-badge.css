@@ -1,0 +1,13 @@
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L21263 */
+.sand-kit-status-dot {
+  position: fixed;
+  top: calc(20px / var(--sand-zoom-factor, 1));
+  left: 50%;
+  z-index: 5000;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--cursor-text-primary) 28%, transparent);
+  border-radius: 9999px;
+  transform: translateX(-50%);
+}

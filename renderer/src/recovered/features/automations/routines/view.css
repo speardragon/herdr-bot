@@ -1,0 +1,11 @@
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2707000 */
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2721225 (sand-automation-detail) */
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2707027 (sand-trigger-card) */
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2741174 (sand-routine__list) */
+.sand-routine__list { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 4px; overflow: auto; }
+.sand-routine__row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; width: 100%; padding: 10px; text-align: left; }
+.sand-routine__row small { grid-column: 2; }
+.sand-routine__empty { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.sand-automation-detail { display: flex; min-height: 0; flex-direction: column; gap: 12px; overflow: auto; padding: 12px; }
+.sand-trigger-card { display: flex; flex-direction: column; gap: 6px; }
+.sand-trigger-card__row { width: 100%; padding: 8px; text-align: left; }

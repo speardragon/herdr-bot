@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "modules": [
+    {
+      "path": "recovered/frontend/app/assets/view-Cbx1-ckK.js",
+      "originalPath": "features/hidden-chats/overlay/view.tsx",
+      "symbols": [
+        { "symbol": "Q", "name": "HiddenChatsDialog", "line": 3, "confidence": "high" },
+        { "symbol": "D", "name": "HiddenChatsOverlayView", "line": 22, "confidence": "high" }
+      ]
+    },
+    {
+      "path": "recovered/frontend/app/assets/view-D0otXpJy.js",
+      "originalPath": "features/org-chart/workspace/view.tsx",
+      "symbols": [
+        { "symbol": "se", "name": "buildOrgChartEdges", "line": 2, "confidence": "high" },
+        { "symbol": "zs", "name": "isAgentMidTurn", "line": 22, "confidence": "high" },
+        { "symbol": "ne", "name": "getEdgeActivity", "line": 25, "confidence": "high" },
+        { "symbol": "os", "name": "getAgentActivity", "line": 32, "confidence": "high" },
+        { "symbol": "ae", "name": "getAgentActivityBadge", "line": 36, "confidence": "high" },
+        { "symbol": "te", "name": "OrgChartAgentInspector", "line": 48, "confidence": "high" },
+        { "symbol": "Rs", "name": "OrgChartPairHeader", "line": 97, "confidence": "high" },
+        { "symbol": "ce", "name": "MessageEdgeInspector", "line": 126, "confidence": "high" },
+        { "symbol": "re", "name": "MembershipEdgeInspector", "line": 160, "confidence": "high" },
+        { "symbol": "me", "name": "OrgChartInspector", "line": 197, "confidence": "high" },
+        { "symbol": "bs", "name": "deterministicLayoutAngle", "line": 244, "confidence": "high" },
+        { "symbol": "pe", "name": "layoutOrgChart", "line": 247, "confidence": "high" },
+        { "symbol": "xe", "name": "OrgChartEdge", "line": 317, "confidence": "high" },
+        { "symbol": "ke", "name": "orgChartNodeCaption", "line": 345, "confidence": "high" },
+        { "symbol": "be", "name": "OrgChartNode", "line": 356, "confidence": "high" },
+        { "symbol": "gs", "name": "clamp", "line": 389, "confidence": "high" },
+        { "symbol": "je", "name": "hasPointerMoved", "line": 393, "confidence": "high" },
+        { "symbol": "is", "name": "normalizeViewport", "line": 397, "confidence": "high" },
+        { "symbol": "we", "name": "panViewport", "line": 401, "confidence": "high" },
+        { "symbol": "ve", "name": "zoomViewport", "line": 404, "confidence": "high" },
+        { "symbol": "Se", "name": "wheelZoomFactor", "line": 409, "confidence": "high" },
+        { "symbol": "qe", "name": "useElementSize", "line": 413, "confidence": "high" },
+        { "symbol": "Ie", "name": "OrgChartCanvas", "line": 432, "confidence": "high" },
+        { "symbol": "Re", "name": "OrgChartWorkspace", "line": 571, "confidence": "high" },
+        { "symbol": "Ge", "name": "OrgChartWorkspaceView", "line": 649, "confidence": "high" }
+      ]
+    },
+    {
+      "path": "recovered/frontend/app/assets/view-B5Ug8wEm.js",
+      "originalPath": "features/plugins/overlay/view.tsx",
+      "symbols": [
+        { "symbol": "Zi", "name": "pluginSelectionKey", "line": 1788, "confidence": "high" },
+        { "symbol": "ed", "name": "skillSourceUrls", "line": 1793, "confidence": "high" },
+        { "symbol": "sd", "name": "compareDefaultAccountFirst", "line": 1796, "confidence": "high" },
+        { "symbol": "nd", "name": "popPluginBreadcrumb", "line": 1799, "confidence": "high" },
+        { "symbol": "ld", "name": "PluginsDialog", "line": 1803, "confidence": "high" },
+        { "symbol": "od", "name": "PluginsOverlayView", "line": 1829, "confidence": "high" }
+      ]
+    },
+    {
+      "path": "recovered/frontend/app/assets/index-BlqerJhg.js",
+      "originalPath": null,
+      "evidence": "Named dependency of features/settings/overlay/view.tsx; its original source filename was erased.",
+      "symbols": [
+        { "symbol": "Gs", "name": "parseCursorAuthId", "line": 6, "confidence": "high" },
+        { "symbol": "Ws", "name": "AccountAvatar", "line": 11, "confidence": "high" },
+        { "symbol": "Fs", "name": "CopyEmailButton", "line": 40, "confidence": "high" },
+        { "symbol": "Vs", "name": "CursorAccountCard", "line": 52, "confidence": "high" },
+        { "symbol": "he", "name": "instructionsForBehavior", "line": 122, "confidence": "high" },
+        { "symbol": "ve", "name": "replaceInstructionsForBehavior", "line": 125, "confidence": "high" },
+        { "symbol": "Hs", "name": "instructionRows", "line": 128, "confidence": "high" },
+        { "symbol": "Ke", "name": "removeInstruction", "line": 131, "confidence": "high" },
+        { "symbol": "Re", "name": "instructionRowsEqual", "line": 135, "confidence": "high" },
+        { "symbol": "Ks", "name": "reconcileInstructionRow", "line": 138, "confidence": "high" },
+        { "symbol": "Se", "name": "isInstructionLimitReached", "line": 142, "confidence": "high" },
+        { "symbol": "Ce", "name": "saveInstruction", "line": 145, "confidence": "high" },
+        { "symbol": "Zs", "name": "instructionBehaviorLabel", "line": 158, "confidence": "high" },
+        { "symbol": "Oe", "name": "InstructionComposer", "line": 162, "confidence": "high" },
+        { "symbol": "Qs", "name": "AutoReviewRulesEditor", "line": 226, "confidence": "high" },
+        { "symbol": "ea", "name": "AutoReviewSettings", "line": 283, "confidence": "high" },
+        { "symbol": "ze", "name": "formatTimeZoneName", "line": 300, "confidence": "high" },
+        { "symbol": "na", "name": "supportedTimeZones", "line": 319, "confidence": "high" },
+        { "symbol": "la", "name": "TimeZoneSetting", "line": 326, "confidence": "high" },
+        { "symbol": "da", "name": "LocalExecutionPermissionSetting", "line": 353, "confidence": "high" },
+        { "symbol": "oa", "name": "AgentSettingsSection", "line": 380, "confidence": "high" },
+        { "symbol": "ca", "name": "egressTunnelStatusDescription", "line": 386, "confidence": "high" },
+        { "symbol": "Ze", "name": "disabledUpdateMessage", "line": 396, "confidence": "high" },
+        { "symbol": "ua", "name": "updateStatusMessage", "line": 409, "confidence": "high" },
+        { "symbol": "ma", "name": "BetaAndUpdatesSettings", "line": 430, "confidence": "high" },
+        { "symbol": "pa", "name": "AppearanceSettings", "line": 506, "confidence": "high" },
+        { "symbol": "va", "name": "SecurityKeySettings", "line": 519, "confidence": "high" },
+        { "symbol": "Na", "name": "UsageSettings", "line": 582, "confidence": "high" },
+        { "symbol": "Sa", "name": "GeneralSettings", "line": 622, "confidence": "high" },
+        { "symbol": "Ta", "name": "SettingsModal", "line": 633, "confidence": "high" }
+      ]
+    }
+  ]
+}

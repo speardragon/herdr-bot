@@ -1,0 +1,14 @@
+/*
+ * @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2736205 (sand-group-members-footer DOM selector)
+ * @evidence recovered/frontend/app/assets/index-UbX-y3il.js#byteOffset=3480600 (sand-group-members-footer DOM selector)
+ * @evidence src/app/dist/renderer/assets/index-lCyB53CO.css#byteOffset=507858,510981,516594
+ * @evidence recovered/frontend/app/assets/index-lCyB53CO.css#byteOffset=574073,577532,583721
+ * Mac SHA256 5a25f934b7d3b7a55483cb5f2a1a05e21209aad0a09c82d07d2add054a6b7856
+ * Windows SHA256 bc44533bcf9109b5596d57dda428370d9bdc4fba8201cd6ed4cb0d4abd795ddc
+ * sand-10b6aqq = padding-bottom: 6px
+ * sand-163pfp = padding-left: 8px
+ * sand-1yrsyyn = padding-top: 6px
+ */
+.sand-group-members-footer {
+  padding: 6px 0 6px 8px;
+}

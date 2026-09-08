@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "artifactRoot": "src/app/dist/renderer/assets",
+  "assets": [
+    { "file": "app-icon-C7NKj2u7.png", "sha256": "79e6a73e634ce7ad8d1982739e9064bcc9c9ec5106bdd7281d7514ee68169ad2" },
+    { "file": "apollo-B0sEgAUH.png", "sha256": "f6f384e4105595e7a65c9fb99d3bb1acf6b1f3a0579114e0499e96217801481a" },
+    { "file": "ashby-BidvOSTU.png", "sha256": "54cbf3075bfc899e8be9517069ef81cf841cd3fbaf7a46d444a7c0cceca0988b" },
+    { "file": "box-DrJB_xON.png", "sha256": "7a6a446cacfeeefddbfde7225a50545b3d18d323155c75957ed2137ad634c9c7" },
+    { "file": "calendly-DYRMkyLM.svg", "sha256": "0ea3b3784f04256aa1dbe27c1e7b8a01a83c29be470f3326e0fd18003cd353f0" },
+    { "file": "canva-djBDOrSx.svg", "sha256": "b8af24ff29cd5dacc1a6cf55be060a7639acb5c0e50e65b00f344288e4452a72" },
+    { "file": "clay-CXmF7QZG.png", "sha256": "be4e9d359788e8917a61f6b7972721fbb13377a541772cca1960949bb7daa1ae" },
+    { "file": "databricks-NEF0SRYx.png", "sha256": "124d2031fc5d9eabdfe17ffadeb66da9f18eedc29af71a870d3956e02062195b" },
+    { "file": "demo-computer-wallpaper-BO7Ye4dV.jpg", "sha256": "90e253579c5e6ff18cb03059bbe380d64263222be48360802cda58e3d8392216" },
+    { "file": "mailchimp-AFHOmIeb.svg", "sha256": "beed6f58fe17a9e7430e3f632429a0dd1dfec24879d86c43370506ee7e52cee4" },
+    { "file": "nooks-Da6AC940.png", "sha256": "9ce39076ea63b6dba09f383d73107f5ce6e83265223b88c94680863edb50cc4c" },
+    { "file": "quickbooks-N88wePET.png", "sha256": "70fa3cf66911871dc2c34557e843e5b1b818bed60d20f89bae8c41b449c4e5d9" },
+    { "file": "rippling-cz7o1jpc.png", "sha256": "1f8e1b805bc847d35f2ca96f53c3bf13f5705d40d4eba859522d35f39685a1e5" },
+    { "file": "salesforce-DuGcPENR.svg", "sha256": "b336c25a3fd584a58b9c7d286054802d17d6d4adb41cb995aedc031e4f4340ca" },
+    { "file": "snowflake-B53K53W6.png", "sha256": "f4a98db83cd5ac180fef571d5907f0f405a56662348c8c803b02c62ed795b975" },
+    { "file": "tableau-DMgl1MR0.png", "sha256": "e991eb03b713a7695f8a925ba2918c132505781556c907ebf123c2cd3e25cb55" },
+    { "file": "workday-DI2a8j1o.svg", "sha256": "a09892f94ee5990e0f16b41852eca1a115de9b80264e7607e8055b4c1a9caeca" },
+    { "file": "zoominfo-kXQt8h27.png", "sha256": "672af7a026b514c043d0dc611aea8ac8bff8e17c56e44027b0a04a6316206142" }
+  ],
+  "immutableAssets": [
+    { "file": "compact-C8-lyxgK.js", "bytes": 571490, "sha256": "a163448dab9eeeb2eba2e743625ae925eac5d2d70f919c3396897c5f042ba39c" },
+    { "file": "messages-ByIkiGdI.js", "bytes": 5892, "sha256": "982d1fb9ed0b0f95155c30c327738f055e2c1a512cef219f7c20d49b978f2628" },
+    { "file": "iamcal-CEyh6ide.js", "bytes": 47901, "sha256": "69f6164afb9487768f9e9da137005c546a472059d24b7244ed1b90320fcee9f1" },
+    { "file": "emojibase-Bc-csq5x.js", "bytes": 170339, "sha256": "0a5a09ad69567774c7988c1e85a77f5a406d66ffff0b0bdbcb55e14e2a144ba2" },
+    { "file": "pdf-WLgSwHwh.js", "sha256": "6bb712dd774816db63697c84bc45a2bec722f0906629398dbfcea78a579cb4f2" },
+    { "file": "pdf.worker.min-qwK7q_zL.mjs", "sha256": "dbcae78a691b3c501508f74b774c6066a57a14a76cefdc9e25ad86b651bb75d5" },
+    { "file": "xlsx-CNerDvZX.js", "sha256": "88bd58aabec374fbb50e18e1f271a15d6fca247297e8af73db4c368ae0408a9c" },
+    { "file": "katex-DHMw6HUq.js", "bytes": 259053, "sha256": "8c143536a1933d1f96d975b0e7dcbd6057bb0885fea799852896530b3234d08a" }
+  ]
+}

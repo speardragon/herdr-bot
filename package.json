@@ -4,14 +4,22 @@
   "private": true,
   "type": "module",
   "engines": { "node": ">=24.0.0" },
-  "workspaces": ["core", "cli"],
+  "workspaces": ["core", "cli", "renderer", "desktop"],
   "scripts": {
     "test": "node --test \"core/test/**/*.test.ts\" \"cli/test/**/*.test.ts\"",
     "typecheck": "tsc -p core/tsconfig.json && tsc -p cli/tsconfig.json",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test",
+    "renderer:typecheck": "tsc -p renderer/tsconfig.json",
+    "renderer:build": "npm run build -w @herdr-bot/renderer",
+    "renderer:dev": "npm run dev -w @herdr-bot/renderer"
   },
   "devDependencies": {
     "@types/node": "^24",
     "typescript": "7.0.2"
+  },
+  "overrides": {
+    "@tiptap/extension-bubble-menu": "3.14.0",
+    "@tiptap/extension-floating-menu": "3.14.0",
+    "@tiptap/core": "3.14.0"
   }
 }

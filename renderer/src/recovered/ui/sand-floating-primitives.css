@@ -1,0 +1,90 @@
+/*
+ * Shared floating styling is intentionally limited to immutable component
+ * markers. Placement and collision are computed by the leaf; tokens are
+ * supplied by runtime-theme-token-installer.ts.
+ * @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=424809
+ * @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=401471
+ * @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=580465
+ * @evidence src/app/dist/renderer/assets/index-lCyB53CO.css#byteOffset=54293
+ */
+
+.ui-menu__content,
+.ui-menu__tooltip {
+  box-sizing: border-box;
+  color: var(--cursor-text-primary);
+  font-family: inherit;
+  font-size: var(--cursor-font-size-base);
+  line-height: var(--cursor-line-height-base);
+  outline: none;
+}
+
+.ui-menu__content {
+  background: var(--cursor-bg-elevated);
+  border: 1px solid var(--cursor-stroke-secondary);
+  border-radius: var(--cursor-radius-lg);
+  box-shadow: var(--cursor-box-shadow-lg);
+  min-width: 160px;
+  padding: var(--cursor-spacing-1);
+}
+
+.ui-menu__tooltip {
+  background: var(--cursor-bg-elevated);
+  border: 1px solid var(--cursor-stroke-secondary);
+  border-radius: var(--cursor-radius-base);
+  box-shadow: var(--cursor-box-shadow-base);
+  max-width: 280px;
+  padding: var(--cursor-spacing-2);
+  pointer-events: none;
+}
+
+.ui-menu__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ui-menu__row {
+  align-items: center;
+  border-radius: var(--cursor-radius-base);
+  cursor: pointer;
+  display: flex;
+  gap: var(--cursor-spacing-2);
+  min-height: var(--cursor-height-base);
+  padding: 0 var(--cursor-spacing-2);
+  color: var(--cursor-text-primary);
+  outline: none;
+}
+
+.ui-menu__row[aria-disabled="true"] {
+  color: var(--cursor-text-tertiary);
+  cursor: default;
+  opacity: .56;
+}
+
+.ui-menu__row:hover:not([aria-disabled="true"]),
+.ui-menu__row:focus-visible:not([aria-disabled="true"]) {
+  background: var(--cursor-bg-hover);
+  color: var(--cursor-text-primary);
+}
+
+.ui-menu__row[aria-selected="true"] {
+  background: var(--cursor-bg-selected);
+}
+
+.ui-menu__backdrop {
+  background: transparent;
+  inset: 0;
+  position: fixed;
+  z-index: 3999;
+}
+
+.ui-menu__layout {
+  display: contents;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-menu__content,
+  .ui-menu__tooltip {
+    transition-duration: 0ms;
+  }
+}

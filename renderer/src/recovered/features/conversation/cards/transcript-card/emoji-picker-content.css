@@ -1,0 +1,21 @@
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=5075764 (sand-emoji-cell) */
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=5080518 (sand-emoji-picker__results/grid/section) */
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#constants=VEn:294,GEn:320,WEn:34,KEn:8,YEn:30 */
+
+.sand-emoji-picker__results {
+  min-width: 0;
+}
+
+.sand-emoji-picker__section {
+  contain: layout style;
+}
+
+.sand-emoji-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(8, 34px);
+}
+
+.sand-emoji-cell {
+  block-size: 34px;
+  inline-size: 34px;
+}

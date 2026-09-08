@@ -1,0 +1,63 @@
+/* Exact immutable menu-row/item markers: see sand-menu-item.tsx. */
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#sha256=ef4e9831b65d39633f09c9ad0c083b98b7ebf52e3bb558182aee5bde31f876fa#byteOffset=409356 */
+/* @evidence recovered/frontend/app/assets/index-UbX-y3il.js#sha256=80464803b50f478598080bdc1b91da3996c6b74168e2351ea26f620f2ec62ba5#byteOffset=533594 */
+
+.ui--default-marker {
+  align-items: center;
+  border-radius: var(--ui-menu-row-border-radius, var(--cursor-radius-sm));
+  box-sizing: border-box;
+  color: var(--cursor-text-primary);
+  cursor: pointer;
+  display: flex;
+  gap: var(--ui-menu-row-gap, var(--cursor-spacing-2));
+  min-height: var(--ui-menu-row-min-height, 32px);
+  outline: none;
+  padding-block: var(--ui-menu-row-padding-block, var(--cursor-spacing-1));
+  padding-inline: var(--ui-menu-row-padding-inline, var(--cursor-spacing-2));
+  user-select: none;
+}
+
+.ui--default-marker:focus-visible,
+.ui--default-marker.ui-flfp0o {
+  background: var(--cursor-bg-focused);
+  box-shadow: 0 0 0 2px var(--cursor-stroke-focused);
+}
+
+.ui--default-marker.ui-i07v4r {
+  background: var(--cursor-bg-selected);
+}
+
+.ui--default-marker.ui-t0e3qv {
+  cursor: not-allowed;
+  opacity: .56;
+  pointer-events: none;
+}
+
+.ui--default-marker > .ui-3nfvp2 {
+  align-items: center;
+  color: var(--ui-menu-item-left-color, var(--cursor-text-secondary));
+  display: inline-flex;
+  flex: 0 0 var(--ui-menu-item-left-width, 16px);
+  height: var(--ui-menu-item-left-height, 16px);
+  justify-content: center;
+}
+
+.ui--default-marker > .ui-98rzlu {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ui-20ajya.ui-4b2ntj {
+  color: var(--cursor-text-tertiary);
+  font-size: var(--cursor-font-size-xs, 12px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui--default-marker > .ui-19aaqeu {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}

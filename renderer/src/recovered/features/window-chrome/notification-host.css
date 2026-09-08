@@ -1,0 +1,61 @@
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L132829-L132847 */
+/* @evidence src/app/dist/renderer/assets/index-lCyB53CO.css#L412014-L412026 */
+.sand-tray-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.sand-tray-stack__clear-all {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sand-tray {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--cursor-text-red-primary) 35%, var(--cursor-stroke-tertiary));
+  border-radius: var(--cursor-radius-2xl, 14px);
+  background-color: color-mix(in srgb, var(--cursor-text-red-primary) 8%, var(--cursor-bg-card));
+  box-shadow: 0 6px 24px -16px var(--sand-shadow-popover-ambient);
+  animation: sand-m8u80m-B .18s cubic-bezier(.16, 1, .3, 1);
+}
+
+.sand-tray__leading {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+
+.sand-tray__icon { color: var(--cursor-text-red-primary); }
+.sand-tray__body { display: flex; flex-grow: 1; flex-shrink: 1; flex-basis: 0%; min-width: 0; gap: 2px; flex-direction: column; }
+.sand-tray__title-row { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.sand-tray__title { color: var(--cursor-text-primary); }
+.sand-tray__count { flex: 0 0 auto; color: var(--cursor-text-tertiary); font-variant-numeric: tabular-nums; }
+.sand-tray__detail { margin: 0; color: var(--cursor-text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
+.sand-tray__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.sand-tray__action-group { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sand-tray__controls { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; margin-top: -2px; margin-right: -4px; }
+
+.sand-tray__copy,
+.sand-tray__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+}
+
+@keyframes sand-m8u80m-B {
+  from { opacity: 0; transform: translateY(4px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}

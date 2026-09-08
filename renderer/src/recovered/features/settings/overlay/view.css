@@ -1,0 +1,75 @@
+/* @evidence src/app/dist/renderer/assets/index-BlqerJhg.js#L1 */
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L131375 */
+/* @evidence src/app/dist/renderer/assets/index-lCyB53CO.css#L1 */
+.sand-settings-dialog {
+  width: min(860px, calc(100vw - 32px));
+  height: min(620px, calc(100vh - 32px));
+  overflow: hidden;
+  color: var(--cursor-text-primary, #ececec);
+  background: var(--cursor-bg-elevated, #202020);
+  border: 1px solid var(--cursor-border-secondary, #414141);
+  border-radius: 14px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  font: 13px/1.4 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.sand-settings-layout { display: grid; grid-template-columns: 190px 1fr; height: 100%; }
+.sand-settings-nav { display: flex; flex-direction: column; gap: 3px; padding: 54px 10px 12px; background: rgba(0, 0, 0, 0.14); border-right: 1px solid var(--cursor-border-secondary, #383838); }
+.sand-settings-nav__item { display: flex; gap: 9px; align-items: center; padding: 8px 10px; color: var(--cursor-text-secondary, #aaa); background: transparent; border: 0; border-radius: 6px; text-align: left; cursor: pointer; }
+/*
+ * @evidence src/app/dist/renderer/assets/index-lCyB53CO.css#byteOffset=407108
+ * @evidence src/app/dist/renderer/assets/index-BlqerJhg.js#byteOffset=39070
+ * Immutable navItemActive maps data-active to the selected, not hover, fill.
+ */
+.sand-settings-nav__item[data-active] { color: var(--cursor-text-primary, #fff); background: var(--sand-fill-ghost-selected); }
+.sand-settings-panel { position: relative; min-width: 0; overflow: hidden; }
+.sand-settings-panel > h2 { height: 54px; box-sizing: border-box; margin: 0; padding: 17px 24px; border-bottom: 1px solid var(--cursor-border-secondary, #383838); font-size: 15px; }
+.sand-settings-panel__close { position: absolute; top: 11px; right: 14px; z-index: 1; padding: 4px 9px; color: inherit; background: transparent; border: 0; font-size: 20px; cursor: pointer; }
+.sand-settings-panel__body { height: calc(100% - 54px); box-sizing: border-box; overflow: auto; padding: 24px; }
+.sand-settings-general, .sand-settings-beta-stack, .sand-usage-section, .sand-router-section { display: grid; gap: 24px; }
+.sand-settings-general section > label, .sand-auto-review > label { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; padding: 13px; color: inherit; background: var(--cursor-bg-secondary, #292929); border: 1px solid var(--cursor-border-secondary, #393939); border-radius: 9px; }
+.sand-settings-general section > label > span, .sand-auto-review > label > span { display: grid; flex: 1; min-width: 0; gap: 4px; }
+.sand-settings-general section > label small, .sand-auto-review > label small { color: var(--cursor-text-secondary, #aaa); font-size: 11px; }
+.sand-settings-row > label:has([role="switch"]) { display: flex; width: 100%; justify-content: space-between; gap: 16px; }
+.sand-settings-row > label:has([role="switch"]) > .sand-settings-copy { display: grid; flex: 1; min-width: 0; gap: 4px; }
+.sand-account-card, .sand-usage-meter { display: flex; align-items: center; gap: 12px; padding: 13px; background: var(--cursor-bg-secondary, #292929); border: 1px solid var(--cursor-border-secondary, #393939); }
+.sand-account-card, .sand-usage-meter:first-of-type { border-radius: 9px 9px 0 0; }
+.sand-usage-meter + .sand-usage-meter { border-top: 0; }
+.sand-usage-meter:last-of-type { border-radius: 0 0 9px 9px; }
+.sand-account-card { border-radius: 9px; }
+.sand-account-card__avatar { display: grid; width: 36px; height: 36px; place-items: center; overflow: hidden; background: var(--cursor-bg-tertiary, #3b3b3b); border-radius: 50%; }
+.sand-account-card__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.sand-account-card__body, .sand-usage-meter__header { display: grid; flex: 1; min-width: 0; }
+.sand-account-card__body span, .sand-usage-meter small { color: var(--cursor-text-secondary, #aaa); font-size: 11px; }
+.sand-account__error { margin: 8px 0 0; color: #f87171; font-size: 12px; }
+.sand-settings-dialog button:not(.sand-kit-button):not(.sand-kit-icon-button), .sand-settings-dialog select { padding: 6px 9px; color: inherit; background: var(--cursor-button-secondary-background, var(--cursor-bg-secondary, #292929)); border: 1px solid var(--cursor-stroke-tertiary, var(--cursor-border-secondary, #494949)); border-radius: 6px; font: inherit; }
+.sand-settings-dialog .ui-select-trigger { min-width: 148px; display: inline-flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 9px; color: inherit; background: var(--cursor-button-secondary-background, var(--cursor-bg-secondary, #292929)); border: 1px solid var(--cursor-stroke-tertiary, var(--cursor-border-secondary, #494949)); border-radius: 6px; font: inherit; cursor: pointer; }
+.sand-settings-dialog select.ui-select-trigger { appearance: none; }
+.sand-settings-dialog .ui-select-trigger[aria-expanded="true"] { border-color: var(--cursor-stroke-focused, #459ffe); }
+.sand-usage-meter { display: grid; }
+.sand-usage-meter__track { display: block; height: 5px; overflow: hidden; background: var(--cursor-bg-tertiary, #414141); border-radius: 999px; }
+.sand-usage-meter__fill { display: block; height: 100%; background: #c5f467; border-radius: inherit; }
+.sand-usage-state, .sand-usage-upgrade { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 13px; color: var(--cursor-text-secondary, #aaa); background: var(--cursor-bg-secondary, #292929); border: 1px solid var(--cursor-border-secondary, #393939); border-radius: 9px; }
+.sand-provider-usage-card { display: grid; gap: 4px; padding: 13px; color: var(--cursor-text-secondary, #aaa); background: var(--cursor-bg-secondary, #292929); border: 1px solid var(--cursor-border-secondary, #393939); border-radius: 9px; }
+.sand-provider-usage-card strong { color: var(--cursor-text-primary, #ececec); }
+.sand-usage-upgrade { align-items: flex-end; flex-direction: column; }
+.sand-usage-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.sand-settings-beta__status { display: block; margin-top: 8px; color: var(--cursor-text-secondary, #aaa); }
+.sand-settings-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 13px; background: var(--cursor-bg-secondary, #292929); border: 1px solid var(--cursor-border-secondary, #393939); border-radius: 9px; }
+.sand-settings-copy { display: grid; flex: 1; min-width: 0; gap: 4px; }
+.sand-settings-field__hint { color: var(--cursor-text-secondary, #aaa); font-size: 11px; }
+.sand-settings-control { display: flex; align-items: center; flex: 0 0 auto; }
+.sand-settings-uptodate-banner { display: grid; gap: 8px; padding: 13px; background: var(--cursor-bg-secondary, #292929); border: 1px solid var(--cursor-border-secondary, #393939); border-radius: 9px; }
+.sand-settings-uptodate-banner > span { color: var(--cursor-text-secondary, #aaa); font-size: 11px; }
+.sand-settings-force-refresh { align-self: flex-end; }
+.sand-auto-review-rules-table { overflow: hidden; border: 1px solid var(--cursor-border-secondary, #414141); border-radius: 7px; }
+.sand-auto-review-rule { display: grid; grid-template-columns: minmax(140px, 1fr) 150px auto; gap: 8px; align-items: center; padding: 8px 10px; }
+.sand-auto-review-rule + .sand-auto-review-rule, .sand-auto-review-rule + [role="rowgroup"] .sand-auto-review-rule:first-child { border-top: 1px solid var(--cursor-border-secondary, #414141); }
+.sand-auto-review-rule [role="cell"]:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sand-auto-review-rule [role="cell"]:last-child { display: flex; gap: 5px; justify-content: flex-end; }
+
+@media (max-width: 620px) {
+  .sand-settings-layout { grid-template-columns: 132px 1fr; }
+  .sand-settings-nav { padding-inline: 6px; }
+  .sand-settings-panel__body { padding: 16px; }
+}

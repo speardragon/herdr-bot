@@ -1,0 +1,51 @@
+{
+  "name": "@herdr-bot/renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "build": "vite build --config vite.config.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@tiptap/core": "3.14.0",
+    "@tiptap/extension-blockquote": "3.14.0",
+    "@tiptap/extension-bold": "3.14.0",
+    "@tiptap/extension-bullet-list": "3.14.0",
+    "@tiptap/extension-code": "3.14.0",
+    "@tiptap/extension-code-block": "3.14.0",
+    "@tiptap/extension-document": "3.14.0",
+    "@tiptap/extension-dropcursor": "3.14.0",
+    "@tiptap/extension-gapcursor": "3.14.0",
+    "@tiptap/extension-hard-break": "3.14.0",
+    "@tiptap/extension-heading": "3.14.0",
+    "@tiptap/extension-horizontal-rule": "3.14.0",
+    "@tiptap/extension-italic": "3.14.0",
+    "@tiptap/extension-link": "3.14.0",
+    "@tiptap/extension-list": "3.14.0",
+    "@tiptap/extension-list-item": "3.14.0",
+    "@tiptap/extension-list-keymap": "3.14.0",
+    "@tiptap/extension-mention": "3.14.0",
+    "@tiptap/extension-ordered-list": "3.14.0",
+    "@tiptap/extension-paragraph": "3.14.0",
+    "@tiptap/extension-placeholder": "3.14.0",
+    "@tiptap/extension-strike": "3.14.0",
+    "@tiptap/extension-text": "3.14.0",
+    "@tiptap/extension-underline": "3.14.0",
+    "@tiptap/extensions": "3.14.0",
+    "@tiptap/html": "3.14.0",
+    "@tiptap/pm": "3.14.0",
+    "@tiptap/react": "3.14.0",
+    "@tiptap/starter-kit": "3.14.0",
+    "@tiptap/suggestion": "3.14.0",
+    "react": "19.2.1",
+    "react-dom": "19.2.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "vite": "8.2.1"
+  }
+}

@@ -1,0 +1,70 @@
+/* @evidence src/app/dist/renderer/assets/index-lCyB53CO.css#L1 */
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L132756 */
+.sand-cover-drag {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 52px;
+  z-index: 4999;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.sand-window-controls {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: var(--sand-titlebar-block, 52px);
+  z-index: 5000;
+  padding-right: calc(12px / var(--sand-zoom-factor, 1));
+  pointer-events: auto;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.sand-window-controls > div {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  zoom: calc(1 / max(var(--sand-zoom-factor, 1), calc(28 / 52)));
+}
+
+.sand-window-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+  padding: 0;
+  color: var(--cursor-text-secondary);
+  cursor: default;
+  background-color: transparent;
+  border-style: none;
+  border-radius: 8px;
+  outline-style: none;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  transition: background-color .12s ease, color .12s ease;
+}
+
+.sand-window-controls button:hover {
+  color: var(--cursor-text-primary);
+  background-color: color-mix(in srgb, var(--cursor-text-primary) 8%, transparent);
+}
+
+.sand-window-controls button:active {
+  background-color: color-mix(in srgb, var(--cursor-text-primary) 13%, transparent);
+}
+
+.sand-window-controls button:last-child:hover {
+  color: var(--cursor-bg-editor);
+  background-color: var(--cursor-bg-red-primary);
+}
+
+.sand-window-controls button:last-child:active {
+  color: var(--cursor-bg-editor);
+  background-color: color-mix(in srgb, var(--cursor-red) 78%, transparent);
+}

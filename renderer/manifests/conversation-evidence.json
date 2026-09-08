@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "entry": "recovered/frontend/app/assets/index-UbX-y3il.js",
+  "bindings": [
+    {
+      "symbol": "R5e",
+      "name": "attachmentBasename",
+      "line": 113821,
+      "confidence": "high",
+      "evidence": "split(/[/\\\\]/).filter"
+    },
+    {
+      "symbol": "Eft",
+      "name": "formatAttachmentBytes",
+      "line": 113855,
+      "confidence": "high",
+      "evidence": "1024 * 1024"
+    },
+    {
+      "symbol": "yAe",
+      "name": "inferAttachmentKind",
+      "line": 113925,
+      "confidence": "high",
+      "evidence": "mimeType"
+    },
+    {
+      "symbol": "lVe",
+      "name": "isComposerDraftEmpty",
+      "line": 117944,
+      "confidence": "high",
+      "evidence": "attachments.length === 0"
+    },
+    {
+      "symbol": "N1t",
+      "name": "areComposerDraftContentsEqual",
+      "line": 117950,
+      "confidence": "high",
+      "evidence": "attachments.every"
+    },
+    {
+      "symbol": "N9n",
+      "name": "areComposerDraftsEqual",
+      "line": 117953,
+      "confidence": "high",
+      "evidence": "replyToId"
+    },
+    {
+      "symbol": "uVe",
+      "name": "COMPOSER_DRAFT_METADATA",
+      "line": 117956,
+      "confidence": "high",
+      "evidence": "schemaVersion: 1"
+    },
+    {
+      "symbol": "PTe",
+      "name": "parseComposerDraft",
+      "line": 117957,
+      "confidence": "high",
+      "evidence": "typeof n10 != \"object\""
+    }
+  ]
+}

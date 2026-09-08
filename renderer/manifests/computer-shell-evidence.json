@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "compositionBoundary": {
+    "immutableArtifact": "src/app/dist/renderer/assets/index-UbX-y3il.js",
+    "sha256": "ef4e9831b65d39633f09c9ad0c083b98b7ebf52e3bb558182aee5bde31f876fa",
+    "formattedMirror": "recovered/frontend/app/assets/index-UbX-y3il.js",
+    "formattedRanges": [
+      "118744-118922:vnc-first-party-webview-adapter-and-pool",
+      "118923-119343:monitor-fullscreen-preview-cursor-and-handoff-surfaces",
+      "119598-119625:computer-use-active-hold",
+      "119626-119855:forever-box-status-controller",
+      "129447-129479:active-computer-open-and-handoff-composition",
+      "132921-132985:production-shell-composition-boundary",
+      "59447-59560:info-pane-resize-and-240ms-close-linger"
+    ],
+    "rawByteAnchors": [
+      { "value": "Grok Bot's Computer", "byteOffset": 4787052 },
+      { "value": "sand:vnc-liveness", "byteOffset": 4805127 },
+      { "value": "sand:vnc-viewer-visible", "byteOffset": 4805446 },
+      { "value": "contextIsolation=yes, nodeIntegration=no, sandbox=no", "byteOffset": 4805577 },
+      { "value": "sand:vnc-host-key", "byteOffset": 4806081 },
+      { "value": "sand:vnc-session", "byteOffset": 4806105 },
+      { "value": "persist:sand-forever-box", "byteOffset": 4806128 },
+      { "value": "sand-box-vnc", "byteOffset": 4810112 },
+      { "value": "sand-box-vnc-pool", "byteOffset": 4810954 },
+      { "value": "sand-box-vnc-pool__connecting", "byteOffset": 4811854 },
+      { "value": "sand-box-vnc-pool__crashed", "byteOffset": 4812092 },
+      { "value": "Screen preview unavailable", "byteOffset": 4812169 },
+      { "value": "sand-computer-monitor-strip", "byteOffset": 4812808 },
+      { "value": "More screens", "byteOffset": 4816756 },
+      { "value": "maxHeight:320,minWidth:240", "byteOffset": 4816770 },
+      { "value": "Setting up the computer", "byteOffset": 4817828 },
+      { "value": "Exit fullscreen", "byteOffset": 4821486 },
+      { "value": "sand-computer-banner", "byteOffset": 4831166 },
+      { "value": "Skip this step", "byteOffset": 4831733 },
+      { "value": "I'm done, continue", "byteOffset": 4831834 },
+      { "value": "sand-computer-fullscreen", "byteOffset": 4832830 },
+      { "value": "function wbn", "byteOffset": 4828111 },
+      { "value": "onReadyChange:oe", "byteOffset": 4832596 },
+      { "value": "sand-computer-cursor-overlay", "byteOffset": 4835242 },
+      { "value": "sand-computer-preview", "byteOffset": 4837308 },
+      { "value": "Needs your attention", "byteOffset": 4839591 },
+      { "value": "Open computer", "byteOffset": 4840837 },
+      { "value": "sand-box-handoff-card", "byteOffset": 4845836 },
+      { "value": "Take over the computer", "byteOffset": 4847973 },
+      { "value": "computerUse", "byteOffset": 4870121 },
+      { "value": "function CTn", "byteOffset": 4870200 },
+      { "value": "function MTn", "byteOffset": 4870838 },
+      { "value": "versionSnapshots.subscribe", "byteOffset": 4871037 },
+      { "value": "getStatus(y)", "byteOffset": 4871239 },
+      { "value": "getAsyncTasks", "byteOffset": 5575720 },
+      { "value": "async-tasks", "byteOffset": 2790794 },
+      { "value": "Resize details", "byteOffset": 2784200 },
+      { "value": "T3n=240,S3n=mm({name:\"agents-info-pane-close-linger\",delayMs:T3n})", "byteOffset": 2784798 }
+    ]
+  },
+  "immutableAssets": [
+    {
+      "path": "src/app/dist/renderer/assets/index-lCyB53CO.css",
+      "sha256": "5a25f934b7d3b7a55483cb5f2a1a05e21209aad0a09c82d07d2add054a6b7856"
+    },
+    {
+      "path": "src/app/dist/renderer/assets/cursor-icons-16-f_W_ogc-.woff2",
+      "sha256": "2058c08b796a3f7ec9fdb219e16b21a350910a3e8cc231939600ee7efbf08bcb",
+      "recoveredCopy": "frontend/src/recovered/features/computer/shell/cursor-icons-16-f_W_ogc-.woff2"
+    }
+  ],
+  "generatedShellAssets": [
+    {
+      "path": "frontend/src/recovered/features/computer/shell/view.css",
+      "sha256": "d4221f057c7034016b443a42423bc8de8d7f70ff2c926706c538464c0f2de63f",
+      "bytes": 63715,
+      "immutableSource": "src/app/dist/renderer/assets/index-lCyB53CO.css",
+      "classes": 417,
+      "rules": 443,
+      "animationNames": 6
+    }
+  ],
+  "nativeContracts": [
+    {
+      "path": "src/app/dist/electron-preload/preload-vnc.cjs",
+      "sha256": "19187f99f035a59a8bf034d7408ca48cbd1b88b7949925303b52f62173d176c2",
+      "rawByteAnchors": [
+        { "value": "box-vnc", "byteOffset": 6590 },
+        { "value": "reportUserPresence", "byteOffset": 6705 },
+        { "value": "sand:vnc-liveness", "byteOffset": 6806 },
+        { "value": "sand:vnc-viewer-visible", "byteOffset": 6977 },
+        { "value": "sand:vnc-host-key", "byteOffset": 25427 },
+        { "value": "sand:vnc-session", "byteOffset": 26002 }
+      ]
+    },
+    {
+      "path": "src/app/dist/electron-main/main.cjs",
+      "sha256": "7a1451f20dff9f022e76586c97b9b98609b6db8c5a8d98c1f8d2f1fad7f5add5",
+      "rawByteAnchors": [
+        { "value": "box-vnc", "byteOffset": 14527685 },
+        { "value": "getForeverBoxStatus", "byteOffset": 18013647 },
+        { "value": "ensureForeverBox", "byteOffset": 18013817 },
+        { "value": "handBackForeverBox", "byteOffset": 18014663 },
+        { "value": "reportVncSession", "byteOffset": 18197700 },
+        { "value": "reportVncLiveness", "byteOffset": 18197740 },
+        { "value": "reportOpenComputer", "byteOffset": 18197781 },
+        { "value": "reportUserPresence", "byteOffset": 18505609 }
+      ]
+    }
+  ],
+  "failClosedBoundaries": [
+    "The shipped noVNC/RFB implementation remains inside the immutable vnc.html dependency; clean code owns only the first-party webview shell and validated host adapter.",
+    "Teach-task recording controls remain absent because their internal capability and recording stores are not exposed by the recovered production contracts.",
+    "No DesktopBridge keys, main RPC methods, event names, or Electron IPC channels were added."
+  ]
+}

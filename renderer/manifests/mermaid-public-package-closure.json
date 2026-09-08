@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "status": "blocked",
+  "purpose": "Evidence boundary for a possible clean public Mermaid replacement; this is not a promotion manifest.",
+  "unmatchedEntryLedger": "recovery/native-package-completion-ledger.json",
+  "fingerprintLedger": "frontend/manifests/mermaid-immutable-fingerprints.json",
+  "appContract": {
+    "declaredPackage": "mermaid",
+    "declaredRange": "^11.16.0",
+    "consumer": "frontend/src/recovered/features/conversation/workspace/mermaid.tsx",
+    "assetReference": "/upstream/assets/mermaid.core-CYC_FcEu.js",
+    "requiredRuntimeMethods": ["initialize", "parse", "render"],
+    "fixture": "graph TD; A[Start] --> B[Ready]"
+  },
+  "publicCandidate": {
+    "name": "mermaid",
+    "version": "11.16.0",
+    "tarball": "https://registry.npmjs.org/mermaid/-/mermaid-11.16.0.tgz",
+    "integrity": "sha512-Zvm3kbstgdpvIJPPItlL7fppIZ3kibvc1oZIGxdvk9t6UFz6flv+Jw7FtRGKwfcI8OckmH04LqG6LlS6X4B1pA==",
+    "shasum": "dc946bc84bde9d093ba14940d49df1d9f7d8c32f",
+    "module": "./dist/mermaid.core.mjs",
+    "types": "./dist/mermaid.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/mermaid.d.ts",
+        "import": "./dist/mermaid.core.mjs",
+        "default": "./dist/mermaid.core.mjs"
+      },
+      "./*": "./*"
+    },
+    "dependencies": {
+      "@braintree/sanitize-url": "^7.1.2",
+      "@iconify/utils": "^3.0.2",
+      "@mermaid-js/parser": "^1.2.0",
+      "@types/d3": "^7.4.3",
+      "@upsetjs/venn.js": "^2.0.0",
+      "cytoscape": "^3.33.3",
+      "cytoscape-cose-bilkent": "^4.1.0",
+      "cytoscape-fcose": "^2.2.0",
+      "d3": "^7.9.0",
+      "d3-sankey": "^0.12.3",
+      "dayjs": "^1.11.20",
+      "dompurify": "^3.3.3",
+      "dagre-d3-es": "7.0.14",
+      "es-toolkit": "^1.45.1",
+      "katex": "^0.16.45",
+      "khroma": "^2.1.0",
+      "marked": "^16.3.0",
+      "roughjs": "^4.6.6",
+      "stylis": "^4.3.6",
+      "ts-dedent": "^2.2.0",
+      "uuid": "^11.1.0 || ^12 || ^13 || ^14.0.0"
+    },
+    "engines": null,
+    "peerDependencies": null
+  },
+  "candidateLock": {
+    "file": "frontend/manifests/mermaid-public-candidate-lock.json",
+    "lockfileVersion": 3,
+    "nodeCount": 111,
+    "confidence": "registry-exact-candidate-only; no shipped-tree confidence",
+    "promotionAllowed": false
+  },
+  "registryVersionComparison": {
+    "method": "npm pack --ignore-scripts; compare Mermaid core chunk stable IDs against immutable lazy/core filenames",
+    "candidates": {
+      "11.14.0": {"integrity": "sha512-GSGloRsBs+JINmmhl0JDwjpuezCsHB4WGI4NASHxL3fHo3o/BRXTxhDLKnln8/Q0lRFRyDdEjmk1/d5Sn1Xz8g==", "coreChunkCount": 51, "stableMatchesAgainstImmutable": 0},
+      "11.15.0": {"integrity": "sha512-pTMbcf3rWdtLiYGpmoTjHEpeY8seiy6sR+9nD7LOs8KfUbHE4lOUAprTRqRAcWSQ6MQpdX+YEsxShtGsINtPtw==", "coreChunkCount": 52, "stableMatchesAgainstImmutable": 0},
+      "11.16.0": {"integrity": "sha512-Zvm3kbstgdpvIJPPItlL7fppIZ3kibvc1oZIGxdvk9t6UFz6flv+Jw7FtRGKwfcI8OckmH04LqG6LlS6X4B1pA==", "coreChunkCount": 65, "stableMatchesAgainstImmutable": 50, "stableMatchesAmong62LazyEntries": 49, "byteEqualMatches": 0},
+      "11.16.1": {"integrity": "sha512-TQsq6u22fAn3rek5VOubrhKPo1g5hwC3FXUN9hiyupTckcYiGuuKGkNQrKYwGJkXUxZdojwRG46gsSCFZMDp4g==", "coreChunkCount": 65, "stableMatchesAgainstImmutable": 7}
+    },
+    "unmatchedLazyEntriesAgainst11_16_0": ["graph-BvS0Xx32.js", "map-7eTsl7HP.js", "layout-D4ui-CWC.js", "index-UbX-y3il.js", "index-lCyB53CO.css", "cytoscape.esm-DH6-wILU.js", "channel-CWhjyOVv.js", "cynefin-VYW2F7L2-CDYzxy1Q.js", "linear-CTxZC_B8.js", "init-Gi6I4Gst.js", "defaultLocale-C4B-KCzX.js", "arc-B9e056_M.js", "ordinal-BENe2yWM.js"],
+    "sourcePackageSignatures": {
+      "dagre-d3-es": ["dagre-VKFMJZFB-BP_NVUV0.js", "chunk-RYQCIY6F-CS9rcNNS.js", "swimlanes-5IMT3BWC-BbafIj29.js", "mindmap-definition-LN4V7U3C-D0bHQ3wv.js", "stateDiagram-2N3HPSRC-BquyafWL.js"],
+      "cytoscape": ["cose-bilkent-JH36ORCC-J4bhRwSy.js", "architectureDiagram-ZJ3FMSHR-Cq74qq00.js"],
+      "cytoscape-fcose": ["architectureDiagram-ZJ3FMSHR-Cq74qq00.js"],
+      "cytoscape-cose-bilkent": ["cose-bilkent-JH36ORCC-J4bhRwSy.js"],
+      "d3-sankey": ["sankeyDiagram-HTMAVEWB-ChfFdxQE.js"],
+      "@upsetjs/venn.js": ["vennDiagram-L72KCM5P-fVic-998.js"],
+      "roughjs": ["ishikawaDiagram-FXEZZL3T-CgJyKREd.js", "chunk-52WLFC77"],
+      "@mermaid-js/parser": ["mermaid.core-CYC_FcEu.js", "shared Mermaid parser chunks"]
+    }
+  },
+  "immutableArtifacts": {
+    "artifactRoot": "src/app/dist/renderer/assets",
+    "mermaidCore": {
+      "mac": {"file": "mermaid.core-CYC_FcEu.js", "bytes": 617807, "sha256": "2f2d078692bb4a4b2184fad90f2d70fa4326d85e864a845db3860821dddbdb6d"},
+      "windows018": {"file": "mermaid.core-CbQ3Wc3k.js", "bytes": 617807, "sha256": "6e5686668dec00afcde9fcc50c191644fb0a2623a581fc19f13a54717169b74a"},
+      "windows019": {"file": "mermaid.core-B4OH9Xzz.js", "bytes": 617807, "sha256": "802ddd5d74709a36e5d546eeb55bf4bf484064c14ca62654a1b7f06e4dd66bd6"},
+      "windows020": {"file": "mermaid.core-CG3Udu9J.js", "bytes": 617807, "sha256": "92f7bf240f29d08044545b57d2e682f3fe87c8ce0c2c72406e779a4d9bc64da4"}
+    },
+    "coreStaticImports": ["./index-UbX-y3il.js"],
+    "coreImportedBindings": {"aE": "interop-default helper", "_": "Vite module-preload helper"},
+    "vitePreloadMapFileCount": 62,
+    "opaqueGraph": {
+      "needle": "index-UbX-y3il.js",
+      "filesReferencingNeedleCount": 71,
+      "filesReferencingNeedle": [
+        "DefaultCode-rCgpcf8-.js", "abnfDiagram-VRR7QNED-9jh1fRUp.js", "architectureDiagram-ZJ3FMSHR-Cq74qq00.js", "blockDiagram-677ZJIJ3-DV5N2wvM.js", "c4Diagram-LMCZKHZV-CZJJyYZr.js", "classDiagram-OUVF2IWQ-b-MjXxN_.js", "classDiagram-v2-EOCWNBFH-b-MjXxN_.js", "connector-card-BOH-l7tH.js", "cose-bilkent-JH36ORCC-J4bhRwSy.js", "cynefin-VYW2F7L2-CDYzxy1Q.js", "cynefinDiagram-TSTJHNR4-CcroMegV.js", "dagre-VKFMJZFB-BP_NVUV0.js", "diagram-FQU43EPY-DNAMZLCf.js", "diagram-G47NLZAW-C5MrAMPv.js", "diagram-NH7WQ7WH-wuXAjqCv.js", "diagram-OA4YK3LP-BrsPhckT.js", "diagram-WEI45ONY-Adu8IGEb.js", "ebnfDiagram-CCIWWBDH-CxBzAlk6.js", "erDiagram-Q63AITRT-VSkvuC0W.js", "ganttDiagram-NO4QXBWP-B0vWYuHX.js", "gitGraphDiagram-IHSO6WYX-BlWjJlzL.js", "index-BlqerJhg.js", "index-BnzjOtf6.js", "index-CTzZF058.js", "index-DwRDwDik.js", "infoDiagram-FWYZ7A6U-DXaRgk1f.js", "ishikawaDiagram-FXEZZL3T-CgJyKREd.js", "journeyDiagram-5HDEW3XC-BCAD_Nv6.js", "kanban-definition-HUTT4EX6-Dvv6JGSL.js", "mermaid.core-CYC_FcEu.js", "mindmap-definition-LN4V7U3C-D0bHQ3wv.js", "pegDiagram-2B236MQR-Chul1Mj2.js", "pieDiagram-ENE6RG2P-CMJ1NirP.js", "quadrantDiagram-ABIIQ3AL-X392A31E.js", "railroadDiagram-RFXS5EU6-B8kLlbTz.js", "requirementDiagram-TGXJPOKE-B2p5VFgA.js", "sankeyDiagram-HTMAVEWB-ChfFdxQE.js", "scroll-pane-CvNuGyd2.js", "sequenceDiagram-DBY2YBRQ-BNP9GDaG.js", "sizeCapture-X5ZJPWSS-hiwUhpcH.js", "stateDiagram-2N3HPSRC-BquyafWL.js", "stateDiagram-v2-6OUMAXLB-DQ6ThYUh.js", "swimlanes-5IMT3BWC-BbafIj29.js", "swimlanesDiagram-G3AALYLV-BjcBflLj.js", "timeline-definition-FHXFAJF6-WUbwE7_B.js", "vennDiagram-L72KCM5P-fVic-998.js", "view-1r0bwdK4.js", "view-3mdFcnEj.js", "view-B5Ug8wEm.js", "view-BEocLLTG.js", "view-BKPMMMAd.js", "view-BMD9fbyy.js", "view-BRftG-LF.js", "view-BXS10NUs.js", "view-BuhxMXKm.js", "view-CIFdOvCz.js", "view-CMppcJ9s.js", "view-Cbx1-ckK.js", "view-CizPQWLy.js", "view-ClhdNXKM.js", "view-D0otXpJy.js", "view-D9Ei08gq.js", "view-DPSBrvyV.js", "view-DW7RVxhH.js", "view-DqTN67x_.js", "view-DyaeCHiE.js", "view-HYU0bFxa.js", "view-LYKe8-aA.js", "view-QqBtBG74.js", "wardleyDiagram-EHGQE667-BT3olFZ2.js", "xychartDiagram-FW5EYKEG-Bf5iZnqd.js"
+      ],
+      "includesMermaidDagreCytoscapeChunks": true,
+      "exactShippedPackageMapping": false
+    }
+  },
+  "promotionBlockers": [
+    "Root package.json, package-lock.json, and node_modules contain no Mermaid closure.",
+    "The immutable bundle retains a static import of opaque index-UbX-y3il.js.",
+    "Mermaid dependencies are mostly ranges; no retained shipped lock maps their resolved versions or integrities.",
+    "No retained artifact maps public package tarballs and transitive trees to the immutable 71-file graph.",
+    "A clean public build has not been proven runtime-equivalent for initialize/parse/render and the Mermaid fixture."
+  ],
+  "negativeBoundary": {
+    "forbiddenRuntimeFiles": ["index-UbX-y3il.js"],
+    "forbiddenManifestEntries": ["index-UbX-y3il.js", "mermaid.core-CYC_FcEu.js"],
+    "noPartialShim": true
+  },
+  "preservedGraphs": ["katex@0.16.45", "pdfjs-dist@5.4.296", "ws@8.20.0", "undici@5.29.0"]
+}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js",
+  "mount": {
+    "rootId": "root",
+    "failure": "Invariant violation (message stripped in packaged builds; the stack identifies the site)",
+    "anchors": [
+      { "needle": "const rgt=document.getElementById(\"root\");", "byteOffset": 5788077 },
+      { "needle": "gAt.createRoot(rgt).render(", "byteOffset": 5792947 },
+      { "needle": "p.jsx(S.StrictMode", "byteOffset": 5792974 }
+    ]
+  },
+  "runtimeAcquisition": {
+    "desktop": { "needle": "const sye=PGn(),um=_Gn(sye);", "byteOffset": 5788133, "required": true },
+    "coordinatorPort": { "needle": "const _he=rGn({portBridge:sGn()})", "byteOffset": 5788400, "required": true },
+    "claimMayBeUnavailable": true
+  },
+  "providerOrder": [
+    { "emittedSymbol": "S.StrictMode", "anchor": "p.jsx(S.StrictMode", "byteOffset": 5792974 },
+    { "emittedSymbol": "lme", "anchor": "p.jsx(lme,{boundary:\"app\",variant:\"app\"", "byteOffset": 5793003 },
+    { "emittedSymbol": "ad", "anchor": "p.jsx(ad,{menuSize:\"md\"", "byteOffset": 5793052 },
+    { "emittedSymbol": "JPt", "anchor": "p.jsx(JPt,{client:Er", "byteOffset": 5793085 },
+    { "emittedSymbol": "OOn", "anchor": "p.jsxs(OOn,{handle:ogt", "byteOffset": 5793115 }
+  ],
+  "rootChildren": ["zzn", "JVn", "LVn", "AVn", "BGn", "Yzn:$zn"],
+  "routing": {
+    "kind": "store-handle",
+    "emittedProvider": "OOn",
+    "handle": "ogt",
+    "browserRouterAnchor": null,
+    "hashRouterAnchor": null,
+    "routerProviderAnchor": null
+  },
+  "lazyFeatureRegistry": "recovered/frontend/reports/features.json",
+  "lazyBoundaries": [
+    { "id": "overlay:computer", "originalEntrypoint": "./features/computer/overlay/entrypoint.ts", "originalView": "./features/computer/overlay/view.tsx", "productionChunk": "assets/view-ChG-6rmU.js", "cleanDynamicEntry": "src/recovered/features/computer/overlay/view.tsx", "disposition": "exact-null-placeholder" },
+    { "id": "overlay:hidden-chats", "originalEntrypoint": "./features/hidden-chats/overlay/entrypoint.ts", "originalView": "./features/hidden-chats/overlay/view.tsx", "productionChunk": "assets/view-Cbx1-ckK.js", "cleanDynamicEntry": "src/recovered/features/hidden-chats/overlay/view.tsx", "disposition": "recovered-view" },
+    { "id": "view:org-chart", "originalEntrypoint": "./features/org-chart/workspace/entrypoint.ts", "originalView": "./features/org-chart/workspace/view.tsx", "productionChunk": "assets/view-D0otXpJy.js", "cleanDynamicEntry": "src/recovered/features/org-chart/workspace/view.tsx", "disposition": "recovered-view" },
+    { "id": "overlay:plugins", "originalEntrypoint": "./features/plugins/overlay/entrypoint.ts", "originalView": "./features/plugins/overlay/view.tsx", "productionChunk": "assets/view-B5Ug8wEm.js", "cleanDynamicEntry": "src/recovered/features/plugins/overlay/desktop-surface.tsx", "disposition": "recovered-desktop-adapter" },
+    { "id": "overlay:settings", "originalEntrypoint": "./features/settings/overlay/entrypoint.ts", "originalView": "./features/settings/overlay/view.tsx", "productionChunk": "assets/view-BRftG-LF.js", "cleanDynamicEntry": "src/recovered/features/settings/overlay/desktop-surface.tsx", "disposition": "recovered-desktop-adapter" }
+  ],
+  "unsupportedLazyChunks": [],
+  "expectedFeatureSurfaces": 5,
+  "expectedShippedRoutes": 11
+}

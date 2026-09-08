@@ -1,0 +1,332 @@
+/* @evidence src/app/dist/renderer/assets/index-lCyB53CO.css#L1 */
+/* Exact immutable icon-font dependency used by every recovered data-icon-name and
+ * cursor-icons glyph. The binary is hash-pinned in computer-shell-evidence.json. */
+@font-face {
+  font-family: "cursor-icons";
+  font-display: block;
+  src: url("../recovered/features/computer/shell/cursor-icons-16-f_W_ogc-.woff2") format("woff2");
+}
+
+:root {
+  color-scheme: light dark;
+  font-family: var(--cursor-font-family-sans);
+  font-synthesis: none;
+  background: var(--cursor-bg-editor);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+button, textarea, input { font: inherit; }
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=5563488 (root shell consumer) */
+.sand-shell {
+  color: var(--cursor-text-primary);
+  background: var(--cursor-bg-editor);
+  font-family: var(--cursor-font-family-sans);
+}
+.sand-shell button { cursor: pointer; }
+.sand-shell button:disabled { cursor: not-allowed; }
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2983995-2986100 */
+/* The shipped root uses a flex sidebar column and a footer-profile slot. Keep
+ * the recovered shell's native grid host intact while restoring that ownership
+ * boundary for the account trigger/menu. */
+.sand-agents-sidebar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  padding: 0;
+  background: var(--cursor-bg-chrome);
+  border-right: .5px solid var(--sand-border-weak);
+  container-name: sand-sidebar;
+  container-type: inline-size;
+}
+.sand-agents-sidebar__plugins {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  color: var(--cursor-text-primary);
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+
+.sand-agents-sidebar__plugins:hover { background: var(--cursor-bg-secondary); }
+.sand-agents-sidebar__plugins-entry { padding: 4px 8px; }
+.sand-agents-sidebar__plugins { justify-content: flex-start; border-radius: var(--cursor-radius-lg); }
+
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2983995-2986100 */
+/* @evidence src/app/dist/renderer/assets/index-lCyB53CO.css#byteOffset=0 (immutable menu surface tokens) */
+.sand-agents-sidebar__account {
+  position: relative;
+  min-width: 0;
+}
+.sand-agents-sidebar__account > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 8px;
+  color: var(--cursor-text-primary);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: var(--cursor-radius-lg);
+  cursor: pointer;
+}
+.sand-agents-sidebar__account > button:hover,
+.sand-agents-sidebar__account > button[aria-expanded="true"] { background: var(--cursor-bg-secondary); }
+.sand-agents-sidebar__account > button > span:first-child {
+  display: grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  overflow: hidden;
+  color: var(--cursor-base);
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--sand-fill-accent);
+  border-radius: var(--cursor-radius-lg);
+}
+.sand-agents-sidebar__account > button > span:first-child img { width: 100%; height: 100%; object-fit: cover; }
+.sand-agents-sidebar__account > button > span:last-child { display: grid; min-width: 0; gap: 2px; }
+.sand-agents-sidebar__account > button > span:last-child strong,
+.sand-agents-sidebar__account > button > span:last-child small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sand-agents-sidebar__account > button > span:last-child strong { font-size: var(--cursor-font-size-base); font-weight: 600; }
+.sand-agents-sidebar__account > button > span:last-child small { color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-xs); }
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=424809 (LegacyMenu.Content account-menu surface) */
+[aria-label="Account"].ui-menu__content {
+  display: grid;
+  gap: 2px;
+  min-width: 228px;
+  max-width: min(360px, calc(100vw - 16px));
+  padding: 6px;
+  color: var(--cursor-text-primary);
+  font-size: var(--cursor-font-size-base);
+  line-height: var(--cursor-line-height-base);
+  letter-spacing: 0;
+  background: var(--cursor-bg-elevated);
+  border: 1px solid var(--cursor-stroke-secondary);
+  border-radius: var(--cursor-radius-xl);
+  box-shadow: var(--cursor-box-shadow-md);
+}
+[aria-label="Account"].ui-menu__content [role="menuitem"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  min-height: 30px;
+  padding: 6px 8px;
+  color: var(--cursor-text-primary);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: var(--cursor-radius-base);
+  cursor: pointer;
+}
+[aria-label="Account"].ui-menu__content [role="menuitem"]:hover:not([aria-disabled="true"]),
+[aria-label="Account"].ui-menu__content [role="menuitem"]:focus-visible:not([aria-disabled="true"]) { color: var(--cursor-text-primary); background: var(--cursor-bg-secondary); }
+[aria-label="Account"].ui-menu__content [role="menuitem"][aria-disabled="true"] { color: var(--sand-text-disabled); cursor: default; }
+[aria-label="Account"].ui-menu__content hr { width: calc(100% - 16px); height: 1px; margin: 4px 8px; background: var(--cursor-stroke-secondary); border: 0; }
+.sand-agents-sidebar__account-name,
+.sand-agents-sidebar__account-name-input { min-width: 0; margin: 0 8px 2px; }
+.sand-agents-sidebar__account-name { display: inline-flex; align-items: center; color: var(--cursor-text-secondary); background: transparent; border: 0; cursor: pointer; font-size: var(--cursor-font-size-base); }
+.sand-agents-sidebar__account-name-input { width: calc(100% - 16px); padding: 4px 6px; color: var(--cursor-text-primary); background: var(--cursor-bg-input); border: 1px solid var(--cursor-stroke-secondary); border-radius: var(--cursor-radius-base); outline: none; }
+
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2983995 (Rct footer root) */
+.sand-agents-sidebar__footer {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-width: 0;
+  padding: 2px 12px 12px;
+}
+
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2605212 (a0n search control) */
+.sand-agents-sidebar__search {
+  width: calc(100% - 24px);
+  margin: 4px 12px;
+  justify-content: flex-start;
+  box-shadow: inset 0 0 0 .5px var(--sand-border-weak);
+}
+.sand-agents-sidebar__search > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cursor-spacing-1);
+}
+
+@container sand-sidebar (max-width: 130px) {
+  .sand-agents-sidebar__footer { padding: 0 8px 8px; }
+  .sand-agents-sidebar__search { display: none; }
+}
+
+.sand-chat-header__identity { display: flex; align-items: center; gap: 9px; }
+
+.sand-onboarding {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--sand-text-primary);
+  background-color: var(--cursor-bg-editor);
+  font-family: var(--cursor-font-family-sans);
+}
+
+.sand-onboarding__landing {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  width: min(520px, 100%);
+  text-align: center;
+  place-self: center;
+}
+.sand-onboarding__landing h1,
+.sand-onboarding__landing p { margin: 0; }
+.sand-onboarding__landing > p { color: var(--cursor-text-secondary); }
+.sand-onboarding__landing button {
+  padding: 9px 18px;
+  color: var(--sand-text-on-color);
+  background: var(--cursor-bg-accent);
+  border: 0;
+  border-radius: 999px;
+}
+.sand-onboarding__landing-wait { display: grid; gap: 10px; }
+.sand-onboarding__landing-wait > span { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.sand-onboarding__landing-wait button { padding: 0; color: var(--cursor-text-accent); background: transparent; }
+
+.sand-about-dialog,
+.sand-feedback-dialog,
+.sand-alert-dialog,
+.sand-deep-link-info {
+  position: relative;
+  overflow: hidden;
+  color: var(--cursor-text-primary);
+  background: var(--cursor-bg-elevated);
+  border: 1px solid var(--cursor-stroke-secondary);
+  border-radius: 12px;
+  box-shadow: var(--cursor-box-shadow-xl);
+}
+.sand-about-dialog { width: 360px; }
+.sand-feedback-dialog { width: min(460px, 100%); }
+.sand-alert-dialog { width: min(380px, 100%); padding: 20px; }
+.sand-deep-link-info { width: min(360px, 100%); }
+.sand-about-dialog > button { position: absolute; top: 8px; right: 10px; color: var(--cursor-text-secondary); background: transparent; border: 0; font-size: 20px; }
+.sand-about-dialog > div { display: grid; justify-items: center; gap: 8px; padding: 42px 24px 28px; text-align: center; }
+.sand-about-dialog > div h2, .sand-about-dialog > div p { margin: 0; }
+.sand-about-dialog > div small { margin-top: 20px; color: var(--cursor-text-tertiary); }
+.sand-about-dialog footer,
+.sand-feedback-dialog footer,
+.sand-alert-dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--cursor-stroke-secondary); }
+.sand-about-dialog footer button,
+.sand-feedback-dialog footer button,
+.sand-alert-dialog footer button { padding: 8px 12px; color: var(--cursor-text-primary); background: var(--cursor-bg-secondary); border: 0; border-radius: 7px; }
+.sand-feedback-dialog footer button:last-child,
+.sand-alert-dialog footer button:last-child { color: var(--cursor-text-on-color); background: var(--cursor-bg-accent); }
+.sand-feedback-dialog header { padding: 18px 20px 0; }
+.sand-feedback-dialog header h2 { margin: 0; }
+.sand-feedback-dialog > div { display: grid; gap: 14px; padding: 16px 20px 20px; }
+.sand-feedback-dialog > div p { margin: 0; color: var(--cursor-text-secondary); }
+.sand-feedback-dialog textarea { min-height: 140px; padding: 10px; resize: vertical; color: var(--cursor-text-primary); background: var(--cursor-bg-input); border: 1px solid var(--cursor-stroke-secondary); border-radius: 8px; }
+.sand-feedback-dialog label { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.sand-alert-dialog h2, .sand-alert-dialog p { margin: 0 0 12px; }
+.sand-alert-dialog p { color: var(--cursor-text-secondary); }
+.sand-alert-dialog footer { margin: 20px -20px -20px; }
+.sand-deep-link-info header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px 0; }
+.sand-deep-link-info header h2, .sand-deep-link-info header p { margin: 0; }
+.sand-deep-link-info header p, .sand-deep-link-info > div p { color: var(--cursor-text-secondary); }
+.sand-deep-link-info header button { color: var(--cursor-text-secondary); background: transparent; border: 0; font-size: 20px; }
+.sand-deep-link-info > div { display: grid; gap: 14px; padding: 16px 20px 20px; }
+.sand-deep-link-info > div > div { display: grid; gap: 5px; }
+.sand-deep-link-info > div p { margin: 0; font-size: 12px; }
+.sand-deep-link-info code { overflow-wrap: anywhere; color: var(--cursor-text-primary); }
+.sand-deep-link-info footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--cursor-stroke-secondary); }
+.sand-deep-link-info footer button { padding: 8px 12px; color: var(--cursor-text-on-color); background: var(--cursor-bg-accent); border: 0; border-radius: 7px; }
+
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L523 */
+.sand-command-palette {
+  position: fixed;
+  z-index: 3000;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 560px;
+  max-width: 92vw;
+  max-height: calc(100vh - (2 * max(16px, var(--sand-window-controls-block, 0px))));
+  overflow: hidden;
+  color: var(--cursor-text-primary);
+  background-color: var(--cursor-bg-elevated);
+  border: .5px solid var(--cursor-stroke-secondary);
+  border-radius: var(--cursor-radius-2xl);
+  box-shadow: var(--cursor-box-shadow-lg);
+  transform: translate(-50%, -50%);
+}
+.sand-command-palette > input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--cursor-spacing-3-5) var(--cursor-spacing-2-5) var(--cursor-spacing-3-5) var(--cursor-spacing-3-5);
+  color: var(--cursor-text-primary);
+  background: transparent;
+  border: 0;
+  border-bottom: .5px solid var(--cursor-stroke-tertiary);
+  outline: none;
+}
+.sand-command-palette > [role="tablist"] {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: var(--cursor-spacing-0-5);
+  padding: var(--cursor-spacing-2) var(--cursor-spacing-2) calc(var(--cursor-spacing-2) + 1px);
+  margin-bottom: -1px;
+  background-color: var(--sand-bg-elevated);
+}
+.sand-command-palette [role="tab"],
+.sand-command-palette [role="option"] {
+  color: inherit;
+  background: transparent;
+  border: 0;
+}
+.sand-command-palette > [role="listbox"] {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--cursor-spacing-0-5);
+  height: 360px;
+  padding: var(--cursor-spacing-2);
+  overflow: auto;
+}
+.sand-command-palette [role="option"] {
+  display: flex;
+  align-items: center;
+  gap: var(--cursor-spacing-2);
+  height: 49px;
+  padding: var(--cursor-spacing-2);
+  text-align: left;
+}
+.sand-command-palette [role="option"] > small:first-of-type { margin-left: auto; }
+.sand-command-palette [aria-selected="true"] { background: var(--cursor-bg-secondary); }
+
+/*
+ * @evidence src/app/dist/renderer/assets/index-lCyB53CO.css#byteOffset=539920
+ * The immutable global focus ring is scoped to these two mounted menu surfaces
+ * so the production root and unrelated recovered controls remain disjoint.
+ */
+.sand-command-palette :is(button, input, [role="tab"], [role="option"]):focus-visible,
+.sand-agents-sidebar__account :is(button, input, [role="menuitem"]):focus-visible {
+  outline: 2px solid var(--cursor-stroke-focused);
+  outline-offset: 1px;
+}

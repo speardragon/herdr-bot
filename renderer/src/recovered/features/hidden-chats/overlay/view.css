@@ -1,0 +1,42 @@
+/* @evidence src/app/dist/renderer/assets/view-Cbx1-ckK.js#L1 */
+.sand-hidden-chats-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(680px, calc(100vh - 32px));
+  overflow: hidden;
+  color: var(--cursor-text-primary);
+  background: var(--cursor-bg-elevated);
+  border: 1px solid var(--cursor-border-secondary);
+  border-radius: 14px;
+  box-shadow: 0 24px 80px var(--sand-shadow-window-ambient);
+}
+
+.sand-hidden-chats__row,
+.sand-hidden-chats__open {
+  display: flex;
+  align-items: center;
+}
+
+.sand-hidden-chats__open,
+.sand-hidden-chats__unhide {
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sand-hidden-chats__empty { padding: 44px 16px; color: var(--cursor-text-secondary); text-align: center; }
+.sand-hidden-chats__empty span { display: block; margin: 4px; }
+
+.sand-hidden-chats__row {
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.sand-hidden-chats__row:hover { background: var(--cursor-bg-hover); }
+.sand-hidden-chats__open { flex: 1; gap: 10px; min-width: 0; text-align: left; }
+.sand-hidden-chats__unhide { padding: 6px 8px; color: var(--cursor-text-secondary); }
+.sand-hidden-chats__unhide:hover { color: var(--cursor-text-primary); }

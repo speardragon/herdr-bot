@@ -1,0 +1,24 @@
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#pdf-viewer-selectors */
+.sand-file-viewer { position: fixed; inset: 0; z-index: 4000; display: flex; overflow: hidden; background: rgba(13, 15, 12, .96); }
+.sand-file-viewer__panel { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; margin: 16px; overflow: hidden; color: #d9ded4; background: #171916; border: 1px solid #343832; border-radius: 10px; }
+.sand-file-viewer__header { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 8px 12px; border-bottom: 1px solid #343832; }
+.sand-file-viewer__header h2 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
+.sand-file-viewer__header span { color: #858d80; font-size: 10px; }
+.sand-file-viewer__toolbar, .sand-file-viewer__actions { display: flex; align-items: center; gap: 4px; }
+.sand-file-viewer__toolbar { margin: auto; }
+.sand-file-viewer__toolbar button, .sand-file-viewer__actions button { display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 7px; color: #d9ded4; background: #20231f; border: 1px solid #343832; border-radius: 7px; cursor: pointer; font: inherit; }
+.sand-file-viewer__toolbar button:hover, .sand-file-viewer__toolbar button:focus-visible, .sand-file-viewer__actions button:hover, .sand-file-viewer__actions button:focus-visible { color: #eef3e7; background: #292d26; outline: 1px solid #a9c85d; outline-offset: 1px; }
+.sand-file-viewer__body { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: 24px; }
+.sand-file-viewer__body > div { display: grid; justify-items: center; gap: 16px; min-width: max-content; width: 100%; }
+.sand-pdf-page { position: relative; overflow: hidden; flex: 0 0 auto; background: #fff; box-shadow: 0 2px 16px rgba(0, 0, 0, .32); }
+.sand-pdf-page > img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.sand-pdf-page__text { position: absolute; inset: 0; text-align: initial; overflow: clip; opacity: 1; line-height: 1; -webkit-text-size-adjust: none; text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; caret-color: CanvasText; z-index: 1; }
+.sand-pdf-page__text :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+.sand-pdf-page__text span[role="img"] { -webkit-user-select: none; user-select: none; cursor: default; }
+.sand-pdf-page__text ::selection { background: color-mix(in srgb, AccentColor, transparent 75%); }
+.sand-pdf-page__badge { position: absolute; right: 8px; bottom: 8px; z-index: 2; padding: 3px 6px; color: #30342d; background: rgba(255, 255, 255, .82); border-radius: 4px; font-size: 10px; }
+.sand-file-viewer__body[role="alert"], .sand-file-viewer__body[role="status"] { display: grid; place-content: center; justify-items: center; gap: 8px; width: 100%; padding: 40px; color: #c5cbc0; text-align: center; font-size: 13px; }
+.sand-file-viewer__body[role="alert"] { color: #f0a7a7; }
+.sand-file-viewer__body span { max-width: 360px; color: #9aa396; font-size: 11px; }
+.sand-file-viewer__body button { padding: 6px 10px; color: #171914; background: #d8fa78; border: 0; border-radius: 7px; cursor: pointer; font: inherit; font-size: 11px; }
+.sand-file-viewer__body button:hover, .sand-file-viewer__body button:focus-visible { background: #e5ff9e; outline: 1px solid #a9c85d; outline-offset: 1px; }

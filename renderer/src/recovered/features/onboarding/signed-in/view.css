@@ -1,0 +1,50 @@
+/* Immutable anchors: index-lCyB53CO.css line 1; renderer JS line 523. */
+@keyframes sand-onboarding-step-enter { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sand-onboarding-step-exit { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sand-onboarding-cast-bob { from { transform: translateY(calc(var(--cast-bob-amp) * -1)); } to { transform: translateY(var(--cast-bob-amp)); } }
+@keyframes sand-onboarding-suggestion-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.sand-onboarding { background: var(--cursor-bg-editor, #fff); color: var(--sand-text-primary, #111); display: grid; font-family: var(--cursor-font-family-sans, sans-serif); grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); inset: 0; min-height: 0; min-width: 0; overflow: hidden; position: fixed; }
+.sand-onboarding__step { animation: sand-onboarding-step-enter .2s ease-out both; grid-area: 1 / 1; min-height: 0; min-width: 0; position: relative; z-index: 1; }
+.sand-onboarding__step > main { height: 100%; min-height: 0; min-width: 0; }
+.sand-onboarding__meet, .sand-onboarding__computer-demo, .sand-onboarding__jobs, .sand-onboarding__tools { inset: 0; overflow: hidden; position: absolute; }
+.sand-onboarding__meet > h1, .sand-onboarding__computer-demo > h1, .sand-onboarding__jobs > h1, .sand-onboarding__tools > h1 { font-size: 28px; font-weight: 500; left: 50%; letter-spacing: -.02em; line-height: 34px; margin: 0; position: absolute; text-align: center; top: calc(50% - 264px); transform: translateX(-50%); width: min(624px, calc(100% - 48px)); }
+.sand-onboarding__footer { align-items: center; display: flex; flex-direction: column; gap: 12px; inset-inline: 0; position: absolute; top: calc(50% + 200px); }
+.sand-onboarding__footer > button, .sand-onboarding__footer > span > button { height: 36px; width: 288px; }
+.sand-onboarding__footer > span { display: flex; justify-content: center; }
+.sand-onboarding__composer { background-color: var(--sand-fill-elevated); border: .5px solid var(--sand-border-default); border-radius: 22px; box-shadow: 0 2px 8px -1px #0000000d, 0 1px 2px #00000008, 0 0 0 1px #e4e4e40a; display: flex; flex-direction: column; gap: 10px; left: 50%; padding: 12px 8px 8px; position: absolute; top: 50%; transform: translate(-50%, -14px); width: 348px; }
+.sand-onboarding__composer > p { margin: 0; min-height: 42px; }
+.sand-onboarding__composer > span { display: flex; justify-content: space-between; }
+.sand-onboarding__cast { left: 50%; pointer-events: none; position: absolute; top: 50%; z-index: 2; }
+.sand-onboarding__cast > div { height: 80px; left: -40px; pointer-events: auto; position: absolute; top: -40px; transition-property: transform, opacity; }
+
+.sand-onboarding__demo-card { background-color: #90c5fd; border: .79px solid #1414141f; border-radius: 16.59px; box-shadow: 0 15.8px 44.24px #00000038; height: 300px; left: 50%; overflow: hidden; position: absolute; top: 50%; transform: translate(-50%, calc(-50% - 21px)); width: 441px; }
+.sand-onboarding__demo-card > img { height: 100%; inset: 0; object-fit: cover; position: absolute; width: 100%; }
+
+.sand-onboarding__job-bubble { align-items: center; background-color: var(--sand-fill-secondary-solid); border-radius: 18px; display: inline-flex; font-size: 17px; font-weight: var(--sand-font-weight-medium); justify-content: center; left: 50%; letter-spacing: -.44px; line-height: 22px; max-width: 276px; padding: 8px 16px; position: absolute; top: 50%; transition: opacity .4s, transform .4s; white-space: nowrap; }
+.sand-onboarding__tools > label { align-items: center; background-color: var(--sand-fill-secondary); border: .5px solid var(--sand-border-weak); border-radius: 9999px; display: flex; gap: 8px; left: 50%; padding: 8px 4px 8px 12px; position: absolute; top: 50%; transform: translate(-50%, -167px); width: 300px; }
+.sand-onboarding__tools > label input { background: transparent; border: 0; color: inherit; flex: 1; outline: 0; }
+.sand-onboarding__tools > div:not(.sand-onboarding__footer) { display: grid; gap: 12px; grid-template-columns: repeat(3, 200px); height: 300px; left: 50%; max-width: 100%; overflow: auto; padding-bottom: 64px; position: absolute; top: 50%; transform: translate(-50%, -117px); width: 624px; }
+.sand-onboarding__tools > div:not(.sand-onboarding__footer) > button { align-items: center; display: flex; flex-direction: column; justify-content: center; }
+
+.sand-onboarding__create { align-items: stretch; background-color: var(--sand-bg-base); display: flex; height: 100%; }
+.sand-onboarding__create > aside { background-color: var(--sand-bg-subtle); border-right: .5px solid var(--sand-border-default); box-sizing: border-box; display: flex; flex-direction: column; flex-shrink: 0; width: 280px; }
+.sand-onboarding__create > aside > div { align-items: center; display: flex; gap: 8px; }
+.sand-onboarding__create > aside > p { text-align: center; }
+.sand-onboarding__create > aside > div > p { margin: 0; text-align: center; width: 100%; }
+.sand-onboarding__create > div { display: flex; flex-direction: column; flex-grow: 1; min-width: 0; }
+.sand-onboarding__create > div > header { align-items: center; border-bottom: .5px solid var(--sand-border-weak); box-sizing: border-box; display: flex; flex-shrink: 0; gap: 4px; height: 44px; padding-inline: 8px; }
+.sand-onboarding__create h1 { font-size: 20px; margin: 0; }
+.sand-onboarding__suggestions { display: flex; flex-direction: column; gap: 16px; min-width: 0; padding-bottom: 6px; }
+.sand-onboarding__suggestions > h2 { font-size: 17px; font-weight: 500; line-height: 22px; margin: 0 20px; }
+.sand-onboarding__suggestions > div > div { display: flex; gap: 16px; }
+.sand-onboarding__suggestion-card { align-items: center; animation: sand-onboarding-suggestion-enter .42s cubic-bezier(.1,.9,.2,1) both; background: var(--sand-bg-base); border: 1px solid var(--sand-border-subtle); border-radius: 16px; box-sizing: border-box; display: flex; flex: 0 0 280px; gap: 12px; padding: 20px; text-align: left; }
+.sand-onboarding__suggestion-card[aria-pressed="true"] { background: var(--sand-fill-secondary-solid); border-color: var(--sand-border-strong); }
+.sand-onboarding__suggestion-card > span { display: flex; flex-direction: column; min-width: 0; }
+.sand-onboarding__suggestion-card > span > span:first-child { font-size: 17px; font-weight: 500; letter-spacing: -.44px; line-height: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sand-onboarding__suggestion-card > span > span:last-child { color: var(--sand-text-secondary); display: -webkit-box; font-size: 14px; letter-spacing: -.15px; line-height: 20px; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.sand-onboarding__hand-off { align-items: center; display: flex; flex-direction: column; gap: var(--cursor-spacing-5-5); height: 100%; justify-content: center; margin-inline: auto; max-width: 100%; text-align: center; width: 305px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sand-onboarding__step, .sand-onboarding__job-bubble, .sand-onboarding__cast > div, .sand-onboarding__suggestion-card { animation: none; transition-duration: 0s; }
+}

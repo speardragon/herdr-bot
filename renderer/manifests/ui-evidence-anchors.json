@@ -1,0 +1,347 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "cleanPath": "frontend/src/production/ProductionRenderer.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-onboarding", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "registry": "frontend/src/production/evidence.ts" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/production/production.css",
+      "anchors": [
+        { "category": "selector", "value": ".sand-agents-sidebar", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 499 },
+        { "category": "selector", "value": ".sand-deep-link-info", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5348302 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/production/CommandPalette.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-command-palette", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "registry": "frontend/manifests/component-names.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/conversation/workspace/composer.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-prompt-form", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "registry": "frontend/manifests/component-names.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/conversation/workspace/sidebar.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-agent-item", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 34, "registry": "frontend/manifests/component-names.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/conversation/workspace/transcript.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-virtual-transcript", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 522, "registry": "frontend/manifests/component-names.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/permissions/local-tool/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-local-tool-permission-dock", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523 },
+        { "category": "visible-string", "value": "Allow Grok Bot and all agents to run commands on your local computer?", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/conversation/workspace/view.css",
+      "anchors": [
+        { "category": "selector", "value": ".sand-prompt-shell", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "registry": "frontend/manifests/component-names.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/computer/shell/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-computer-preview", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4837308 },
+        { "category": "selector", "value": ".sand-box-handoff-card", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4845836 },
+        { "category": "selector", "value": ".sand-computer-monitor-strip", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4812808 },
+        { "category": "visible-string", "value": "Screen preview unavailable", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4812169 },
+        { "category": "visible-string", "value": "Exit fullscreen", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4821486 },
+        { "category": "visible-string", "value": "More screens", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4816756 },
+        { "category": "visible-string", "value": "Take over the computer", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4847973 },
+        { "category": "selector", "value": ".sand-computer-cursor-overlay", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4835242 },
+        { "category": "selector", "value": ".sand-computer-banner", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4831166 },
+        { "category": "selector", "value": ".sand-box-vnc-pool", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4810954 },
+        { "category": "selector", "value": ".sand-box-vnc-pool__connecting", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4811854 },
+        { "category": "selector", "value": ".sand-box-vnc-pool__crashed", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4812092 },
+        { "category": "visible-string", "value": "Needs your attention", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4839591 },
+        { "category": "visible-string", "value": "Skip this step", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4831733 },
+        { "category": "visible-string", "value": "I'm done, continue", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4831834 },
+        { "category": "visible-string", "value": "Open computer", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4840837 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/hidden-chats/overlay/view.css",
+      "anchors": [
+        { "category": "selector", "value": ".sand-hidden-chats-dialog", "artifact": "src/app/dist/renderer/assets/view-Cbx1-ckK.js", "line": 1, "registry": "recovered/frontend/reports/features.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/onboarding/signed-in/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-onboarding", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5391939, "registry": "frontend/src/production/evidence.ts" },
+        { "category": "selector", "value": ".sand-onboarding__suggestions", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5397272 },
+        { "category": "selector", "value": ".sand-onboarding__suggestion-card", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5400625 },
+        { "category": "asset", "value": "demo-computer-wallpaper-BO7Ye4dV.jpg", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5412826 },
+        { "category": "visible-string", "value": "Suggestions", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5397250 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/onboarding/signed-in/suggestions.ts",
+      "anchors": [
+        { "category": "visible-string", "value": "Works overnight and preps your morning digest", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 512, "byteOffset": 4479974 },
+        { "category": "visible-string", "value": "Tracks competitor pricing and launches, and briefs you weekly", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 512, "byteOffset": 4481085 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/onboarding/signed-in/tool-assets.ts",
+      "anchors": [
+        { "category": "asset", "value": "apollo-B0sEgAUH.png", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 34, "byteOffset": 1200968 },
+        { "category": "asset", "value": "workday-DI2a8j1o.svg", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 34, "byteOffset": 1200968 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/onboarding/signed-in/view.css",
+      "anchors": [
+        { "category": "selector", "value": ".sand-onboarding", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "registry": "frontend/src/production/evidence.ts" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/hidden-chats/overlay/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-hidden-chats-dialog", "artifact": "src/app/dist/renderer/assets/view-Cbx1-ckK.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/account/session/sign-out.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-alert-dialog", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 537, "byteOffset": 5744981, "registry": "frontend/src/production/evidence.ts" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/account/session/sign-in-status.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-onboarding__landing-wait", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5432418, "registry": "frontend/src/production/evidence.ts" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/account/session/menu.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-agents-sidebar__account", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 499, "byteOffset": 2337409, "registry": "frontend/src/production/evidence.ts" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/roster/privacy-blocked.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-privacy-blocked-dialog", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5337901, "registry": "frontend/src/production/evidence.ts" },
+        { "category": "visible-string", "value": "Update Privacy Mode", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5336023, "registry": "frontend/src/production/evidence.ts" },
+        { "category": "visible-string", "value": "Open Privacy Settings", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5336291, "registry": "frontend/src/production/evidence.ts" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/roster/reconnect-notice.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-agents-reconnect-notice", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2560288, "registry": "frontend/src/production/evidence.ts" },
+        { "category": "selector", "value": ".sand-agents-reconnect-notice__label", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2560382, "registry": "frontend/src/production/evidence.ts" },
+        { "category": "visible-string", "value": "Reconnecting to your computer…", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2560456, "registry": "frontend/src/production/evidence.ts" },
+        { "category": "visible-string", "value": "Retrying…", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2560564, "registry": "frontend/src/production/evidence.ts" },
+        { "category": "visible-string", "value": "Retry", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2560578, "registry": "frontend/src/production/evidence.ts" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/roster/status.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-agents-state", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2556476 },
+        { "category": "selector", "value": ".sand-agents-state--connecting", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2556476 },
+        { "category": "selector", "value": ".sand-agents-state--unreachable", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2558022 },
+        { "category": "selector", "value": ".sand-agents-state__header", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2556520 },
+        { "category": "selector", "value": ".sand-agents-state__label", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2556754 },
+        { "category": "selector", "value": ".sand-agents-state__body", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2557277 },
+        { "category": "selector", "value": ".sand-agents-state__actions", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2557464 },
+        { "category": "selector", "value": ".sand-agents-state__retrying", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2559304 },
+        { "category": "selector", "value": ".sand-agents-empty", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2562271 },
+        { "category": "visible-string", "value": "Connecting to your computer…", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2556754 },
+        { "category": "visible-string", "value": "Can’t reach your computer", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2556999 },
+        { "category": "visible-string", "value": "Your agents are safe — they just can’t be loaded right now.", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2557031 },
+        { "category": "visible-string", "value": "Retry", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2557511 },
+        { "category": "visible-string", "value": "Retrying…", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2559304 },
+        { "category": "visible-string", "value": "No saved agents yet.", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2562327 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/root-resilience/connection-state.ts",
+      "anchors": [
+        { "category": "dom-signature", "value": "sand-agents-state", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2556476, "registry": "frontend/src/production/evidence.ts" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/org-chart/workspace/graph.css",
+      "anchors": [
+        { "category": "selector", "value": ".sand-org-chart-network", "artifact": "src/app/dist/renderer/assets/view-D0otXpJy.js", "line": 1, "registry": "recovered/frontend/reports/features.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/org-chart/workspace/graph.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-org-chart-network", "artifact": "src/app/dist/renderer/assets/view-D0otXpJy.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/org-chart/workspace/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-org-chart", "artifact": "src/app/dist/renderer/assets/view-D0otXpJy.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" },
+        { "category": "visible-string", "value": "Org chart", "artifact": "src/app/dist/renderer/assets/view-D0otXpJy.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" },
+        { "category": "visible-string", "value": "Close org chart", "artifact": "src/app/dist/renderer/assets/view-D0otXpJy.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/plugins/overlay/browser.css",
+      "anchors": [
+        { "category": "selector", "value": ".sand-plugins-dialog", "artifact": "src/app/dist/renderer/assets/view-B5Ug8wEm.js", "line": 1, "registry": "recovered/frontend/reports/features.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/plugins/overlay/browser.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-plugins", "artifact": "src/app/dist/renderer/assets/view-B5Ug8wEm.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/plugins/overlay/desktop-surface.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-plugins-dialog", "artifact": "src/app/dist/renderer/assets/view-B5Ug8wEm.js", "line": 1, "registry": "recovered/frontend/reports/features.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/plugins/overlay/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-plugins-dialog", "artifact": "src/app/dist/renderer/assets/view-B5Ug8wEm.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/settings/overlay/auto-review.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-auto-review", "artifact": "src/app/dist/renderer/assets/index-BlqerJhg.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/settings/overlay/desktop.ts",
+      "anchors": [
+        { "category": "visible-string", "value": "On-demand usage", "artifact": "src/app/dist/renderer/assets/index-BlqerJhg.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/settings/overlay/desktop-surface.tsx",
+      "anchors": [
+        { "category": "visible-string", "value": "Retry", "artifact": "src/app/dist/renderer/assets/index-BlqerJhg.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/settings/overlay/panels.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-settings-general", "artifact": "src/app/dist/renderer/assets/index-BlqerJhg.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/settings/overlay/updates.ts",
+      "anchors": [
+        { "category": "visible-string", "value": "Stable", "artifact": "src/app/dist/renderer/assets/index-BlqerJhg.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/settings/overlay/view.css",
+      "anchors": [
+        { "category": "selector", "value": ".sand-settings-dialog", "artifact": "src/app/dist/renderer/assets/index-BlqerJhg.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/settings/overlay/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-settings-dialog", "artifact": "src/app/dist/renderer/assets/index-BlqerJhg.js", "line": 1, "registry": "frontend/manifests/semantic-symbols.json" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/feedback/overlay/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-feedback-dialog", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 537, "byteOffset": 5749846, "registry": "frontend/src/production/evidence.ts" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/update/required/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-update-required", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 537, "byteOffset": 5787652 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/about/overlay/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-about-dialog", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 537, "byteOffset": 5743205, "registry": "frontend/src/production/evidence.ts" }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/error-boundary/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-error-boundary--app", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 499, "byteOffset": 2158805 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/update/status/pill.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-update-pill", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 520, "byteOffset": 4856403 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/deep-links/overlay/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-deep-link-info", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5348302 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/access/cover/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-access-cover", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5544624 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/window-chrome/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-window-controls", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 523, "byteOffset": 5540170 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/agent-info/settings/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-agent-settings", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2773215 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/automations/routines/controller.ts",
+      "anchors": [
+        { "category": "dom-signature", "value": "getAgentAutomations", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 536, "byteOffset": 5576460 },
+        { "category": "dom-signature", "value": "createAgentAutomation", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 536, "byteOffset": 5577276 },
+        { "category": "dom-signature", "value": "setAgentAutomationEnabled", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 536, "byteOffset": 5577220 },
+        { "category": "dom-signature", "value": "updateAgentAutomation", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 536, "byteOffset": 5577328 },
+        { "category": "dom-signature", "value": "deleteAgentAutomation", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 536, "byteOffset": 5577380 },
+        { "category": "dom-signature", "value": "runAgentAutomationNow", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 536, "byteOffset": 5577432 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/automations/routines/view.tsx",
+      "anchors": [
+        { "category": "selector", "value": ".sand-automation-detail", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2721225 },
+        { "category": "selector", "value": ".sand-trigger-card", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2707027 },
+        { "category": "selector", "value": ".sand-routine__list", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2741174 }
+      ]
+    },
+    {
+      "cleanPath": "frontend/src/recovered/features/automations/routines/view.css",
+      "anchors": [
+        { "category": "selector", "value": ".sand-automation-detail", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2721225 },
+        { "category": "selector", "value": ".sand-trigger-card", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2707027 },
+        { "category": "selector", "value": ".sand-routine__list", "artifact": "src/app/dist/renderer/assets/index-UbX-y3il.js", "line": 511, "byteOffset": 2741174 }
+      ]
+    }
+  ]
+}

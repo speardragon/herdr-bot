@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "entry": "recovered/frontend/app/assets/index-UbX-y3il.js",
+  "components": [
+    {
+      "symbol": "Xln",
+      "name": "AccountMenu",
+      "selector": ".sand-agents-sidebar__account",
+      "line": 50091,
+      "confidence": "high",
+      "evidence": ["Settings", "Sign in", "Sign out"]
+    },
+    {
+      "symbol": "udn",
+      "name": "AgentSidebarItem",
+      "selector": ".sand-agent-item",
+      "line": 51965,
+      "confidence": "high",
+      "evidence": ["Agent actions", "agent prop", "drag-and-drop state"]
+    },
+    {
+      "symbol": "pcn",
+      "name": "AgentSidebarHeader",
+      "selector": ".sand-agents-sidebar__header",
+      "line": 50432,
+      "confidence": "high",
+      "evidence": ["New chat", "Broadcast to agents", "Agent network"]
+    },
+    {
+      "symbol": "l6n",
+      "name": "ComposerActions",
+      "selector": ".sand-prompt-actions-row",
+      "line": 113713,
+      "confidence": "high",
+      "evidence": ["Attach file", "Send message", "Start voice input"]
+    },
+    {
+      "symbol": "hve",
+      "name": "ConversationComposer",
+      "selector": ".sand-prompt-shell",
+      "line": 117776,
+      "confidence": "high",
+      "evidence": ["attachmentPaths", "onStageFiles", "sand-prompt-form"]
+    },
+    {
+      "symbol": "aSn",
+      "name": "ChatHeader",
+      "selector": ".sand-chat-header",
+      "line": 120258,
+      "confidence": "high",
+      "evidence": ["View agent settings", "View conversation details", "sand-conversation-heading"]
+    },
+    {
+      "symbol": "i_n",
+      "name": "VirtualTranscript",
+      "selector": ".sand-virtual-transcript",
+      "line": 127971,
+      "confidence": "high",
+      "evidence": ["Conversation transcript", "role=log", "sand-transcript-row"]
+    },
+    {
+      "symbol": "zRn",
+      "name": "CommandPaletteActions",
+      "selector": ".sand-command-palette",
+      "line": 132072,
+      "confidence": "high",
+      "evidence": ["command palette arguments", "theme preference", "open settings"]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L131944 */
+.sand-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cursor-text-primary);
+  background: var(--cursor-bg-editor);
+}
+
+.sand-loading__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.sand-loading__mark {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border: 2px solid color-mix(in srgb, var(--cursor-text-primary) 20%, transparent);
+  border-top-color: var(--cursor-text-primary);
+  border-radius: 50%;
+  animation: sand-loading-spin 1s linear infinite;
+}
+
+.sand-loading__heading {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sand-loading__mark { animation: none; }
+}
+
+@keyframes sand-loading-spin {
+  to { transform: rotate(360deg); }
+}

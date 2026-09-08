@@ -1,0 +1,11 @@
+/*
+ * The shipped card chunks provide the visual utility classes consumed by the
+ * leaf views. Keep this local stylesheet free of new selectors: recovery must
+ * not invent a parallel card skin when the immutable renderer already owns
+ * the styling vocabulary.
+ *
+ * @evidence src/app/dist/renderer/assets/view-CIFdOvCz.js#byteOffset=0
+ * @evidence src/app/dist/renderer/assets/view-CizPQWLy.js#byteOffset=0
+ * @evidence src/app/dist/renderer/assets/view-ClhdNXKM.js#byteOffset=0
+ * @evidence src/app/dist/renderer/assets/view-DyaeCHiE.js#byteOffset=0
+ */
