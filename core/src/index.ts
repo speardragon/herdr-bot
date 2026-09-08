@@ -1,0 +1,15 @@
+export { resolveConfig, hostPaths, type HostConfig } from "./config.ts";
+export { createHost, type Host, type HostStatus, type SendUserMessageArgs } from "./host.ts";
+export { HostEvents, type HostEventFamily } from "./host-events.ts";
+export { createHerdrCli, type HerdrCli } from "./herdr/cli.ts";
+export { HerdrError, type HerdrAgentInfo, type BotRuntime } from "./herdr/types.ts";
+export { createCoordinatorDispatcher } from "./coordinator/dispatcher.ts";
+export { createRendererPortServer, type RendererPort, type RendererPortServer } from "./coordinator/port-server.ts";
+export { COORDINATOR_PROTOCOL_VERSION, type CoordinatorFrame, type CoordinatorReplyOutcome } from "./coordinator/frames.ts";
+export { controlRequest } from "./control/client.ts";
+export { ControlError } from "./control/protocol.ts";
+export type { AgentSummary } from "./model/summaries.ts";
+export type { BotProfile, PermissionMode } from "./store/profile-store.ts";
+export type { RoomConfig } from "./store/room-store.ts";
+export type { StoredEntry, TranscriptPage } from "./store/transcript-store.ts";
+export { SUPPORTED_KINDS } from "./bots/launch-args.ts";

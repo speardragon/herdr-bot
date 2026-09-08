@@ -19,9 +19,11 @@ if (logPath) appendFileSync(logPath, `${JSON.stringify({ argv: process.argv.slic
 const argv = process.argv.slice(2);
 const [group, command, ...rest] = argv;
 
-function ok(result) {
+function ok(result, mutated = true) {
   process.stdout.write(`${JSON.stringify({ id: "fake", result })}\n`);
-  save();
+  // Read-only commands must not re-save: a concurrent mutating call could finish first, and
+  // saving our own (now stale) in-memory snapshot would silently erase its update.
+  if (mutated) save();
   process.exit(0);
 }
 function fail(code, message) {
@@ -29,7 +31,9 @@ function fail(code, message) {
   process.exit(1);
 }
 function save() {
-  const temp = `${statePath}.tmp`;
+  // Unique per process: two fake-herdr invocations racing on a shared ".tmp" path can rename
+  // each other's temp file out from under themselves (ENOENT). This keeps concurrent saves independent.
+  const temp = `${statePath}.tmp.${process.pid}`;
   writeFileSync(temp, JSON.stringify(state, null, 2));
   renameSync(temp, statePath);
 }
@@ -79,8 +83,10 @@ async function agentPrompt() {
   if (agent.agent_status === "blocked") fail("agent_blocked", "agent is blocked");
   state.prompts.push({ target, text });
   const script = state.onPrompt[agent.name] ?? null;
-  // Only turn prompts carry a room/DM tag; the identity brief must not trigger scripted replies.
-  const isTurnPrompt = /\[herdr-bot (room |DM\])/.test(text);
+  // Only turn prompts carry a room/DM tag at the very start; the identity brief opens with the
+  // bare "[herdr-bot]" tag but also *mentions* "[herdr-bot room ...]"/"[herdr-bot DM]" further down
+  // as documentation, so this must anchor to the start of the text or the brief would falsely match.
+  const isTurnPrompt = /^\[herdr-bot (room |DM\])/.test(text);
   const roomMatch = /\bsay (\S+) "/.exec(text);
   const chatId = roomMatch ? roomMatch[1] : null;
   if (script && chatId && isTurnPrompt) {
@@ -97,10 +103,10 @@ async function agentPrompt() {
 }
 
 async function main() {
-  if (group === "agent" && command === "list") return ok({ agents: state.agents });
+  if (group === "agent" && command === "list") return ok({ agents: state.agents }, false);
   if (group === "agent" && command === "get") {
     const agent = findAgent(positionals()[0]);
-    return agent ? ok({ agent }) : fail("agent_not_found", "no such agent");
+    return agent ? ok({ agent }, false) : fail("agent_not_found", "no such agent");
   }
   if (group === "agent" && command === "start") {
     const [name] = positionals();
@@ -121,9 +127,9 @@ async function main() {
     agent.name = rest.includes("--clear") ? null : name;
     return ok({ agent });
   }
-  if (group === "agent" && command === "focus") return findAgent(positionals()[0]) ? ok({ type: "agent_focus" }) : fail("agent_not_found", "no such agent");
+  if (group === "agent" && command === "focus") return findAgent(positionals()[0]) ? ok({ type: "agent_focus" }, false) : fail("agent_not_found", "no such agent");
   if (group === "agent" && command === "read") { process.stdout.write("fake screen\n"); process.exit(0); }
-  if (group === "workspace" && command === "list") return ok({ workspaces: state.workspaces });
+  if (group === "workspace" && command === "list") return ok({ workspaces: state.workspaces }, false);
   if (group === "workspace" && command === "create") {
     const id = `w${state.counters.workspace++}`;
     state.workspaces.push({ workspace_id: id, label: flag("--label") ?? id });
