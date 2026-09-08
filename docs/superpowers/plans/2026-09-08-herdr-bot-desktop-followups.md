@@ -5,10 +5,13 @@
 ## 사람이 직접 확인해야 하는 것
 
 - **앱 안 라이브 E2E(플랜 Task 8 Step 3)**는 GUI 클릭이 필요해 자동으로 수행하지 않았다. 체크리스트는 README의 "앱 (macOS)" 절과 플랜 문서 Task 8을 따른다. 전제는 herdr 0.9.0 실행 중, claude 로그인. 패키징된 앱(`.build/desktop/mac-arm64/herdr-bot.app`)은 실제 `~/.herdr-bot`을 홈으로 쓴다. ad-hoc 서명이므로 첫 실행은 우클릭 → 열기.
+- **E2E 전 준비 두 가지.** (1) 데스크톱 main은 `~/.herdr-bot/bin/herdr-bot` shim을 설치하지 않는다(코어의 `installShim`은 `cli/src/main.ts`의 `serve`/`install-shim`에서만 불린다). 앱을 켜기 전에 레포 루트에서 `node cli/src/main.ts install-shim`을 한 번 실행한다. 빠뜨리면 체크리스트 4단계에서 claude가 `herdr-bot: command not found`를 낸다. (2) 호스트는 `execFile("herdr")`로 herdr를 찾는데, Finder에서 연 앱의 PATH는 `/usr/bin:/bin:/usr/sbin:/sbin`뿐이라 `/opt/homebrew/bin/herdr`를 못 찾고 1단계 Start bot이 `herdr_spawn_failed`로 실패한다. 터미널에서 `npm run desktop:start`로 실행하거나, `HERDR_BIN_PATH=$(which herdr)`를 준 채 `.build/desktop/mac-arm64/herdr-bot.app/Contents/MacOS/herdr-bot`을 직접 실행한다(`open`이 아니라). 두 문제 모두 가짜 herdr 테스트에서는 드러나지 않는다(가짜 herdr는 `say`를 컨트롤 소켓에 직접 보내고, 바이너리 경로는 `HERDR_BIN_PATH`로 넘긴다).
 - 사이드바·컴포저·리액션·삭제·저자 라벨·"Open in herdr" 버튼 같은 시각 요소는 `npm run desktop:dev:fake`로 가짜 herdr 위에서 눈으로 확인한다.
 
 ## 나중에 고칠 것 (fix later)
 
+- `desktop/src/main.ts`: 호스트 시작 시 shim을 설치·검증하지 않는다. 패키징된 앱은 CLI도 node도 싣지 않으므로, shim이 exec할 node 경로와 진입점을 앱이 정해야 한다(예: `process.execPath` + `ELECTRON_RUN_AS_NODE=1`로 Electron 내장 node를 쓰거나, 설정에서 node 경로를 받는다). shim 형식(`exec "<node>" "<main>" "$@"`)이 환경변수를 못 실어서 형식 변경도 함께 필요하다.
+- `desktop/src/main.ts` / `core/src/herdr/cli.ts`: GUI 실행 시 PATH 보정이 없다. 로그인 셸(`$SHELL -lc 'echo $PATH'`)에서 PATH를 읽어 오거나, `/opt/homebrew/bin`·`~/.local/bin`을 탐색하거나, 설정 UI에서 herdr 경로를 받아 `HERDR_BIN_PATH`로 넘긴다.
 - `desktop/src/main.ts`: macOS `activate` 핸들러가 없다. 빨간 버튼으로 창을 닫으면 앱은 살아 있는데 창을 다시 열 방법이 없다(Cmd+Q 후 재실행). 한 줄 추가.
 - `desktop/src/main.ts`: `before-quit`에서 `void host.stop()`을 기다리지 않고, 호스트 시작 후 부팅이 실패한 경로에서도 `host.stop()`을 호출하지 않는다. 다음 실행 때 컨트롤 서버가 죽은 소켓 파일을 정리하므로 복구는 되지만, 종료 시 정리를 기다리도록 바꾼다. `dialog.showErrorBox`는 블로킹이라 헤드리스 환경에서 `app.exit(1)`이 지연된다.
 - `desktop/tsconfig.json`: `test`를 include하지 않아 데스크톱 테스트 파일은 타입체크되지 않는다(런타임 타입 스트리핑만).
