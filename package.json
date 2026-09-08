@@ -1,0 +1,17 @@
+{
+  "name": "herdr-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24.0.0" },
+  "workspaces": ["core"],
+  "scripts": {
+    "test": "node --test \"core/test/**/*.test.ts\"",
+    "typecheck": "tsc -p core/tsconfig.json",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "typescript": "7.0.2"
+  }
+}
