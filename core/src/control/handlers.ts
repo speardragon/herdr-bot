@@ -1,10 +1,10 @@
 import type { Host } from "../host.ts";
 import { entryText, projectAuthor } from "../model/entries.ts";
-import { RosterError } from "../services/roster-service.ts";
+import { RosterError, type RosterErrorCode } from "../services/roster-service.ts";
 import type { AgentSummary } from "../model/summaries.ts";
 import type { PermissionMode } from "../store/profile-store.ts";
 import type { ControlHandler } from "./server.ts";
-import { ControlError, optionalString, optionalStringArray, requireString } from "./protocol.ts";
+import { ControlError, optionalString, optionalStringArray, requireString, type ControlErrorCode } from "./protocol.ts";
 
 type Params = Record<string, unknown>;
 type Handler = (host: Host, params: Params) => Promise<unknown> | unknown;
@@ -113,9 +113,19 @@ const METHOD_TABLE: Readonly<Record<string, Handler>> = {
   status: (host) => host.status(),
 };
 
+const ROSTER_ERROR_CODES: Readonly<Record<RosterErrorCode, ControlErrorCode>> = {
+  herdr_error: "herdr_error",
+  unknown_bot: "unknown_bot",
+  unknown_room: "unknown_chat",
+  bot_exists: "invalid_params",
+  too_many_members: "invalid_params",
+  unsupported_kind: "invalid_params",
+  invalid_bot_id: "invalid_params",
+};
+
 function rethrow(error: unknown): never {
   if (error instanceof ControlError) throw error;
-  if (error instanceof RosterError) throw new ControlError(error.code === "unknown_bot" ? "unknown_bot" : error.code === "unknown_room" ? "unknown_chat" : "invalid_params", `${error.code}: ${error.message}`);
+  if (error instanceof RosterError) throw new ControlError(ROSTER_ERROR_CODES[error.code], `${error.code}: ${error.message}`);
   throw error;
 }
 

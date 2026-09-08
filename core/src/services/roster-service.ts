@@ -44,6 +44,10 @@ export interface RosterServiceDeps {
   readonly mirror: StatusMirror;
   readonly now?: () => number;
   readonly onNotice?: (chatId: string, text: string) => void;
+  /** Called once a bot or room is fully removed, so callers can evict any per-chat caches (transcript, view state, run queue). */
+  readonly onChatRemoved?: (chatId: string) => void;
+  /** Injectable so tests do not wait through real retry backoff. Defaults to a real setTimeout-based sleep. */
+  readonly sleep?: (ms: number) => Promise<void>;
 }
 
 function toMember(profile: BotProfile): GroupMember {
@@ -84,6 +88,7 @@ export class RosterService {
     }
     this.#deps.profiles.delete(id);
     await this.#deps.mirror.refresh();
+    this.#deps.onChatRemoved?.(id);
   }
 
   updateProfile(id: string, patch: { readonly name?: string; readonly description?: string; readonly notifyOnUpdatesEnabled?: boolean; readonly isHiddenFromSidebar?: boolean }): BotProfile | null {
@@ -133,6 +138,7 @@ export class RosterService {
 
   deleteRoom(id: string): void {
     this.#deps.rooms.delete(id);
+    this.#deps.onChatRemoved?.(id);
   }
 
   async listAdoptable(): Promise<HerdrAgentInfo[]> {
@@ -185,22 +191,7 @@ export class RosterService {
     const permissionMode = args.permissionMode ?? "ask";
     const location = await this.#locationFor(cwd, id);
     const launchArgs = launchArgsFor(kind, permissionMode, this.#deps.config.cliPath);
-    let sessionId: string | null = null;
-    try {
-      const started = await this.#deps.cli.agentStart({ name: id, kind, paneId: location.paneId, agentArgs: launchArgs });
-      sessionId = started.agent_session?.value ?? null;
-    } catch (error) {
-      if (error instanceof HerdrError && error.code === "agent_not_ready") {
-        this.#deps.onNotice?.(id, `${id} needs first-run setup in herdr (pane ${location.paneId}); finish it there and the bot will come online.`);
-      } else {
-        try {
-          await this.#deps.cli.paneClose(location.paneId);
-        } catch (closeError) {
-          log("roster", `failed to close pane ${location.paneId} after a failed agent start for ${id}`, closeError instanceof Error ? closeError.message : String(closeError));
-        }
-        throw new RosterError("herdr_error", error instanceof Error ? error.message : String(error));
-      }
-    }
+    const sessionId = await this.#startAgent(id, kind, location.paneId, launchArgs);
     const now = this.#now();
     return {
       id, name: args.name.trim().length > 0 ? args.name.trim() : id, description: args.description ?? "", kind, cwd, permissionMode,
@@ -208,6 +199,57 @@ export class RosterService {
       herdr: { paneId: location.paneId, workspaceId: location.workspaceId, sessionId },
       notifyOnUpdatesEnabled: true, isHiddenFromSidebar: false, createdAt: now, updatedAt: now,
     };
+  }
+
+  /**
+   * Starts the agent, closing the freshly created pane and rethrowing a RosterError only once
+   * the retries in #startAgentWithRetry are exhausted. `agent_not_ready` (the pane needs manual
+   * first-run setup) is never retried since retrying it cannot help; it becomes a notice instead.
+   */
+  async #startAgent(id: string, kind: string, paneId: string, agentArgs: readonly string[]): Promise<string | null> {
+    try {
+      const started = await this.#startAgentWithRetry({ name: id, kind, paneId, agentArgs });
+      return started.agent_session?.value ?? null;
+    } catch (error) {
+      if (error instanceof HerdrError && error.code === "agent_not_ready") {
+        this.#deps.onNotice?.(id, `${id} needs first-run setup in herdr (pane ${paneId}); finish it there and the bot will come online.`);
+        return null;
+      }
+      try {
+        await this.#deps.cli.paneClose(paneId);
+      } catch (closeError) {
+        log("roster", `failed to close pane ${paneId} after a failed agent start for ${id}`, closeError instanceof Error ? closeError.message : String(closeError));
+      }
+      throw new RosterError("herdr_error", error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * Retries `agentStart` up to 3 attempts with a 500ms backoff: a just-created pane's shell is
+   * sometimes not interactive yet, and herdr answers with a (non "agent_not_ready") HerdrError
+   * that a short retry reliably clears. `agent_not_ready` is never retried here (see #startAgent).
+   */
+  async #startAgentWithRetry(args: { name: string; kind: string; paneId: string; agentArgs: readonly string[] }): Promise<HerdrAgentInfo> {
+    const maxAttempts = 3;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await this.#deps.cli.agentStart(args);
+      } catch (error) {
+        lastError = error;
+        const retryable = error instanceof HerdrError && error.code !== "agent_not_ready";
+        if (!retryable) throw error;
+        if (attempt < maxAttempts) {
+          log("roster", `agent start for ${args.name} failed on attempt ${attempt}/${maxAttempts}; retrying`, error instanceof Error ? error.message : String(error));
+          await this.#sleep(500);
+        }
+      }
+    }
+    throw lastError;
+  }
+
+  #sleep(ms: number): Promise<void> {
+    return (this.#deps.sleep ?? ((delay: number) => new Promise<void>((resolve) => setTimeout(resolve, delay))))(ms);
   }
 
   async #adopt(id: string, args: CreateBotArgs, paneId: string): Promise<BotProfile> {

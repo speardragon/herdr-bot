@@ -37,6 +37,11 @@ export class ChatService {
     return this.#deps.profiles.get(chatId) == null ? null : "bot";
   }
 
+  /** Drops the cached transcript store for a deleted chat so a reused chatId does not resurrect stale entries. */
+  forget(chatId: string): void {
+    this.#transcripts.delete(chatId);
+  }
+
   transcript(chatId: string): TranscriptStore {
     const cached = this.#transcripts.get(chatId);
     if (cached != null) return cached;

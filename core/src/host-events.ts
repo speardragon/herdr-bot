@@ -1,3 +1,5 @@
+import { log } from "./log.ts";
+
 export type HostEventFamily = "agents" | "agent-upserted" | "transcript";
 
 type Listener = (payload: unknown) => void;
@@ -14,7 +16,14 @@ export class HostEvents {
     };
   }
 
+  /** Never throws: a listener that throws is logged and skipped so every other listener still runs. */
   emit(family: HostEventFamily, payload: unknown): void {
-    for (const listener of [...(this.#listeners.get(family) ?? [])]) listener(payload);
+    for (const listener of [...(this.#listeners.get(family) ?? [])]) {
+      try {
+        listener(payload);
+      } catch (error) {
+        log("events", `listener for "${family}" threw`, error instanceof Error ? error.message : String(error));
+      }
+    }
   }
 }

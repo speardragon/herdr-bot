@@ -54,7 +54,18 @@ function withAttachments(content: string, paths: readonly string[] | undefined):
   return `${content}\n\n${paths.map((path) => `(attached: ${path})`).join("\n")}`;
 }
 
-export function createHost(config: HostConfig, overrides: HostOverrides = {}): Host {
+interface HostServices {
+  readonly profiles: ProfileStore;
+  readonly rooms: RoomStore;
+  readonly events: HostEvents;
+  readonly mirror: StatusMirror;
+  readonly chat: ChatService;
+  readonly roster: RosterService;
+  readonly turns: TurnService;
+}
+
+/** Constructs the stores plus the mirror/roster/chat/turn wiring, evicting per-chat caches on delete. */
+function buildServices(config: HostConfig, overrides: HostOverrides): HostServices {
   const cli = overrides.cli ?? createHerdrCli(config.herdrBin);
   const profiles = new ProfileStore(config.home);
   const rooms = new RoomStore(config.home);
@@ -62,8 +73,8 @@ export function createHost(config: HostConfig, overrides: HostOverrides = {}): H
   const events = new HostEvents();
   const runQueue = new RunQueue();
   const inbox = new SayInbox();
-  let turns: TurnService | null = null;
   let chatRef: ChatService | null = null;
+  let turnsRef: TurnService | null = null;
 
   const mirror = new StatusMirror({
     cli,
@@ -71,11 +82,25 @@ export function createHost(config: HostConfig, overrides: HostOverrides = {}): H
     botIds: () => profiles.list().map((profile) => profile.id),
     onChange: (botId) => chatRef?.emitUpsert(botId),
   });
-  const chat = new ChatService({ config, profiles, rooms, view, mirror, events, isTurnActive: (chatId) => turns?.isTurnActive(chatId) ?? false, ...(overrides.now == null ? {} : { now: overrides.now }) });
+  const chat = new ChatService({ config, profiles, rooms, view, mirror, events, isTurnActive: (chatId) => turnsRef?.isTurnActive(chatId) ?? false, ...(overrides.now == null ? {} : { now: overrides.now }) });
   chatRef = chat;
-  const roster = new RosterService({ config, profiles, rooms, cli, mirror, ...(overrides.now == null ? {} : { now: overrides.now }), onNotice: (chatId, text) => chat.appendNotice(chatId, text) });
-  turns = new TurnService({ config, roster, chat, runQueue, cli, mirror, inbox });
-  const turnService: TurnService = turns;
+  const roster = new RosterService({
+    config, profiles, rooms, cli, mirror,
+    ...(overrides.now == null ? {} : { now: overrides.now }),
+    onNotice: (chatId, text) => chat.appendNotice(chatId, text),
+    onChatRemoved: (chatId) => {
+      chat.forget(chatId);
+      view.delete(chatId);
+      runQueue.forget(chatId);
+    },
+  });
+  const turns = new TurnService({ config, roster, chat, runQueue, cli, mirror, inbox });
+  turnsRef = turns;
+  return { profiles, rooms, events, mirror, chat, roster, turns };
+}
+
+export function createHost(config: HostConfig, overrides: HostOverrides = {}): Host {
+  const { profiles, rooms, events, mirror, chat, roster, turns: turnService } = buildServices(config, overrides);
 
   let controlServer: ControlServer | null = null;
   const host: Host = {

@@ -126,22 +126,56 @@ test("updateProfile and rooms round-trip", async () => {
   }
 });
 
-test("createBot closes the spawned pane and saves no profile when agent start fails", async () => {
+test("createBot retries agentStart once when the new pane's shell is not ready yet, then succeeds", async () => {
   const h = harness();
   try {
     setLogSink(() => undefined);
+    let calls = 0;
+    const flakyCli: HerdrCli = {
+      ...h.cli,
+      async agentStart(args) {
+        calls += 1;
+        if (calls === 1) throw new HerdrError("herdr_error", "agent target pane w1:p1 is not an available shell");
+        return h.cli.agentStart(args);
+      },
+    };
+    const sleeps: number[] = [];
+    const service = new RosterService({
+      config: h.config, profiles: h.profiles, rooms: h.rooms, cli: flakyCli, mirror: h.mirror,
+      now: () => 1_000, sleep: async (ms) => { sleeps.push(ms); },
+    });
+    const profile = await service.createBot({ id: "flaky", name: "Flaky" });
+    assert.equal(profile.id, "flaky");
+    assert.equal(h.profiles.get("flaky")?.id, "flaky");
+    assert.equal(calls, 2);
+    assert.deepEqual(sleeps, [500]);
+    const log = h.fake.readLog().map((argv) => argv.join(" "));
+    assert.equal(log.filter((line) => line.startsWith("agent start")).length, 1, JSON.stringify(log));
+  } finally {
+    setLogSink((line) => process.stderr.write(`${line}\n`));
+    h.temp.cleanup();
+  }
+});
+
+test("createBot closes the spawned pane and saves no profile after 3 failed agentStart attempts", async () => {
+  const h = harness();
+  try {
+    setLogSink(() => undefined);
+    let calls = 0;
     const failingCli: HerdrCli = {
       ...h.cli,
       async agentStart() {
+        calls += 1;
         throw new HerdrError("herdr_error", "boom");
       },
     };
     const notices: string[] = [];
     const failingService = new RosterService({
       config: h.config, profiles: h.profiles, rooms: h.rooms, cli: failingCli, mirror: h.mirror,
-      now: () => 1_000, onNotice: (chatId, text) => notices.push(`${chatId}: ${text}`),
+      now: () => 1_000, onNotice: (chatId, text) => notices.push(`${chatId}: ${text}`), sleep: async () => undefined,
     });
     await assert.rejects(failingService.createBot({ id: "boom", name: "Boom" }), (e: unknown) => e instanceof RosterError && e.code === "herdr_error");
+    assert.equal(calls, 3);
     assert.equal(h.profiles.get("boom"), null);
     const log = h.fake.readLog().map((argv) => argv.join(" "));
     assert.ok(log.some((line) => line === "pane close w1:p1"), JSON.stringify(log));
