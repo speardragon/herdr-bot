@@ -65,7 +65,8 @@ test("workspace/tab/pane helpers return ids from the json result", async () => {
     assert.deepEqual((await cli.workspaceList()).map((ws) => ws.workspace_id), ["w1"]);
     await cli.paneClose("w1:p100");
     assert.deepEqual(fake.readState().closedPanes, ["w1:p100"]);
-    await cli.agentRename("w1:p1", null).catch(() => undefined);
+    await assert.rejects(cli.agentRename("w1:p1", null), (error: unknown) => error instanceof HerdrError && error.code === "agent_not_found");
+    assert.deepEqual(fake.readLog().at(-1), ["agent", "rename", "w1:p1", "--clear"]);
     await cli.notify("t", "b");
   } finally {
     temp.cleanup();

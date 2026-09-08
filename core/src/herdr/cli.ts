@@ -83,7 +83,25 @@ function requireString(value: unknown, context: string): string {
   return value;
 }
 
-export function createHerdrCliFromRunner(runner: RawHerdrRunner): HerdrCli {
+function agentStartArgv(args: { name: string; kind: string; paneId: string; agentArgs: readonly string[]; timeoutMs?: number }): string[] {
+  const base = ["agent", "start", args.name, "--kind", args.kind, "--pane", args.paneId, ...(args.timeoutMs == null ? [] : ["--timeout", String(args.timeoutMs)])];
+  return args.agentArgs.length > 0 ? [...base, "--", ...args.agentArgs] : base;
+}
+
+function agentPromptArgv(args: { target: string; text: string; wait: boolean; until?: readonly HerdrAgentStatus[]; timeoutMs?: number }): string[] {
+  const untilFlags = (args.until ?? []).flatMap((status) => ["--until", status]);
+  return [
+    "agent", "prompt", args.target, args.text,
+    ...(args.wait ? ["--wait"] : []),
+    ...untilFlags,
+    ...(args.timeoutMs == null ? [] : ["--timeout", String(args.timeoutMs)]),
+  ];
+}
+
+type AgentMethods = Pick<HerdrCli, "agentList" | "agentGet" | "agentStart" | "agentPrompt" | "agentRename" | "agentFocus" | "agentRead">;
+type WorkspaceMethods = Pick<HerdrCli, "workspaceList" | "workspaceCreate" | "tabCreate" | "paneClose" | "notify">;
+
+function createAgentMethods(runner: RawHerdrRunner): AgentMethods {
   return {
     async agentList() {
       const result = await runJson(runner, ["agent", "list"]);
@@ -93,16 +111,10 @@ export function createHerdrCliFromRunner(runner: RawHerdrRunner): HerdrCli {
       return requireAgent(await runJson(runner, ["agent", "get", target]), "agent get");
     },
     async agentStart(args) {
-      const command = ["agent", "start", args.name, "--kind", args.kind, "--pane", args.paneId, ...(args.timeoutMs == null ? [] : ["--timeout", String(args.timeoutMs)])];
-      if (args.agentArgs.length > 0) command.push("--", ...args.agentArgs);
-      return requireAgent(await runJson(runner, command), "agent start");
+      return requireAgent(await runJson(runner, agentStartArgv(args)), "agent start");
     },
     async agentPrompt(args) {
-      const command = ["agent", "prompt", args.target, args.text];
-      if (args.wait) command.push("--wait");
-      for (const status of args.until ?? []) command.push("--until", status);
-      if (args.timeoutMs != null) command.push("--timeout", String(args.timeoutMs));
-      const result = await runJson(runner, command);
+      const result = await runJson(runner, agentPromptArgv(args));
       return projectHerdrAgentInfo(result.agent);
     },
     async agentRename(target, name) {
@@ -116,6 +128,11 @@ export function createHerdrCliFromRunner(runner: RawHerdrRunner): HerdrCli {
       if (code !== 0) throw errorFromStderr(stderr, "agent read failed");
       return stdout;
     },
+  };
+}
+
+function createWorkspaceMethods(runner: RawHerdrRunner): WorkspaceMethods {
+  return {
     async workspaceList() {
       const result = await runJson(runner, ["workspace", "list"]);
       return Array.isArray(result.workspaces)
@@ -141,6 +158,10 @@ export function createHerdrCliFromRunner(runner: RawHerdrRunner): HerdrCli {
       await runJson(runner, ["notification", "show", title, "--body", body]);
     },
   };
+}
+
+export function createHerdrCliFromRunner(runner: RawHerdrRunner): HerdrCli {
+  return { ...createAgentMethods(runner), ...createWorkspaceMethods(runner) };
 }
 
 export function createHerdrCli(binPath: string, env: NodeJS.ProcessEnv = process.env): HerdrCli {
