@@ -193,6 +193,11 @@ export class RosterService {
       if (error instanceof HerdrError && error.code === "agent_not_ready") {
         this.#deps.onNotice?.(id, `${id} needs first-run setup in herdr (pane ${location.paneId}); finish it there and the bot will come online.`);
       } else {
+        try {
+          await this.#deps.cli.paneClose(location.paneId);
+        } catch (closeError) {
+          log("roster", `failed to close pane ${location.paneId} after a failed agent start for ${id}`, closeError instanceof Error ? closeError.message : String(closeError));
+        }
         throw new RosterError("herdr_error", error instanceof Error ? error.message : String(error));
       }
     }

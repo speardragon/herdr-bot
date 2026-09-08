@@ -2,11 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { resolveConfig } from "../src/config.ts";
-import { createHerdrCli } from "../src/herdr/cli.ts";
+import { createHerdrCli, type HerdrCli } from "../src/herdr/cli.ts";
 import { StatusMirror } from "../src/herdr/status-mirror.ts";
+import { setLogSink } from "../src/log.ts";
 import { ProfileStore } from "../src/store/profile-store.ts";
 import { RoomStore } from "../src/store/room-store.ts";
 import { RosterError, RosterService } from "../src/services/roster-service.ts";
+import { HerdrError } from "../src/herdr/types.ts";
 import { installFakeHerdr, type FakeHerdrState } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
 
@@ -20,7 +22,7 @@ function harness(state: FakeHerdrState = { agents: [], workspaces: [] }) {
   const mirror = new StatusMirror({ cli, socketPath: null, botIds: () => profiles.list().map((p) => p.id), onChange: () => undefined });
   const notices: string[] = [];
   const service = new RosterService({ config, profiles, rooms, cli, mirror, now: () => 1_000, onNotice: (chatId, text) => notices.push(`${chatId}: ${text}`) });
-  return { temp, fake, config, profiles, rooms, mirror, service, notices };
+  return { temp, fake, config, profiles, rooms, cli, mirror, service, notices };
 }
 
 test("createBot spawns into a new workspace for a new cwd, then a tab for the next bot", async () => {
@@ -120,6 +122,31 @@ test("updateProfile and rooms round-trip", async () => {
     assert.equal(existsSync(`${h.temp.home}/rooms/${room.id}`), false);
     assert.deepEqual(h.service.memberIdFor("a"), { id: "a", name: "Ava", description: "helps" });
   } finally {
+    h.temp.cleanup();
+  }
+});
+
+test("createBot closes the spawned pane and saves no profile when agent start fails", async () => {
+  const h = harness();
+  try {
+    setLogSink(() => undefined);
+    const failingCli: HerdrCli = {
+      ...h.cli,
+      async agentStart() {
+        throw new HerdrError("herdr_error", "boom");
+      },
+    };
+    const notices: string[] = [];
+    const failingService = new RosterService({
+      config: h.config, profiles: h.profiles, rooms: h.rooms, cli: failingCli, mirror: h.mirror,
+      now: () => 1_000, onNotice: (chatId, text) => notices.push(`${chatId}: ${text}`),
+    });
+    await assert.rejects(failingService.createBot({ id: "boom", name: "Boom" }), (e: unknown) => e instanceof RosterError && e.code === "herdr_error");
+    assert.equal(h.profiles.get("boom"), null);
+    const log = h.fake.readLog().map((argv) => argv.join(" "));
+    assert.ok(log.some((line) => line === "pane close w1:p1"), JSON.stringify(log));
+  } finally {
+    setLogSink((line) => process.stderr.write(`${line}\n`));
     h.temp.cleanup();
   }
 });
