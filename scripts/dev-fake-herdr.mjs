@@ -30,4 +30,6 @@ const env = {
   HERDR_BOT_DEV: "1",
 };
 const child = spawn("npm", ["run", "start", "-w", "@herdr-bot/desktop"], { cwd: root, env, stdio: "inherit" });
+child.on("error", (error) => { process.stderr.write(`dev-fake-herdr: failed to launch electron: ${error.message}\n`); process.exit(1); });
 child.on("exit", (code) => process.exit(code ?? 0));
+for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => child.kill(signal));
