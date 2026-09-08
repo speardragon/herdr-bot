@@ -80,7 +80,12 @@ export function NewChatDialog({ open, agents, defaultCwd, onClose, onCreateBot, 
     if (!open) return;
     setTab("bot"); setName(""); setId(""); setIdTouched(false); setDescription(""); setKind("claude"); setCwd(defaultCwd);
     setPermissionMode("ask"); setSource(SPAWN); setRoomName(""); setRoomGoal(""); setMembers(new Set()); setError(null); setPending(false);
-    listAdoptable().then(setAdoptable, () => setAdoptable([]));
+    let cancelled = false;
+    listAdoptable().then(
+      (list) => { if (!cancelled) setAdoptable(list); },
+      () => { if (!cancelled) setAdoptable([]); },
+    );
+    return () => { cancelled = true; };
   }, [open, defaultCwd, listAdoptable]);
 
   const effectiveId = idTouched ? id : suggestBotId(name);
