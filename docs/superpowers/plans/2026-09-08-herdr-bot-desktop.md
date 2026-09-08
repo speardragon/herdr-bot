@@ -1326,7 +1326,7 @@ node cli/src/main.ts room create "Auth refactor" --members reviewer,writer
 ```
 Expected:
 - 사이드바에 `Reviewer`, `Writer`, `Auth refactor`(그룹 아바타)가 **CLI 실행 직후** 나타난다(`agents` 이벤트 → 포트 → 렌더러).
-- `Auth refactor`를 클릭 → 빈 트랜스크립트. 컴포저에 "리뷰 부탁"을 입력해 Enter → 내 메시지가 즉시 뜨고(펜딩→sent, `clientNonce` 매칭), 1~2초 내 Reviewer/Writer의 답이 이어서 뜬다. 방 행에 Working 표시가 잠깐 켜진다.
+- `Auth refactor`를 클릭 → 빈 트랜스크립트. 컴포저에 "리뷰 부탁"을 입력해 Enter → 내 메시지가 즉시 뜨고(펜딩→sent, `clientNonce` 매칭), 1~2초 내 Reviewer/Writer의 답이 이어서 뜬다. 가짜 봇은 `sayOnce`가 없어 프롬프트를 받을 때마다 같은 답을 하므로, 서로의 답에 반응해 grok-bot 상한(최대 3라운드, 턴당 2메시지)까지 몇 턴 더 이어진 뒤 멈춘다 — 이는 단체방 라운드로빈이 UI에 흐르는 모습을 그대로 보여 주는 의도된 동작이다(`sayOnce: true`로 바꾸면 봇이 첫 메시지에만 답하고 이후 영원히 침묵해 개발용으로 덜 유용하다). 방 행에 Working 표시가 잠깐 켜진다.
 - `Reviewer`(DM)를 클릭해 메시지를 보내면 한 번의 답이 온다.
 - 메시지에 마우스를 올려 리액션 👍를 누르면 표시된다(`reactToMessage` → `updated` 이벤트).
 - 봇 행 우클릭 → Delete → 사이드바에서 사라진다.
