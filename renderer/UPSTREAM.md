@@ -16,3 +16,11 @@ Local modifications are listed in docs/superpowers/plans/2026-09-08-herdr-bot-de
 - `renderer/src/production/NewChatDialog.tsx` (new): the "New" dialog (Bot / Room tabs) for spawning or adopting bots and creating rooms, composed entirely from existing `recovered/ui/*` primitives.
 - `renderer/src/production/ProductionRenderer.tsx`: sidebar "New" and command-palette "New chat" now open `NewChatDialog` instead of immediately creating a "New chat" agent; added `createBotFromDialog` (`createAgent` with `herdrBot`), `createRoomFromDialog` (`createGroup`), and `listAdoptable` (`herdrBot.listAdoptable`) handlers, plus the dialog's render-tree mount and a `new:chat` command-palette entry.
 - `renderer/src/production/production.css`: appended `.sand-new-chat-dialog__*` styles for the new dialog.
+
+## Task 7 modifications
+
+- `renderer/src/recovered/features/conversation/cards/transcript-card/protocol.ts`: `TranscriptCardEntryBase` carries an optional `author: { id, name }` (the room member who said this), projected from the host's transcript entry.
+- `renderer/src/recovered/features/conversation/cards/transcript-card/views/send-message-text.tsx`: renders a `.sand-message__author` label above the message content when `entry.author` is present and differs from the chat's own `scope.agentId` (i.e. inside a room, not a 1:1 chat).
+- `renderer/src/recovered/features/conversation/workspace/chat-header.tsx`: replaced the computer-icon header control with an "Open in herdr" `SandIconButton` (terminal icon) for bot (non-group) chats, wired via a new `onOpenInHerdr` prop; `ComputerHeaderControl` import and the `isComputerActive`/`onToggleInfo` props are left in place (unused) to minimize upstream diff.
+- `renderer/src/production/ProductionRenderer.tsx`: passes `onOpenInHerdr` to `ConversationAgentHeader`, calling coordinator `herdrBot.focus { id }` for the active bot agent.
+- `renderer/src/production/production.css`: appended `.sand-message__author` style.

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { RendererAgent } from "../../../../production/model";
 import { ComputerHeaderControl } from "../../computer/shell/view";
 import { SharedRoomHeaderTrigger, type SharedRoomHeaderTriggerProps } from "../../agent-info/shared-room/trigger";
+import { SandIconButton } from "../../../ui/sand-kit-primitives";
 import { AgentAvatar } from "./agent-avatar";
 
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=4886695 (ChatHeader aSn)
@@ -15,11 +16,12 @@ export interface ConversationAgentHeaderProps {
   isInfoOpen: boolean;
   onToggleInfo(): void;
   onToggleSettings?(): void;
+  onOpenInHerdr?(): void;
   sharedRoomTrigger?: SharedRoomHeaderTriggerProps;
   trailing?: ReactNode;
 }
 
-export function ConversationAgentHeader({ agent, isComputerActive, isInfoOpen, onToggleInfo, onToggleSettings, sharedRoomTrigger, trailing }: ConversationAgentHeaderProps) {
+export function ConversationAgentHeader({ agent, isComputerActive, isInfoOpen, onToggleInfo, onToggleSettings, onOpenInHerdr, sharedRoomTrigger, trailing }: ConversationAgentHeaderProps) {
   const avatarKind = agent.isSharedRoom === true ? "shared-room" : agent.isGroup === true ? "group" : "agent";
   const identity = <>
     <span className="sand-chat-header__avatar"><AgentAvatar agentId={agent.id} kind={avatarKind} memberIds={agent.memberIds} dataUrl={agent.avatarDataUrl} color={agent.avatarColor} shape={agent.avatarShape} currentActivity={agent.currentActivity} isComposingMessage={agent.isComposingMessage} isRunning={agent.isRunning} awaitingUserResponse={agent.awaitingUserResponse} size="md" /></span>
@@ -32,7 +34,7 @@ export function ConversationAgentHeader({ agent, isComputerActive, isInfoOpen, o
       : <button aria-controls="sand-conversation-details" aria-expanded={isInfoOpen} aria-label="View agent settings" className="sand-chat-header__identity" data-info-row="settings" onClick={onToggleSettings} type="button">{identity}</button>}
     <div className="sand-chat-header__controls">
       {sharedRoomTrigger == null ? null : <SharedRoomHeaderTrigger {...sharedRoomTrigger} />}
-      {agent.isGroup ? null : <ComputerHeaderControl active={isComputerActive} isInfoOpen={isInfoOpen} onToggle={onToggleInfo} />}
+      {agent.isGroup || onOpenInHerdr == null ? null : <SandIconButton aria-label="Open in herdr" icon="terminal" label="Open in herdr" onClick={onOpenInHerdr} size="sm" title="Focus this bot's pane in herdr" />}
       {trailing}
     </div>
   </div>;

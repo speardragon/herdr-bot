@@ -3501,6 +3501,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
             isComputerActive={computer.isComputerUseActive}
             isInfoOpen={activeAgent.isGroup ? groupInfoPaneOpen : computerInfoOpen}
             onToggleInfo={() => { setGroupInfoPaneOpen(false); setAgentSettingsOpen(false); setRoutinesInfoPaneOpen(false); setChannelsInfoPaneOpen(false); setManageSharedRoomId(null); setComputerInfoOpen((open) => !open); }}
+            onOpenInHerdr={activeAgent != null && !activeAgent.isGroup && client != null ? () => { void client.call("herdrBot.focus", { id: activeAgent.id }).catch((error: unknown) => setNotice(error instanceof Error ? error.message : String(error))); } : undefined}
             sharedRoomTrigger={sharedRoomTrigger}
             onToggleSettings={activeAgent.isGroup
               ? groupInfoPaneRoute == null ? undefined : () => { setAgentSettingsOpen(false); setRoutinesInfoPaneOpen(false); setChannelsInfoPaneOpen(false); setComputerInfoOpen(false); setManageSharedRoomId(null); setGroupInfoPaneOpen((open) => !open); }

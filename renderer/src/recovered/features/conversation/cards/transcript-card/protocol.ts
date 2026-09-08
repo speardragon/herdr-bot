@@ -208,6 +208,8 @@ export interface TranscriptCardEntryBase {
   myReactions?: ReadonlySet<string>;
   permissionScope?: string;
   permissionScopeRevision?: number;
+  /** herdr-bot: the room member who said this (absent on 1:1 chats). */
+  author?: { readonly id: string; readonly name: string };
 }
 
 export type TranscriptCardEntry = TranscriptCardEntryBase & {
@@ -488,6 +490,7 @@ export function projectTranscriptCardEntry(value: unknown): TranscriptCardEntry 
     ...(value.reactions === undefined ? {} : reactionFields),
     ...(value.permissionScope === undefined ? {} : { permissionScope: value.permissionScope }),
     ...(value.permissionScopeRevision === undefined ? {} : { permissionScopeRevision: value.permissionScopeRevision }),
+    ...(isRecord(value.author) && typeof value.author.id === "string" && typeof value.author.name === "string" ? { author: { id: value.author.id, name: value.author.name } } : {}),
   };
 }
 

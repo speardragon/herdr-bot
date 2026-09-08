@@ -28,7 +28,10 @@ export function SendMessageTextTranscriptCard(props: TranscriptCardLeafProps) {
     return <LinkCardView isGroupStart={props.adjacency?.isGroupStart} provider={providers.urlCards} url={url} whenUnavailable="url-card" />;
   }
 
+  const author = entry.author;
+  const showAuthor = author != null && providers?.scope.agentId != null && author.id !== providers.scope.agentId;
   return <div aria-label="Agent message" className="sand-message" data-group-start={props.adjacency?.isGroupStart || undefined} data-role="assistant" role="group">
+    {showAuthor ? <span className="sand-message__author" data-author-id={author.id}>{author.name}</span> : null}
     <AssistantMessageContent
       channel={message.channel}
       images={message.images}
