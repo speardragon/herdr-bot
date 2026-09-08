@@ -1791,7 +1791,7 @@ npmRebuild: false
 ```
 루트 scripts:
 ```json
-    "desktop:package": "npm run desktop:build && npx electron-builder --config desktop/electron-builder.yml --dir --project desktop"
+    "desktop:package": "npm run desktop:build && npx electron-builder --config electron-builder.yml --dir --project desktop"
 ```
 `main.ts`의 `rendererIndex` 경로는 패키지 안에서 `<app>/Contents/Resources/app/renderer/dist/index.html`이 되므로, `rendererIndex` 계산을 다음으로 바꾼다:
 ```ts
