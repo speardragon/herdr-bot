@@ -12,14 +12,22 @@ export interface ControlServer {
   close(): Promise<void>;
 }
 
+const PROBE_TIMEOUT_MS = 300;
+
 function probeLiveSocket(socketPath: string): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = connect(socketPath);
-    socket.once("connect", () => {
+    let settled = false;
+    const finish = (result: boolean): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       socket.destroy();
-      resolve(true);
-    });
-    socket.once("error", () => resolve(false));
+      resolve(result);
+    };
+    const timer = setTimeout(() => finish(false), PROBE_TIMEOUT_MS);
+    socket.once("connect", () => finish(true));
+    socket.once("error", () => finish(false));
   });
 }
 
@@ -56,7 +64,12 @@ export async function startControlServer(socketPath: string, handler: ControlHan
     // no stale socket file
   }
   mkdirSync(dirname(socketPath), { recursive: true });
-  const server: Server = createServer((socket) => serveConnection(socket, handler));
+  const sockets = new Set<Socket>();
+  const server: Server = createServer((socket) => {
+    sockets.add(socket);
+    socket.once("close", () => sockets.delete(socket));
+    serveConnection(socket, handler);
+  });
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(socketPath, () => resolve());
@@ -72,6 +85,7 @@ export async function startControlServer(socketPath: string, handler: ControlHan
         }
         resolve();
       });
+      for (const socket of sockets) socket.destroy();
     }),
   };
 }

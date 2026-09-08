@@ -1,6 +1,6 @@
 import { connect } from "node:net";
 import { ndjsonSplitter } from "../herdr/socket.ts";
-import { ControlError, parseControlResponse } from "./protocol.ts";
+import { CONTROL_ERROR_CODES, ControlError, parseControlResponse } from "./protocol.ts";
 
 let requestCounter = 0;
 
@@ -35,5 +35,5 @@ export function controlRequest(socketPath: string, method: string, params: Recor
 }
 
 function isKnownCode(code: string): code is ControlError["code"] {
-  return ["unknown_pane", "unknown_chat", "unknown_bot", "not_a_member", "over_cap", "invalid_params", "unknown_method", "herdr_error", "internal", "connect_failed", "timeout", "host_already_running", "bad_response"].includes(code);
+  return (CONTROL_ERROR_CODES as readonly string[]).includes(code);
 }
