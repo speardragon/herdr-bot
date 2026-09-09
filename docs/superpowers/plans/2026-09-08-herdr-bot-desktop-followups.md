@@ -18,6 +18,7 @@
 - 컴포저 placeholder가 첫 채팅 이름에 고정됐다(tiptap `useEditor`가 첫 extension 세트를 유지). placeholder를 ref로 읽고 변경 시 빈 트랜잭션으로 다시 그린다. placeholder 규칙 자체도 없어서 그동안 보이지 않았다.
 - 사이드바 aside가 `auto` 행에 놓여 내용 높이(288px)에서 끊기고 아래는 흰색이었다. 열 전체에 chrome 배경을 주고 aside를 1fr 행에 고정했다.
 - 그 외: 타이틀바에 중복 표시되던 채팅 제목과 "Connected" 점 숨김, 컴포저를 한 줄 pill로, 아바타 기본 모양 cloud, 다크 리터럴 색 토큰화, 첫 프레임 창 배경색을 테마에 맞춤(`windowBackground`).
+- 라이브 E2E에서 확인할 것: `.sand-message`의 `max-width`를 anchor로 옮겼으므로, anchor 없이 렌더되는 `.sand-message`(예: "busy in herdr" notice)가 있으면 행 전체 폭으로 퍼진다. 그런 항목이 보이면 `.sand-message-action-anchor`로 감싸거나 해당 클래스에 max-width를 준다.
 
 ## 나중에 고칠 것 (fix later)
 
