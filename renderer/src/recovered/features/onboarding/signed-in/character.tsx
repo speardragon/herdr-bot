@@ -52,6 +52,15 @@ export function resolvePersonaColor(agentId: string, color?: string | null): str
   if (color != null && COLORS[color] != null) return color;
   return ["brown", "red", "orange", "yellow", "green", "cyan", "blue", "violet", "magenta", "gray"][shippedColorIndex(agentId)] ?? "gray";
 }
+
+/** herdr-bot: the hex a persona's colour name resolves to, for painting non-avatar UI (e.g. a room
+ * message's author label) the same colour as that agent's avatar. Always the `.dark` swatch --
+ * the shipped gradient blends both, but a solid text colour needs one, and `.dark` reads on both
+ * light and dark chat backgrounds. */
+export function resolvePersonaColorHex(agentId: string, color?: string | null): string {
+  const resolved = resolvePersonaColor(agentId, color);
+  return (COLORS[resolved] ?? COLORS.gray).dark;
+}
 export function resolvePersonaShape(agentId: string, shape?: string | null): string {
   if (shape != null && (SHIPPED_SHAPES as readonly string[]).includes(shape)) return shape;
   return SHIPPED_SHAPES[shippedShapeHash(agentId) % SHIPPED_SHAPES.length] ?? "blob";

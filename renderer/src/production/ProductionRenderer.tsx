@@ -1754,7 +1754,11 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       attachments: transcriptCardAttachments,
       connectors: transcriptCardConnectors,
       urlCards: transcriptCardUrlCards,
-      onOpenPullRequest: openTranscriptCardPullRequest
+      onOpenPullRequest: openTranscriptCardPullRequest,
+      authorAvatar: (authorId) => {
+        const agent = agentsRef.current.find((candidate) => candidate.id === authorId);
+        return agent == null ? null : { avatarShape: agent.avatarShape ?? null, avatarColor: agent.avatarColor ?? null, avatarDataUrl: agent.avatarDataUrl ?? null };
+      }
     }
   }), [createTranscriptCardAutoReviewApproval, openTranscriptCardPullRequest, transcriptCardAttachments, transcriptCardCloudAgents, transcriptCardConnectors, transcriptCardListenerIntegrations, transcriptCardResolver, transcriptCardScope, transcriptCardSecretRequests, transcriptCardUrlCards, transcriptCardWidgetInteractions]);
   const transcriptCardEntries = useMemo(

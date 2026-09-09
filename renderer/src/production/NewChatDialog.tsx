@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { RendererAgent } from "./model";
 import { OverlayDialog } from "../recovered/ui/overlay-primitives";
 import { SandButton } from "../recovered/ui/sand-kit-primitives";
 import { SandCheckbox, SandTabs, SandTextField, SandTextarea } from "../recovered/ui/sand-form-primitives";
 import { SandSelect, type SandSelectOption } from "../recovered/ui/sand-floating-primitives";
+import { rendererRuntimeAssetUrl } from "./runtime-assets";
 
 export interface CreateBotRequest {
   readonly id: string;
@@ -49,13 +50,17 @@ export interface NewChatDialogProps {
   listDirectories(path: string): Promise<DirectoryListing>;
 }
 
-/** Label, single-letter monogram, and badge colour for the agent kinds offered in the New Bot dialog. */
+/**
+ * Label, badge colour, and (where one exists) real brand mark for the agent kinds offered in the
+ * New Bot dialog. Icons are Simple Icons (CC0 1.0 licensed glyphs; see renderer/UPSTREAM.md) --
+ * xAI has no mark there yet, so Grok keeps a plain monogram.
+ */
 const KIND_META = [
-  { value: "claude", label: "Claude Code", letter: "C", color: "#D97757" },
-  { value: "codex", label: "Codex", letter: "X", color: "#10A37F" },
-  { value: "grok", label: "Grok CLI", letter: "G", color: "#1C1C1C" },
-  { value: "gemini", label: "Gemini CLI", letter: "G", color: "#4285F4" },
-  { value: "opencode", label: "OpenCode", letter: "O", color: "#6E56CF" },
+  { value: "claude", label: "Claude Code", letter: "C", color: "#D97757", icon: "claude" },
+  { value: "codex", label: "Codex", letter: "X", color: "#10A37F", icon: "codex" },
+  { value: "grok", label: "Grok CLI", letter: "G", color: "#1C1C1C", icon: null },
+  { value: "gemini", label: "Gemini CLI", letter: "G", color: "#4285F4", icon: "gemini" },
+  { value: "opencode", label: "OpenCode", letter: "O", color: "#6E56CF", icon: "opencode" },
 ] as const;
 
 const TABS = [{ id: "bot", label: "Bot" }, { id: "room", label: "Room" }] as const;
@@ -82,8 +87,10 @@ function uniqueBotId(name: string, takenIds: ReadonlySet<string>): string {
   return base;
 }
 
-function KindBadge({ letter, color }: { readonly letter: string; readonly color: string }) {
-  return <span aria-hidden="true" className="sand-kind-badge" style={{ background: color }}>{letter}</span>;
+function KindBadge({ letter, color, icon }: { readonly letter: string; readonly color: string; readonly icon: string | null }) {
+  if (icon == null) return <span aria-hidden="true" className="sand-kind-badge" style={{ background: color }}>{letter}</span>;
+  const url = rendererRuntimeAssetUrl(`agent-kinds/${icon}.svg`);
+  return <span aria-hidden="true" className="sand-kind-badge" style={{ background: color }}><span className="sand-kind-badge__icon" style={{ "--kind-icon": `url(${url})` } as CSSProperties} /></span>;
 }
 
 export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom, listAdoptable, getDefaults, listDirectories }: NewChatDialogProps) {
@@ -139,7 +146,7 @@ export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom
     ...adoptable.map((agent) => ({ value: agent.pane_id, label: `Adopt ${agent.agent ?? "agent"} at ${agent.pane_id}${agent.cwd ? ` (${agent.cwd})` : ""}` })),
   ], [adoptable]);
   const kindOptions: SandSelectOption<string>[] = useMemo(() => KIND_META.map((meta) => ({
-    value: meta.value, label: meta.label, leading: <KindBadge color={meta.color} letter={meta.letter} />,
+    value: meta.value, label: meta.label, leading: <KindBadge color={meta.color} icon={meta.icon} letter={meta.letter} />,
   })), []);
   const canCreateBot = name.trim().length > 0 && (source !== SPAWN || cwdExists) && !pending;
   const canCreateRoom = roomName.trim().length > 0 && members.size > 0 && members.size <= 6 && !pending;

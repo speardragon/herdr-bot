@@ -29,6 +29,9 @@ export interface TranscriptCardLeafProviders {
   /** Existing local-tool permission store and coordinator action; no card-local transport is invented. */
   readonly localToolPermissionStore?: LocalToolPermissionStore;
   readonly resolveLocalToolPermission?: (input: ResolveLocalToolPermissionInput) => Promise<unknown>;
+  /** herdr-bot: looks up a room member's configured avatar by id, so a message's author gutter can
+   * show the exact same avatar (shape/colour/photo) as the sidebar, not just a hash-derived guess. */
+  readonly authorAvatar?: (authorId: string) => { readonly avatarShape: string | null; readonly avatarColor: string | null; readonly avatarDataUrl: string | null } | null;
 }
 
 const TranscriptCardLeafContext = createContext<TranscriptCardLeafProviders | null>(null);

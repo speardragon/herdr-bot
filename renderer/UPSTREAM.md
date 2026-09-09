@@ -45,3 +45,28 @@ Found by inspecting the live renderer over CDP against the real Grok Bot 0.18 wi
 - `renderer/src/recovered/ui/sand-floating-primitives.tsx`: `SandSelect`'s trigger button now renders the selected option's `leading` node (previously only the list rows did), so a leading badge/icon actually appears once chosen.
 - `renderer/src/production/NewChatDialog.tsx`: dropped the Id field (derived from Name via `suggestBotId`, deduped client-side against existing agent ids with a `-2`, `-3`, ... suffix on collision); the Source row (spawn vs. adopt) only renders when there is at least one adoptable agent; Agent options carry a colour-coded monogram badge (no third-party CLI logos ship in this repo); Working directory is a live autocomplete (text field + popover of matching subdirectories) backed by two new coordinator methods, and submit is blocked while the typed directory doesn't exist.
 - `core/src/services/directory-browser.ts` (new) + `core/src/coordinator/dispatcher.ts`: `herdrBot.listDirectories` resolves `~`/relative input against the host's home dir and lists matching subdirectories (directories only, dotfiles hidden unless typed, capped at 50); `herdrBot.defaults` returns the host's configured default cwd/kind so the dialog no longer opens with an empty, non-functional working-directory field.
+
+## Room message identity + text selection + sidebar alignment (2026-09-09, third pass)
+
+- `renderer/public/assets/agent-kinds/*.svg` (new): real brand marks for Claude, Codex (OpenAI's
+  mark), Gemini, and OpenCode -- Simple Icons glyphs (CC0 1.0), see `NOTICE.md` alongside them for
+  the source and licence. No Grok/xAI glyph exists there, so that kind keeps a monogram badge.
+- `renderer/src/production/NewChatDialog.tsx`: the Agent select's badge renders the real icon
+  (masked white over the kind's colour chip) where one exists.
+- `.../conversation/cards/transcript-card/views/send-message-text.tsx`: a room message (author id
+  differs from the chat's own agent id) now renders in a two-column row -- a fixed-width avatar
+  gutter (populated only on the first bubble of that sender's run) and a content column carrying
+  the coloured author name above the bubble. The avatar/shape/colour come from the actual bot
+  profile via the new `authorAvatar` leaf provider (falls back to the same hash-derived look the
+  sidebar uses when a bot has no explicit override) -- not a copy that could drift from the
+  sidebar's own avatar.
+- `.../transcript-card/views/shared.tsx`: `TranscriptCardLeafProviders` gained `authorAvatar`,
+  wired in `ProductionRenderer.tsx` from the live `agents` list.
+- `.../onboarding/signed-in/character.tsx`: exported `resolvePersonaColorHex` (the `.dark` swatch
+  for a resolved persona colour) so non-avatar UI can match an agent's avatar colour without
+  duplicating the palette.
+- `production.css`: neutralised the "computer" (sandboxed browser-use) feature's stylesheet, whose
+  unscoped `:root { user-select: none }` was disabling text selection for the entire app, messages
+  included; restored to `text`. Also un-did a padding-top-only quirk (present on the shared "md"
+  button size class for pixel-exact fidelity elsewhere) that was pushing the sidebar Search and
+  Plugins button labels a few px below centre.

@@ -344,7 +344,6 @@ button, textarea, input { font: inherit; }
 .sand-new-chat-dialog__footer { display: flex; justify-content: flex-end; gap: 8px; margin: 18px -20px -20px; padding: 12px 16px; border-top: 1px solid var(--cursor-border-secondary); }
 
 /* herdr-bot: room member attribution on bot messages */
-.sand-message__author { display: block; margin: 0 0 2px; color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-xs); font-weight: 600; letter-spacing: 0.01em; }
 
 
 /* Tokens the recovered code references that the shipped palette never defines. The runtime theme
@@ -475,7 +474,7 @@ button, textarea, input { font: inherit; }
 .sand-transcript-row { margin: 0; }
 .sand-message-action-anchor { margin-bottom: 3px; }
 .sand-message-action-anchor[data-group-start],
-.sand-message-action-anchor:has(> .sand-message[data-group-start]) { margin-top: 14px; }
+.sand-message-action-anchor:has(.sand-message[data-group-start]) { margin-top: 14px; }
 
 /* 14. The three-button hover toolbar (reply / more actions / react) sits on every message; this
  * also removes the right-click "more actions" menu and the reaction picker entry point, since both
@@ -512,3 +511,28 @@ button, textarea, input { font: inherit; }
 /* 18. Agent-kind monogram badge (New Bot dialog): the repo ships no third-party CLI logos, so each
  * kind gets a colour-coded initial instead of an unlicensed icon. */
 .sand-kind-badge { display: inline-flex; flex: 0 0 18px; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #fff; font-size: 10px; font-weight: 700; line-height: 1; }
+
+/* 19. Room messages: the author's avatar sits in a fixed-width gutter to the left (empty, but
+ * still reserved, on every bubble after the first of that sender's run), with the coloured name
+ * above the first bubble -- the same layout and colour as the sidebar/DM header. */
+.sand-room-message { display: flex; align-items: flex-start; gap: 8px; }
+.sand-room-message__gutter { flex: 0 0 22px; width: 22px; }
+.sand-room-message__content { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.sand-message__author { display: block; font-size: var(--cursor-font-size-xs); font-weight: 600; letter-spacing: 0.01em; }
+
+/* 20. The "computer" (sandboxed browser-use) feature's stylesheet sets a blanket
+ * `:root { user-select: none }` for its own isolated surface; it isn't scoped and so disables text
+ * selection app-wide, messages included. Restore normal selection; the few places that
+ * deliberately opt out (icons, drag handles) keep their own `user-select: none` untouched. */
+:root { -webkit-user-select: text; user-select: text; }
+
+/* 21. Sidebar Search / Plugins buttons: the shared "md" button size class carries a
+ * padding-top-only nudge (a pixel-exact quirk from elsewhere in the recovered kit) that isn't
+ * balanced by any padding-bottom here, pushing these two buttons' labels a few px below centre. */
+.sand-agents-sidebar__search:not(#\#):not(#\#):not(#\#):not(#\#),
+.sand-agents-sidebar__plugins:not(#\#):not(#\#):not(#\#):not(#\#) { padding-top: 0; }
+
+/* 22. Agent-kind icon (New Bot dialog): a real brand mark, masked in white over the kind's colour
+ * chip -- see renderer/UPSTREAM.md for source/licence. Kinds with no available mark (Grok) fall
+ * back to the plain monogram badge. */
+.sand-kind-badge__icon { width: 12px; height: 12px; background-color: #fff; -webkit-mask: var(--kind-icon) center / contain no-repeat; mask: var(--kind-icon) center / contain no-repeat; }
