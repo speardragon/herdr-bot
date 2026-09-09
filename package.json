@@ -6,7 +6,7 @@
   "engines": { "node": ">=24.0.0" },
   "workspaces": ["core", "cli", "renderer", "desktop"],
   "scripts": {
-    "test": "node --test \"core/test/**/*.test.ts\" \"cli/test/**/*.test.ts\" \"desktop/test/**/*.test.ts\"",
+    "test": "node --test \"core/test/**/*.test.ts\" \"cli/test/**/*.test.ts\" \"desktop/test/**/*.test.ts\" \"renderer/test/**/*.test.ts\"",
     "typecheck": "tsc -p core/tsconfig.json && tsc -p cli/tsconfig.json && tsc -p desktop/tsconfig.json --noEmit && tsc -p renderer/tsconfig.json",
     "check": "npm run typecheck && npm test",
     "renderer:typecheck": "tsc -p renderer/tsconfig.json",

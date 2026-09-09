@@ -1,5 +1,6 @@
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L499 bytes 2328200,2331500,2332789,2337409,2346511,2346725,2346952,2347189,2347629,2347841,2347970; sha256=ef4e9831b65d39633f09c9ad0c083b98b7ebf52e3bb558182aee5bde31f876fa
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { accountInitials } from "./initials";
 import type { CursorAuthStatus, CursorUsageSummary, DesktopBridge } from "../../../contracts/desktop-bridge";
 import { SandMenuContent, SandMenuItem, SandMenuRoot, SandMenuTrigger } from "../../../ui/sand-floating-primitives";
 
@@ -299,7 +300,7 @@ export function AccountMenu({
       <SandMenuRoot closeOnSelect={false} offset={4} onOpenChange={onOpenChange} open={isOpen} placement="bottom-start">
         <SandMenuTrigger>
           <button aria-expanded={isOpen} aria-haspopup="menu" aria-label={accountLabel} type="button">
-            <span aria-hidden="true">{avatarDataUrl == null ? displayName.slice(0, 1).toUpperCase() : <img alt="" src={avatarDataUrl} />}</span>
+            <span aria-hidden="true">{avatarDataUrl == null ? accountInitials(displayName) : <img alt="" src={avatarDataUrl} />}</span>
             <span><strong>{displayName}</strong>{account?.kind === "logged-in" && account.email != null ? <small>{account.email}</small> : null}</span>
           </button>
         </SandMenuTrigger>

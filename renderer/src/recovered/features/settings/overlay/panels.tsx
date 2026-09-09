@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { accountInitials } from "../../account/session/initials";
 import type { CursorUsageSummary, CursorUsageUpgradeAction, DesktopTimeZoneState } from "../../../contracts/desktop-bridge";
 import { egressTunnelStatusDescription, type EgressTunnelStatus, type UpdateStatus, type UpdateTrack } from "./updates";
 // @evidence src/app/dist/renderer/assets/index-BlqerJhg.js#L1
@@ -127,7 +128,7 @@ export function GeneralSettingsPanel({ account, accountPending = false, accountE
       <SettingsGroup title="Account">
         <div className="sand-account-card" data-state={account.kind}>
           <span aria-hidden="true" className="sand-account-card__avatar">
-            {signedIn && account.avatarDataUrl ? <img alt="" src={account.avatarDataUrl} /> : title.slice(0, 1).toLocaleUpperCase()}
+            {signedIn && account.avatarDataUrl ? <img alt="" src={account.avatarDataUrl} /> : accountInitials(title)}
           </span>
           <span className="sand-account-card__body">
             <strong>{title}</strong>

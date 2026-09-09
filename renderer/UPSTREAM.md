@@ -205,3 +205,50 @@ recovered specificity boost, not upstream layout:
 - `assistantTextBlocks`' paragraph trimming has no unit test: the renderer workspace has no test
   runner at all (`npm test` covers core, cli and desktop), and the function lives in a `.tsx` file
   that `node --test` cannot strip. Verified live instead.
+
+## Settings dialog restyle + two-character user avatar (2026-09-09, eleventh pass)
+
+Restyled after the shipped Grok Bot settings sheet (screenshot supplied by the user). Layout/markup
+untouched; everything is `production.css` block 26 scoped under `.sand-settings-dialog`, plus one
+helper.
+
+- `recovered/features/account/session/initials.ts` (herdr-bot addition, tested in
+  `renderer/test/account-initials.test.ts` -- the first renderer test; the root `npm test` glob now
+  includes `renderer/test`): `accountInitials(name)` returns two characters -- the first of each of
+  the first two words ("창룡 강" -> "창강", "Donald Duck" -> "DD") or the first two of a lone word
+  ("ray" -> "RA"), Latin upper-cased. Used by the Settings account card (`panels.tsx`) and the
+  sidebar footer (`menu.tsx`) in place of the single `slice(0, 1)` initial. Both avatars are now a
+  grey (`--cursor-bg-secondary`) circle with primary-colour text; the footer one was a blue rounded
+  square.
+- Dialog 900x660 (was 860x620), 14px base. Nav column 200px, `--cursor-bg-chrome`, items 32px with
+  a 16px icon and an 8px-radius `--cursor-bg-secondary` pill on the active one; the title is a plain
+  18px heading with no rule beneath it and the panel is a flex column (the body no longer subtracts
+  a 54px magic number).
+- Groups: 13px secondary label indented 8px, then ONE 12px-radius `--cursor-bg-tertiary` card per
+  group. Rows (`label`, `.sand-settings-row`, `.sand-account-card`, `.sand-auto-review`, the usage
+  cards) lose their own border/radius/background; consecutive rows are separated by a hairline inset
+  14px from both edges (`::before`), and only the first/last row carry the card's corner radius
+  (longhands, so a one-row card keeps all four). Row height 52px, 12px/14px padding; copy is
+  14px/600 over 13px secondary.
+- Controls hug their content on the right: select pills 28px, 8px radius, `--cursor-bg-secondary`,
+  no border, no 148px floor (view.css's blanket "every non-kit <button> is a bordered secondary
+  button" rule needed a `:not(#\#)` to beat -- it was also what boxed the nav items and the
+  switches). `SandSwitch` renders its toggle before the label; the sheet puts it after, so the
+  toggle gets `order: 1`. Its on-colour is an inline `var(--cursor-bg-accent)`, redefined on the
+  switch to `--cursor-text-primary` (black, as in the sheet) rather than fought with `!important`;
+  the off-track read `--cursor-bg-tertiary`, the card colour itself, so that is redefined locally
+  to a 22% mix of the text colour.
+- Account card: 44px avatar, 15px/600 name, 14px secondary detail with the copy-email button on
+  the same line (the body grid was single-column, which stacked the button under the email).
+- `.sand-auto-review` is a `<section>` nested in the Agent group; the card-row reset outranked its
+  plain-class padding override, so its toggle row was double-padded and its label copy ran inline.
+- Updates tab: the dev-only "Refresh Anyway" button lives between two rows; it becomes a
+  right-aligned pill and the row after it starts a new card. `scrollbar-gutter: stable` keeps card
+  widths identical between tabs that scroll and tabs that do not.
+- `production.css` (27): every `sentiment="danger"` SandButton rendered white text on nothing --
+  the kit's base class list carries a threefold-boosted `background-color: transparent` and the
+  danger variant classes only set a plain `background`. Surfaced as an unreadable "Reset" in
+  Settings > Updates; the fix is app-wide.
+- Not changed: one `npm test` run showed a single failure that did not reproduce on two immediate
+  re-runs (the core suite has timing-based tests noted in the core follow-ups); unrelated to the
+  renderer.

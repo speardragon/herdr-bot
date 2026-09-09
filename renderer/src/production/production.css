@@ -91,11 +91,12 @@ button, textarea, input { font: inherit; }
   height: 34px;
   place-items: center;
   overflow: hidden;
-  color: var(--cursor-base);
-  font-size: 13px;
-  font-weight: 700;
-  background: var(--sand-fill-accent);
-  border-radius: var(--cursor-radius-lg);
+  color: var(--cursor-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--cursor-bg-secondary);
+  border-radius: 50%;
 }
 .sand-agents-sidebar__account > button > span:first-child img { width: 100%; height: 100%; object-fit: cover; }
 .sand-agents-sidebar__account > button > span:last-child { display: grid; min-width: 0; gap: 2px; }
@@ -652,3 +653,80 @@ button, textarea, input { font: inherit; }
  *    The button therefore sat in normal flow at the panel's top-left, shifted 14px out of it by the
  *    now-relative `right` offset, so it rendered half-clipped over the nav column. */
 .sand-settings-panel__close:not(#\#):not(#\#):not(#\#) { position: absolute; }
+
+/* 26. Settings dialog, restyled after the shipped Grok Bot settings sheet: a chrome-coloured nav
+ * column with pill-highlighted items, a plain title (no rule under it), and each group as ONE
+ * rounded card whose rows are separated by inset hairlines -- instead of every row being its own
+ * bordered box. Controls on the right hug their content (select pills, toggles). All sizes are
+ * read off the reference at 2x; all colours are theme tokens. Scoped to .sand-settings-dialog. */
+.sand-settings-dialog { width: min(900px, calc(100vw - 32px)); height: min(660px, calc(100vh - 32px)); font-size: 14px; }
+.sand-settings-dialog .sand-settings-layout { grid-template-columns: 200px 1fr; }
+.sand-settings-dialog .sand-settings-nav { gap: 2px; padding: 15px 14px; background: var(--cursor-bg-chrome); border-right: 1px solid var(--cursor-stroke-tertiary); }
+/* view.css styles every non-kit <button> in the dialog as a bordered secondary button, which is
+ * what boxed the nav items (and the switches, below). */
+.sand-settings-dialog .sand-settings-nav__item:not(#\#) { display: flex; gap: 6px; align-items: center; height: 32px; padding: 0 10px; color: var(--cursor-text-primary); font-size: 14px; background: transparent; border: 0; border-radius: 8px; }
+.sand-settings-dialog .sand-settings-nav__item:not(#\#):hover { background: var(--sand-fill-ghost-hover); }
+.sand-settings-dialog .sand-settings-nav__item:not(#\#)[data-active] { background: var(--cursor-bg-secondary); }
+.sand-settings-dialog .sand-settings-nav__item > .ui-icon:not(#\#) { width: 16px; height: 16px; }
+.sand-settings-dialog .sand-settings-panel { display: flex; flex-direction: column; }
+.sand-settings-dialog .sand-settings-panel > h2 { flex: 0 0 auto; height: auto; padding: 30px 40px 0; border-bottom: 0; font-size: 18px; font-weight: 600; line-height: 24px; }
+.sand-settings-dialog .sand-settings-panel__body { flex: 1 1 auto; height: auto; min-height: 0; padding: 22px 32px 32px; scrollbar-gutter: stable; }
+.sand-settings-dialog .sand-settings-panel__close { top: 14px; right: 12px; }
+/* Groups: label, then one card. The card is the run of row elements after the <h3>. */
+.sand-settings-dialog :is(.sand-settings-general, .sand-settings-beta-stack, .sand-usage-section, .sand-router-section) { gap: 28px; }
+.sand-settings-dialog :is(.sand-settings-general, .sand-settings-beta-stack, .sand-usage-section, .sand-router-section) > section { display: grid; gap: 0; }
+.sand-settings-dialog :is(.sand-settings-general, .sand-settings-beta-stack, .sand-usage-section, .sand-router-section) > section > h3 { margin: 0 0 8px 8px; color: var(--cursor-text-secondary); font-size: 13px; font-weight: 500; line-height: 18px; }
+.sand-settings-dialog :is(.sand-settings-general, .sand-settings-beta-stack, .sand-usage-section, .sand-router-section) > section > :is(.sand-account-card, label, .sand-settings-row, .sand-auto-review, .sand-usage-meter, .sand-usage-state, .sand-usage-upgrade, .sand-provider-usage-card, .sand-settings-uptodate-banner) {
+  position: relative;
+  align-items: center;
+  min-height: 52px;
+  padding: 12px 14px;
+  color: var(--cursor-text-primary);
+  background: var(--cursor-bg-tertiary);
+  border: 0;
+  border-radius: 0;
+}
+.sand-settings-dialog :is(.sand-settings-general, .sand-settings-beta-stack, .sand-usage-section, .sand-router-section) > section > :is(h3, .sand-settings-force-refresh) + :is(.sand-account-card, label, .sand-settings-row, .sand-auto-review, .sand-usage-meter, .sand-usage-state, .sand-usage-upgrade, .sand-provider-usage-card, .sand-settings-uptodate-banner) { border-top-left-radius: 12px; border-top-right-radius: 12px; }
+.sand-settings-dialog :is(.sand-settings-general, .sand-settings-beta-stack, .sand-usage-section, .sand-router-section) > section > :is(.sand-account-card, label, .sand-settings-row, .sand-auto-review, .sand-usage-meter, .sand-usage-state, .sand-usage-upgrade, .sand-provider-usage-card, .sand-settings-uptodate-banner):not(:has(+ :is(.sand-account-card, label, .sand-settings-row, .sand-auto-review, .sand-usage-meter, .sand-usage-state, .sand-usage-upgrade, .sand-provider-usage-card, .sand-settings-uptodate-banner))) { border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+.sand-settings-dialog :is(.sand-settings-general, .sand-settings-beta-stack, .sand-usage-section, .sand-router-section) > section > :is(.sand-account-card, label, .sand-settings-row, .sand-auto-review, .sand-usage-meter, .sand-usage-state, .sand-usage-upgrade, .sand-provider-usage-card, .sand-settings-uptodate-banner) + :is(.sand-account-card, label, .sand-settings-row, .sand-auto-review, .sand-usage-meter, .sand-usage-state, .sand-usage-upgrade, .sand-provider-usage-card, .sand-settings-uptodate-banner)::before { content: ""; position: absolute; top: 0; right: 14px; left: 14px; height: 1px; background: var(--cursor-stroke-tertiary); }
+/* Row copy: title / description. */
+.sand-settings-dialog :is(.sand-settings-general, .sand-settings-beta-stack, .sand-usage-section, .sand-router-section) > section > label > span,
+.sand-settings-dialog .sand-settings-copy { gap: 2px; }
+.sand-settings-dialog :is(.sand-settings-general, .sand-settings-beta-stack, .sand-usage-section, .sand-router-section) > section > label strong,
+.sand-settings-dialog .sand-settings-copy strong { font-size: 14px; font-weight: 600; line-height: 20px; }
+.sand-settings-dialog :is(.sand-settings-general, .sand-settings-beta-stack, .sand-usage-section, .sand-router-section) > section > label small,
+.sand-settings-dialog .sand-settings-copy small,
+.sand-settings-dialog .sand-settings-field__hint { color: var(--cursor-text-secondary); font-size: 13px; line-height: 18px; }
+/* Switch rows: SandSwitch renders the toggle BEFORE its label; the sheet puts it on the right. */
+.sand-settings-dialog label:has(> [role="switch"]) { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 0; }
+.sand-settings-dialog label:has(> [role="switch"]) > [role="switch"] { order: 1; flex: 0 0 auto; }
+.sand-settings-dialog label:has(> [role="switch"]) > span { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; }
+/* Auto-review hands SandSwitch a bare <span><strong/><small/></span>; stack those two as well. */
+.sand-settings-dialog label:has(> [role="switch"]) > span > span:not([class]) { display: grid; gap: 2px; }
+.sand-settings-dialog [role="switch"]:not(#\#) { --cursor-bg-accent: var(--cursor-text-primary); --cursor-bg-tertiary: color-mix(in srgb, var(--cursor-text-primary) 22%, transparent); padding: 0; background: transparent; border: 0; }
+/* Auto-review is a nested <section>: toggle row on top, the rules editor beneath it in the same card. */
+.sand-settings-dialog .sand-auto-review:not(#\#) { display: grid; padding: 0; }
+.sand-settings-dialog .sand-auto-review > label { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; padding: 12px 14px; background: transparent; border: 0; border-radius: 0; }
+.sand-settings-dialog .sand-auto-review > div { position: relative; display: grid; gap: 12px; padding: 14px; }
+.sand-settings-dialog .sand-auto-review > div::before { content: ""; position: absolute; top: 0; right: 14px; left: 14px; height: 1px; background: var(--cursor-stroke-tertiary); }
+.sand-settings-dialog .sand-auto-review > div h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.sand-settings-dialog .sand-auto-review > div p, .sand-settings-dialog .sand-auto-review > div small { margin: 0; color: var(--cursor-text-secondary); font-size: 13px; }
+/* Account card: 44px circular avatar with the two-character initials, name over email (+ copy). */
+.sand-settings-dialog .sand-account-card { gap: 12px; min-height: 68px; }
+.sand-settings-dialog .sand-account-card__avatar { width: 44px; height: 44px; color: var(--cursor-text-primary); font-size: 15px; font-weight: 500; letter-spacing: 0.02em; background: var(--cursor-bg-secondary); }
+.sand-settings-dialog .sand-account-card__body { grid-template-columns: max-content 1fr; align-items: center; column-gap: 6px; row-gap: 1px; }
+.sand-settings-dialog .sand-account-card__body > strong { grid-column: 1 / -1; font-size: 15px; font-weight: 600; line-height: 20px; }
+.sand-settings-dialog .sand-account-card__body > span { color: var(--cursor-text-secondary); font-size: 14px; line-height: 20px; }
+.sand-settings-dialog .sand-account-card__copy-email { justify-self: start; }
+.sand-settings-dialog .sand-account-card > .sand-kit-button:not(#\#):not(#\#):not(#\#):not(#\#) { height: 30px; padding: 0 14px; font-size: 14px; background-color: var(--cursor-bg-secondary); }
+/* Select pills hug their label; view.css gave them a 148px floor and a border. */
+.sand-settings-dialog .ui-select-trigger:not(#\#) { gap: 8px; min-width: 0; height: 28px; min-height: 28px; padding: 0 10px; color: var(--cursor-text-primary); font-size: 14px; background: var(--cursor-bg-secondary); border: 0; border-radius: 8px; }
+.sand-settings-dialog .ui-select-trigger:not(#\#):hover { background: var(--cursor-bg-active, var(--cursor-bg-selected)); }
+.sand-settings-dialog .sand-settings-force-refresh:not(#\#) { justify-self: end; margin: 8px 0; }
+.sand-settings-dialog .sand-settings-beta__status { margin: 8px 0 0 8px; color: var(--cursor-text-secondary); font-size: 13px; }
+
+/* 27. Danger buttons (`sentiment="danger"`): the kit's base class list carries
+ * `.sand-jbqb8w:not(#\#)x3 { background-color: transparent }`, and the danger variant classes only
+ * set a plain `background: var(--cursor-danger)`, so every danger button rendered as white text on
+ * nothing (Settings > Updates > "Reset" was unreadable). Match the boost. */
+.sand-kit-button:is(.sand-18he5m, .sand-6y9aml):not(#\#):not(#\#):not(#\#) { background-color: var(--cursor-danger); }
