@@ -433,3 +433,18 @@ button, textarea, input { font: inherit; }
 .sand-new-chat-dialog select.ui-select-trigger { appearance: none; }
 .sand-new-chat-dialog .ui-select-trigger[aria-expanded="true"] { border-color: var(--cursor-stroke-focused); }
 .sand-new-chat-dialog__row > span { color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-sm); }
+
+/* 12. Agent row context menu: Grok Bot-style rows (icon + label), hairline group separators, red
+ *     Delete. Scoped by the menu's aria-label so other menus keep their recovered look. */
+[aria-label="Agent actions"].ui-menu__content { min-width: 212px; padding: 6px; border-radius: 12px; box-shadow: var(--cursor-box-shadow-md); }
+[aria-label="Agent actions"] .sand-agent-menu { gap: 1px; }
+[aria-label="Agent actions"] .sand-kit-button[role="menuitem"]:not(#\#):not(#\#):not(#\#) { display: flex; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; min-height: 34px; padding: 0 10px; color: var(--cursor-text-primary); background: transparent; border: 0; border-radius: 8px; box-shadow: none; font-size: var(--cursor-font-size-base); font-weight: 400; text-align: left; }
+[aria-label="Agent actions"] .sand-kit-button[role="menuitem"]:not(#\#):not(#\#):not(#\#):hover,
+[aria-label="Agent actions"] .sand-kit-button[role="menuitem"]:not(#\#):not(#\#):not(#\#):focus-visible,
+[aria-label="Agent actions"] .sand-kit-button[role="menuitem"]:not(#\#):not(#\#):not(#\#)[aria-expanded="true"] { background: var(--cursor-bg-hover); outline: none; }
+[aria-label="Agent actions"] .sand-kit-button[role="menuitem"]:not(#\#):not(#\#):not(#\#) > span { display: inline-flex; flex: 1 1 auto; align-items: center; justify-content: flex-start; gap: 12px; min-width: 0; margin: 0; text-align: left; }
+[aria-label="Agent actions"] .sand-kit-button[role="menuitem"]:not(#\#):not(#\#):not(#\#) .ui-icon { flex: 0 0 18px; width: 18px; color: var(--cursor-text-secondary); text-align: center; }
+[aria-label="Agent actions"] .sand-kit-button[role="menuitem"]:not(#\#):not(#\#):not(#\#)[data-sentiment="danger"],
+[aria-label="Agent actions"] .sand-kit-button[role="menuitem"]:not(#\#):not(#\#):not(#\#)[data-sentiment="danger"] .ui-icon { color: var(--cursor-red); }
+[aria-label="Agent actions"] .sand-kit-button[role="menuitem"]:not(#\#):not(#\#):not(#\#)[data-sentiment="danger"]:hover { background: color-mix(in srgb, var(--cursor-red) 10%, transparent); }
+.sand-agent-menu__separator { height: 1px; margin: 5px 2px; background: var(--cursor-stroke-tertiary); }

@@ -3,6 +3,7 @@ import { SandButton } from "../recovered/ui/sand-kit-primitives";
 import { SandContextMenu, SandMenuContent, SandMenuItem, SandMenuRoot, SandMenuTrigger } from "../recovered/ui/sand-floating-primitives";
 import {
   AGENT_ROW_ACTIONS_LABEL,
+  type AgentRowAction,
   agentRowActions,
   isCopyConversationIdAction,
   isDeleteAgentAction,
@@ -42,6 +43,26 @@ export interface AgentRowActionsProps {
   children: ReactNode;
 }
 
+type MenuIcon = "pin" | "pin-slash" | "bell" | "bell-slash" | "copy" | "eye-slash" | "trash" | "pencil" | "folder-plus" | "list-bullets" | "clock";
+
+function iconForAction(action: AgentRowAction): MenuIcon {
+  if (isTogglePinAction(action)) return togglePinValue(action) ? "pin" : "pin-slash";
+  if (isMarkAgentUnreadAction(action)) return markAgentUnreadValue(action) ? "bell" : "bell-slash";
+  if (isHideFromSidebarAction(action)) return "eye-slash";
+  if (isDeleteAgentAction(action)) return "trash";
+  return "copy";
+}
+
+function menuItem(key: string, label: string, icon: MenuIcon, onClick: () => void, sentiment?: "danger"): ReactNode {
+  return <SandButton key={key} leadingIcon={icon} onClick={onClick} role="menuitem" sentiment={sentiment} size="md" variant="secondary">{label}</SandButton>;
+}
+
+/** Drops empty groups and puts a rule between the survivors. */
+function withSeparators(groups: readonly (readonly ReactNode[])[]): ReactNode[] {
+  const present = groups.map((group) => group.filter((node) => node != null)).filter((group) => group.length > 0);
+  return present.flatMap((group, index) => index === 0 ? group : [<div aria-hidden="true" className="sand-agent-menu__separator" key={`separator-${index}`} role="separator" />, ...group]);
+}
+
 export function AgentRowActions({ agentId, agentName, isPinned = false, hasUnread = false, isGroup, isHidden = false, onHideFromSidebar, onCopyConversationId, onDuplicateAgent, onTogglePin, onRequestDelete, onSetAgentUnread, sections, currentSectionId, onMoveToSection, onMoveToNewSection, onOpenProfile, onShowFullConversation, onShowAsyncTasks, children }: AgentRowActionsProps) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [moveMenuOpen, setMoveMenuOpen] = useState(false);
@@ -70,35 +91,38 @@ export function AgentRowActions({ agentId, agentName, isPinned = false, hasUnrea
     setMoveMenuOpen(false);
   };
 
-  const content = <div className="ui-menu__list" data-component="menu-list">
-    {onOpenProfile == null ? null : <SandButton onClick={() => { closeMenu(); onOpenProfile(agentId); }} leadingIcon="pencil" role="menuitem" size="sm" variant="secondary">Edit Profile</SandButton>}
-    {onShowFullConversation == null ? null : <SandButton onClick={() => { closeMenu(); onShowFullConversation(agentId); }} leadingIcon="list-bullets" role="menuitem" size="sm" variant="secondary">Show full conversation</SandButton>}
-    {onShowAsyncTasks == null ? null : <SandButton onClick={() => { closeMenu(); onShowAsyncTasks(agentId); }} leadingIcon="clock" role="menuitem" size="sm" variant="secondary">Show async tasks</SandButton>}
-    {canMoveToSection ? sections != null && sections.length > 0 ? <>
-      <SandMenuRoot closeOnSelect={false} onOpenChange={setMoveMenuOpen} open={moveMenuOpen} placement="right-start">
-        <SandMenuTrigger><SandButton aria-expanded={moveMenuOpen} aria-haspopup="menu" role="menuitem" size="sm" variant="secondary">{sectionLabel}</SandButton></SandMenuTrigger>
-        <SandMenuContent ariaLabel="Move to section">
-          {onMoveToSection == null ? null : sections.map((section, index) => <SandMenuItem index={index} key={section.id} onSelect={() => { closeMenu(); onMoveToSection(section.id); }}>{section.name}</SandMenuItem>)}
-          {onMoveToNewSection == null ? null : <SandMenuItem index={sections.length} onSelect={() => { closeMenu(); onMoveToNewSection(); }}>New section</SandMenuItem>}
-        </SandMenuContent>
-      </SandMenuRoot>
-    </> : <SandButton onClick={() => { closeMenu(); onMoveToNewSection?.(); }} role="menuitem" size="sm" variant="secondary">Move to new section</SandButton> : null}
-    {actions.map((action) => <SandButton
-      key={action.id}
-      onClick={() => {
-        closeMenu();
-        if (isTogglePinAction(action)) onTogglePin?.(agentId, togglePinValue(action));
-        else if (isDuplicateAgentAction(action)) onDuplicateAgent?.(agentId);
-        else if (isCopyConversationIdAction(action)) onCopyConversationId?.(agentId);
-        else if (isMarkAgentUnreadAction(action)) onSetAgentUnread?.(agentId, markAgentUnreadValue(action));
-        else if (isHideFromSidebarAction(action)) onHideFromSidebar(agentId);
-        else if (isDeleteAgentAction(action)) onRequestDelete?.({ id: agentId, name: agentName, isGroup });
-      }}
-      role="menuitem"
-      size="sm"
-      variant="secondary"
-    >{action.label}</SandButton>)}
-  </div>;
+  const select = (run: () => void) => () => { closeMenu(); run(); };
+  const runAction = (action: AgentRowAction) => {
+    if (isTogglePinAction(action)) onTogglePin?.(agentId, togglePinValue(action));
+    else if (isDuplicateAgentAction(action)) onDuplicateAgent?.(agentId);
+    else if (isCopyConversationIdAction(action)) onCopyConversationId?.(agentId);
+    else if (isMarkAgentUnreadAction(action)) onSetAgentUnread?.(agentId, markAgentUnreadValue(action));
+    else if (isHideFromSidebarAction(action)) onHideFromSidebar(agentId);
+    else if (isDeleteAgentAction(action)) onRequestDelete?.({ id: agentId, name: agentName, isGroup });
+  };
+  const actionItem = (action: AgentRowAction) => menuItem(action.id, action.label, iconForAction(action), select(() => runAction(action)), isDeleteAgentAction(action) ? "danger" : undefined);
+  const moveItem = !canMoveToSection ? null : sections != null && sections.length > 0
+    ? <SandMenuRoot closeOnSelect={false} key="move" onOpenChange={setMoveMenuOpen} open={moveMenuOpen} placement="right-start">
+      <SandMenuTrigger><SandButton aria-expanded={moveMenuOpen} aria-haspopup="menu" leadingIcon="folder-plus" role="menuitem" size="md" variant="secondary">{sectionLabel}</SandButton></SandMenuTrigger>
+      <SandMenuContent ariaLabel="Move to section">
+        {onMoveToSection == null ? null : sections.map((section, index) => <SandMenuItem index={index} key={section.id} onSelect={() => { closeMenu(); onMoveToSection(section.id); }}>{section.name}</SandMenuItem>)}
+        {onMoveToNewSection == null ? null : <SandMenuItem index={sections.length} onSelect={() => { closeMenu(); onMoveToNewSection(); }}>New section</SandMenuItem>}
+      </SandMenuContent>
+    </SandMenuRoot>
+    : menuItem("move-new-section", "Move to new section", "folder-plus", select(() => onMoveToNewSection?.()));
+  // Grouped like the shipped Grok Bot menu: organise · edit · copy · remove, separated by rules.
+  const groups: ReactNode[][] = [
+    [...actions.filter(isTogglePinAction).map(actionItem), moveItem, ...actions.filter(isMarkAgentUnreadAction).map(actionItem)],
+    [
+      onOpenProfile == null ? null : menuItem("edit-profile", "Edit Profile", "pencil", select(() => onOpenProfile(agentId))),
+      ...actions.filter(isDuplicateAgentAction).map(actionItem),
+      onShowFullConversation == null ? null : menuItem("show-full-conversation", "Show full conversation", "list-bullets", select(() => onShowFullConversation(agentId))),
+      onShowAsyncTasks == null ? null : menuItem("show-async-tasks", "Show async tasks", "clock", select(() => onShowAsyncTasks(agentId))),
+    ],
+    actions.filter(isCopyConversationIdAction).map(actionItem),
+    [...actions.filter(isHideFromSidebarAction).map(actionItem), ...actions.filter(isDeleteAgentAction).map(actionItem)],
+  ];
+  const content = <div className="ui-menu__list sand-agent-menu" data-component="menu-list">{withSeparators(groups)}</div>;
 
   return <SandContextMenu ariaLabel={AGENT_ROW_ACTIONS_LABEL} content={content} onOpenChange={(next) => { setMenu(next); if (next == null) setMoveMenuOpen(false); }} open={menu}>
     <div onContextMenu={handleContextMenu} onKeyDown={handleKeyDown}>
