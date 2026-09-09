@@ -24,6 +24,8 @@
 ## 나중에 고칠 것 (fix later)
 
 - `desktop/src/main.ts`: 호스트 시작 시 shim을 설치·검증하지 않는다. 패키징된 앱은 CLI도 node도 싣지 않으므로, shim이 exec할 node 경로와 진입점을 앱이 정해야 한다(예: `process.execPath` + `ELECTRON_RUN_AS_NODE=1`로 Electron 내장 node를 쓰거나, 설정에서 node 경로를 받는다). shim 형식(`exec "<node>" "<main>" "$@"`)이 환경변수를 못 실어서 형식 변경도 함께 필요하다.
+- `core/src/herdr/session.ts`: 앱이 `herdr-bot` 세션 서버를 처음 띄우면 그 서버는 Electron의 환경(PATH 등)을 물려받는다. pane은 로그인 셸이라 PATH는 회복되지만, "터미널에서 시작한 세션은 되는데 앱이 시작한 세션은 claude를 못 찾는다" 같은 증상이 나오면 여기부터 본다.
+- 기존 `~/.herdr-bot` 프로필 중 pane이 메인(`default`) 세션에 있는 봇은 이제 offline으로 보이고, 삭제해도 `paneClose`가 전용 세션을 향해 메인 세션의 pane은 남는다. 앱에서 봇을 지운 뒤 메인 herdr 창에서 pane을 직접 닫고 다시 만든다. 또는 `HERDR_BOT_SESSION=default`.
 - `desktop/src/main.ts` / `core/src/herdr/cli.ts`: GUI 실행 시 PATH 보정이 없다. 로그인 셸(`$SHELL -lc 'echo $PATH'`)에서 PATH를 읽어 오거나, `/opt/homebrew/bin`·`~/.local/bin`을 탐색하거나, 설정 UI에서 herdr 경로를 받아 `HERDR_BIN_PATH`로 넘긴다.
 - `desktop/src/main.ts`: macOS `activate` 핸들러가 없다. 빨간 버튼으로 창을 닫으면 앱은 살아 있는데 창을 다시 열 방법이 없다(Cmd+Q 후 재실행). 한 줄 추가.
 - `desktop/src/main.ts`: `before-quit`에서 `void host.stop()`을 기다리지 않고, 호스트 시작 후 부팅이 실패한 경로에서도 `host.stop()`을 호출하지 않는다. 다음 실행 때 컨트롤 서버가 죽은 소켓 파일을 정리하므로 복구는 되지만, 종료 시 정리를 기다리도록 바꾼다. `dialog.showErrorBox`는 블로킹이라 헤드리스 환경에서 `app.exit(1)`이 지연된다.
