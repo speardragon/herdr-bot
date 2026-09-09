@@ -59,7 +59,7 @@ button, textarea, input { font: inherit; }
 }
 
 .sand-agents-sidebar__plugins:hover { background: var(--cursor-bg-secondary); }
-.sand-agents-sidebar__plugins-entry { padding: 4px 8px; }
+.sand-agents-sidebar__plugins-entry { padding: 4px 12px; }
 .sand-agents-sidebar__plugins { justify-content: flex-start; border-radius: var(--cursor-radius-lg); }
 
 /* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2983995-2986100 */
@@ -71,10 +71,10 @@ button, textarea, input { font: inherit; }
 .sand-agents-sidebar__account > button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   width: 100%;
   min-height: 40px;
-  padding: 6px 8px;
+  padding: 4px 8px;
   color: var(--cursor-text-primary);
   text-align: left;
   background: transparent;
@@ -87,8 +87,8 @@ button, textarea, input { font: inherit; }
 .sand-agents-sidebar__account > button > span:first-child {
   display: grid;
   flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   place-items: center;
   overflow: hidden;
   color: var(--cursor-base);
@@ -335,13 +335,13 @@ button, textarea, input { font: inherit; }
 }
 
 /* herdr-bot: New (bot / room) dialog */
-.sand-new-chat-dialog__title { margin: 0 0 12px; font-size: var(--cursor-font-size-lg); font-weight: 600; }
-.sand-new-chat-dialog__form { display: grid; gap: 12px; margin-top: 14px; }
+.sand-new-chat-dialog__title { margin: 0 0 12px; font-size: var(--cursor-font-size-lg); line-height: 18px; font-weight: 600; }
+.sand-new-chat-dialog__form { display: grid; gap: 12px; margin-top: 12px; }
 .sand-new-chat-dialog__row { display: grid; gap: 6px; font-size: var(--cursor-font-size-sm); color: var(--cursor-text-secondary); }
 .sand-new-chat-dialog__members { display: grid; gap: 8px; margin: 0; padding: 10px 12px; border: 1px solid var(--cursor-border-secondary); border-radius: var(--cursor-radius-lg); }
 .sand-new-chat-dialog__members legend { padding: 0 4px; color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-xs); }
 .sand-new-chat-dialog__error { margin: 12px 0 0; color: var(--cursor-danger); font-size: var(--cursor-font-size-sm); }
-.sand-new-chat-dialog__footer { display: flex; justify-content: flex-end; gap: 8px; margin: 18px -20px -20px; padding: 12px 16px; border-top: 1px solid var(--cursor-border-secondary); }
+.sand-new-chat-dialog__footer { display: flex; justify-content: flex-end; gap: 8px; margin: 18px -20px -20px; padding: 12px 20px; border-top: 1px solid var(--cursor-border-secondary); }
 
 /* herdr-bot: room member attribution on bot messages */
 
@@ -462,7 +462,7 @@ button, textarea, input { font: inherit; }
 /* 11. The New dialog had no surface: OverlayDialog only positions the panel, so labels and fields
  *     floated over the transcript. Same surface recipe as the settings dialog; selects match too. */
 .sand-new-chat-dialog { color: var(--cursor-text-primary); background: var(--cursor-bg-elevated); border: 1px solid var(--cursor-border-secondary); border-radius: 14px; box-shadow: var(--cursor-box-shadow-md, 0 24px 80px rgba(0, 0, 0, 0.35)); }
-.sand-new-chat-dialog .ui-select-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; padding: 6px 9px; color: inherit; background: var(--cursor-button-secondary-background, var(--cursor-bg-secondary)); border: 1px solid var(--cursor-stroke-tertiary, var(--cursor-border-secondary)); border-radius: 6px; font: inherit; cursor: pointer; }
+.sand-new-chat-dialog .ui-select-trigger { font: inherit; cursor: pointer; }
 .sand-new-chat-dialog select.ui-select-trigger { appearance: none; }
 .sand-new-chat-dialog .ui-select-trigger[aria-expanded="true"] { border-color: var(--cursor-stroke-focused); }
 .sand-new-chat-dialog__row > span { color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-sm); }
@@ -502,7 +502,7 @@ button, textarea, input { font: inherit; }
  * autocomplete, and any future one): same height/radius/border as text fields, a chevron so it
  * reads as a control rather than a plain button, and the option list matches the app's other
  * floating menus. */
-.ui-select-trigger { display: inline-flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 0 10px; color: var(--cursor-text-primary); background: var(--cursor-bg-input); border: 1px solid var(--cursor-stroke-secondary); border-radius: 8px; font-size: var(--cursor-font-size-base); text-align: left; }
+.ui-select-trigger { display: inline-flex; align-items: center; gap: 8px; width: 100%; min-height: 38px; padding: 0 12px; color: var(--cursor-text-primary); background: var(--cursor-bg-input); border: 1px solid var(--cursor-stroke-secondary); border-radius: 8px; font-size: var(--cursor-font-size-base); text-align: left; }
 .ui-select-trigger:hover { border-color: var(--cursor-stroke-primary, var(--cursor-stroke-secondary)); }
 .ui-select-trigger[aria-expanded="true"] { border-color: var(--cursor-stroke-focused); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cursor-stroke-focused) 25%, transparent); }
 .ui-select-trigger__label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -536,7 +536,7 @@ button, textarea, input { font: inherit; }
 .sand-room-message { display: flex; align-items: flex-end; gap: 8px; }
 .sand-room-message__gutter { flex: 0 0 22px; width: 22px; }
 .sand-room-message__content { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
-.sand-message__author { display: block; font-size: var(--cursor-font-size-xs); font-weight: 600; letter-spacing: 0.01em; }
+.sand-message__author { display: block; font-size: var(--cursor-font-size-xs); line-height: 15px; font-weight: 600; letter-spacing: 0.01em; }
 
 /* 20. The "computer" (sandboxed browser-use) feature's stylesheet sets a blanket
  * `:root { user-select: none }` for its own isolated surface; it isn't scoped and so disables text
@@ -547,8 +547,8 @@ button, textarea, input { font: inherit; }
 /* 21. Sidebar Search / Plugins buttons: the shared "md" button size class carries a
  * padding-top-only nudge (a pixel-exact quirk from elsewhere in the recovered kit) that isn't
  * balanced by any padding-bottom here, pushing these two buttons' labels a few px below centre. */
-.sand-agents-sidebar__search:not(#\#):not(#\#):not(#\#):not(#\#),
-.sand-agents-sidebar__plugins:not(#\#):not(#\#):not(#\#):not(#\#) { padding-top: 0; }
+.sand-agents-sidebar__search:not(#\#):not(#\#):not(#\#):not(#\#) { padding-top: 0; }
+.sand-agents-sidebar__plugins:not(#\#):not(#\#):not(#\#):not(#\#) { padding: 0 8px; }
 
 /* 22. Agent-kind icon (New Bot dialog): a real brand mark, masked in white over the kind's colour
  * chip -- see renderer/UPSTREAM.md for source/licence. Kinds with no available mark (Grok) fall
@@ -565,6 +565,7 @@ button, textarea, input { font: inherit; }
   overflow: hidden;
   color: var(--sand-fill-accent);
   font-size: var(--cursor-font-size-xs);
+  line-height: 15px;
   font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -578,3 +579,61 @@ button, textarea, input { font: inherit; }
  * the broader .sand-message-prose code match. */
 .sand-message-prose code { color: #eb5757; }
 .sand-code-figure .sand-code-block code { color: #d9ded4; }
+
+/* 25. Pixel alignment pass. Each rule below names the reference it is being lined up with; none of
+ * them change a colour, a size that already agreed with its neighbour, or any deliberate spacing.
+ *
+ * a. The two header hairlines met at the column divider 1px apart: the recovered sidebar header is
+ *    50px tall, the recovered chat header 51px. Match the chat header. */
+.sand-agents-sidebar__header { height: 51px; }
+
+/* b. Sidebar rows had no line-height on the name or the preview, so a Hangul name (17px line box)
+ *    sat 1px higher than a Latin one (15px) and its preview 1px lower -- neighbouring rows in the
+ *    same list did not share a baseline. Fix both line boxes so every row is identical; the values
+ *    clear the taller Hangul glyphs, which `overflow: hidden` would otherwise clip. */
+.sand-agent-item__name { line-height: 17px; }
+.sand-agent-item__preview { line-height: 15px; }
+
+/* c. The Channels button puts its icon inside the label span, so the button's own `gap` never
+ *    applied and the glyph touched the "C". The Plugins button (icon as a direct child) shows the
+ *    intended 4px. */
+.sand-chat-header__controls .sand-kit-button > span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* d. Composer controls: the attach and mic buttons are sized by a recovered atomic class carrying
+ *    a four-fold `:not(#\#)` specificity boost, so the 34px in block 9 never applied and both
+ *    rendered 24px. Bottom-aligned in the row, that put their centres 5px below the 34px send
+ *    button's -- and the mic jumped down 5px the moment the send button appeared. Match the boost
+ *    so all three controls share one centre line in both composer states. */
+.sand-prompt-shell .sand-prompt-attach:not(#\#):not(#\#):not(#\#):not(#\#),
+.sand-prompt-shell .sand-prompt-mic:not(#\#):not(#\#):not(#\#):not(#\#) { width: 34px; height: 34px; }
+
+/* e. Message body: every recovered markdown block carries `margin-top: 0` and `margin-bottom: 0`
+ *    atomic classes, so headings, paragraphs, lists, quotes and tables all ran flush into one
+ *    another; the only thing separating them was the blank line the paragraph parser used to leave
+ *    inside the <p> (fixed in transcript.tsx). The prose column is a flex column, so give it one
+ *    uniform block gap and zero the code figure's own margin, which would otherwise stack on top
+ *    of that gap. First/last resets keep the gap off the bubble's 8px padding. */
+.sand-message-prose { gap: 8px; }
+.sand-message-prose > .sand-code-figure { margin-block: 0; }
+.sand-message-prose > :first-child { margin-top: 0; }
+.sand-message-prose > :last-child { margin-bottom: 0; }
+
+/* f. Select triggers and text inputs were 34px and 37px tall with 10px and 12px text insets, so a
+ *    dialog's selects and its fields started their text on two different lines and columns. Block
+ *    15 now matches the input's 12px inset; 38px (an even content box once the 1px border is
+ *    counted) is the shared height, so the 18px badge and the 14px label inside a select also
+ *    centre on a whole pixel instead of a half one. */
+.ui-input-group__input, .ui-input-group__textarea { min-height: 38px; }
+
+/* g. The Search and Plugins buttons centre their label, so the only two full-width controls in the
+ *    sidebar start their text 90px right of every row above and below them. Block 8 already tried
+ *    to left-align them, but the shared button-kit class carries a `:not(#\#)` boost; match it.
+ *    With the 8px button padding the label then starts at x=20, the avatar column. */
+.sand-agents-sidebar__search:not(#\#):not(#\#):not(#\#):not(#\#),
+.sand-agents-sidebar__search:not(#\#):not(#\#):not(#\#):not(#\#) > span,
+.sand-agents-sidebar__plugins:not(#\#):not(#\#):not(#\#):not(#\#) { justify-content: flex-start; }
+@container sand-sidebar (max-width: 130px) {
+  .sand-agents-sidebar__search:not(#\#):not(#\#):not(#\#):not(#\#),
+  .sand-agents-sidebar__search:not(#\#):not(#\#):not(#\#):not(#\#) > span,
+  .sand-agents-sidebar__plugins:not(#\#):not(#\#):not(#\#):not(#\#) { justify-content: center; }
+}

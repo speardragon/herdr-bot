@@ -436,7 +436,9 @@ function SidebarSectionNameEditor({ initialValue, onCommit, onExit }: { initialV
 export function ConversationSidebar({ agents, sections, pinnedAgentIds = [], activeAgentId, onBroadcast, onNewChat, onOpenAgent, onHideAgent, onRequestDeleteAgent, onRenameAgent, onCopyAgentId, onDuplicateAgent, onTogglePin, onReorderPinnedAgents, onSetAgentUnread, onToggleSectionCollapsed, onStartRenameSection, onRenameSection, onRequestDeleteSection, onMoveSection, onOpenNetwork, onOpenSearch, onOpenProfile, onShowFullConversation, onShowAsyncTasks, onMoveAgentToSection, onMoveAgentToNewSection, selectedAgentIds = [], onToggleAgentSelection, onRangeSelectAgent, onDeleteSelectedAgents, onClearAgentSelection, onMoveSelectedAgentsToSection, onMoveSelectedAgentsToNewSection, sidebarLayout, onResize, onResizeEnd, listStatus, isHostReachable = false, isPreviewEnabled = true }: ConversationSidebarProps) {
   const now = Date.now();
   const isCollapsed = sidebarLayout?.isCollapsed ?? false;
-  const sidebarWidth = isCollapsed ? SIDEBAR_LAYOUT_BOUNDS.collapsedWidth : sidebarLayout?.expandedWidth;
+  const sidebarWidthRaw = isCollapsed ? SIDEBAR_LAYOUT_BOUNDS.collapsedWidth : sidebarLayout?.expandedWidth;
+  // Round: a fractional aside width leaves the column's hairline border on a half-pixel.
+  const sidebarWidth = sidebarWidthRaw == null ? undefined : Math.round(sidebarWidthRaw);
   const [renamingSectionId, setRenamingSectionId] = useState<string | null>(null);
   const [dropSectionId, setDropSectionId] = useState<string | null>(null);
   const { pinned: orderedPinned, unpinned } = partitionSidebarAgents(agents, pinnedAgentIds);

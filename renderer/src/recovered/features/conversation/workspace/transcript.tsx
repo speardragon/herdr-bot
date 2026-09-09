@@ -300,7 +300,14 @@ function assistantTextBlocks(text: string): AssistantTextBlock[] {
   let activeList: Extract<AssistantTextBlock, { kind: "list" }> | null = null;
   let activeQuote: string[] | null = null;
   const flushParagraph = () => {
-    if (paragraphLines.some((line) => line.trim().length > 0)) blocks.push({ kind: "paragraph", text: paragraphLines.join("\n") });
+    // A paragraph run collects every line up to the next block, blank separator lines included.
+    // Those blanks survived into the <p>, which renders `white-space: pre-wrap`, so each markdown
+    // paragraph gained an empty leading and/or trailing line.
+    let start = 0;
+    let end = paragraphLines.length;
+    while (start < end && paragraphLines[start]!.trim().length === 0) start += 1;
+    while (end > start && paragraphLines[end - 1]!.trim().length === 0) end -= 1;
+    if (end > start) blocks.push({ kind: "paragraph", text: paragraphLines.slice(start, end).join("\n") });
     paragraphLines.length = 0;
   };
   const flushList = () => {

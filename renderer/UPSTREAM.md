@@ -127,3 +127,56 @@ Found by inspecting the live renderer over CDP against the real Grok Bot 0.18 wi
   still occupied inline layout space next to the visible one, pushing the visible icon off-centre
   within its span. Stacked both icons absolutely inside a fixed-size relative span so only the
   visible one's position matters.
+
+## Pixel alignment pass (2026-09-09, tenth pass)
+
+A full CDP measurement sweep of the DM view, the room view, the New dialog and an 820x620 window,
+comparing every rect against the neighbour it is supposed to line up with. Fixes, by cause:
+
+- `transcript.tsx` `assistantTextBlocks`: a paragraph run collected every line up to the next block,
+  the blank separator lines included, and joined them verbatim. `.sand-message-prose p` renders
+  `white-space: pre-wrap`, so those blanks survived as real line boxes -- every markdown paragraph
+  was 20px taller than its text and carried an empty leading (and often trailing) line. Trim blank
+  lines at both ends of the run.
+- `production.css` (25e): with that blank line gone, nothing separated markdown blocks at all --
+  every recovered block class carries explicit `margin-top: 0` / `margin-bottom: 0`, so headings,
+  paragraphs, lists, quotes and tables ran flush. Give the prose flex column one 8px block gap,
+  zero the code figure's own margin (it would stack on the gap) and reset the first/last margins so
+  the gap stays off the bubble's 8px padding. That last reset also fixes 18px of padding under a
+  trailing code block against 8px above it.
+- `ProductionRenderer.tsx` / `sidebar.tsx` / `resizeSidebar`: the sidebar width is persisted from a
+  drag and was never rounded (271.3515625px here), so the entire chat column -- its header hairline,
+  its text -- sat on a half-pixel grid. Round at the three places the value becomes layout.
+- `production.css` (25a): the recovered sidebar header is 50px and the recovered chat header 51px,
+  so the two bottom hairlines met at the column divider 1px apart. Match the chat header.
+- `production.css` (25b): `.sand-agent-item__name` / `__preview` had no line-height, so a Hangul row
+  (17px line box) sat 1px above a Latin one (15px) and its preview 1px below -- adjacent rows in the
+  same list did not share a baseline. Fixed line boxes, sized to clear Hangul without clipping.
+- `production.css` (23 addendum): same for `.sand-agent-item__activity`, which swaps in while a bot
+  is working -- it was 13px against the preview's 15px, so the row's text shifted as a bot started.
+- `production.css` (25c): the Channels button nests its icon inside the label span, so the button's
+  own `gap` never applied and the glyph touched the "C".
+- `production.css` (25d): the composer's attach and mic buttons are sized by a recovered atomic class
+  with a fourfold `:not(#\#)` boost, so block 9's 34px never applied and both rendered 24px.
+  Bottom-aligned in the row that put their centres 5px below the 34px send button's, and the mic
+  jumped down 5px the moment the send button appeared. Match the boost.
+- `production.css` (25g): the Search and Plugins buttons centred their labels, the only two controls
+  in the sidebar that did; every row above and below starts its content at x=20. Block 8 had already
+  tried to left-align them and lost to the same specificity boost. Collapsed sidebars keep centring.
+- `production.css` (account block): the footer avatar was 30px against the rows' 34px at the same
+  left edge, so the two avatar columns' centres were 2px apart; its label sat 1px off the rows'
+  names. 34px, `gap: 9px` and `padding: 4px 8px` keep the row height and line both columns up.
+- `production.css` (plugins block): `.sand-agents-sidebar__plugins-entry` had an 8px gutter against
+  the 12px the search box, the rows and the account row all use, so the Plugins button was 4px wider
+  than everything else on both sides.
+- `production.css` (dialog): `.sand-new-chat-dialog .ui-select-trigger` was a second, higher-specificity
+  copy of block 15's select recipe, so block 15 never governed: selects were 34px tall with a 10px
+  text inset against the inputs' 37px and 12px, and the Agent select's badge sat 16px from its label.
+  Dropped the duplicate; both are now 38px (an even content box, so an 18px badge and a 14px label
+  centre on a whole pixel). The footer's 16px padding put "Start bot" 4px past the fields' right
+  edge; the title had no line-height, which made the dialog 530.5px tall and centred it on a
+  half-pixel; the form's 14px top margin did not match the title's 12px.
+
+Not changed, and why: `.sand-chat-input-dock`'s 8px/18px vertical padding, `.sand-chat-header__controls`'
+2px gap against the sidebar cluster's 3px, and the transcript's 24px/8px padding are recovered
+upstream values, not ours.

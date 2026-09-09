@@ -1320,7 +1320,9 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     const base = sidebarResizePreviewRef.current ?? uiLayoutStore.sidebarLayout.get();
     const next = {
       ...base,
-      expandedWidth: Math.max(SIDEBAR_LAYOUT_BOUNDS.minExpandedWidth, Math.min(SIDEBAR_LAYOUT_BOUNDS.maxExpandedWidth, expandedWidth))
+      // Round: a fractional width puts the whole chat column on a half-pixel grid, which blurs
+      // its borders and text.
+      expandedWidth: Math.round(Math.max(SIDEBAR_LAYOUT_BOUNDS.minExpandedWidth, Math.min(SIDEBAR_LAYOUT_BOUNDS.maxExpandedWidth, expandedWidth)))
     };
     sidebarResizePreviewRef.current = next;
     setSidebarResizePreview(next);
@@ -3480,7 +3482,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       {account?.kind === "logged-in" && !computerInfoOpen && !computer.isOpen && computerRebuildBannerInput.kind !== "reconnecting" ? <ComputerRebuildProgressBanner input={computerRebuildBannerInput} onRestore={restoreComputerProgress} /> : null}
       {bridge == null ? null : <WindowChrome bridge={bridge} isFullscreen={windowFullscreen} isMaximized={windowMaximized} />}
       <RootShellLoading isVisible={showRootLoading} />
-      <div style={{ display: "grid", gridTemplateColumns: `${renderedSidebarLayout.isCollapsed ? SIDEBAR_LAYOUT_BOUNDS.collapsedWidth : renderedSidebarLayout.expandedWidth}px minmax(0, 1fr)`, height: "100%", minHeight: 0, width: "100%" }}>
+      <div style={{ display: "grid", gridTemplateColumns: `${Math.round(renderedSidebarLayout.isCollapsed ? SIDEBAR_LAYOUT_BOUNDS.collapsedWidth : renderedSidebarLayout.expandedWidth)}px minmax(0, 1fr)`, height: "100%", minHeight: 0, width: "100%" }}>
         <div className="sand-sidebar-column" style={{ display: "grid", gridTemplateRows: "minmax(0, 1fr) auto auto auto", minHeight: 0 }}>
           <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", minHeight: 0 }}>
             {connectionController == null ? null : <CoordinatorConnectionHost controller={connectionController} />}
