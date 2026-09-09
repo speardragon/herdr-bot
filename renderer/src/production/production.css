@@ -502,7 +502,7 @@ button, textarea, input { font: inherit; }
  * autocomplete, and any future one): same height/radius/border as text fields, a chevron so it
  * reads as a control rather than a plain button, and the option list matches the app's other
  * floating menus. */
-.ui-select-trigger { display: inline-flex; align-items: center; gap: 8px; width: 100%; min-height: 38px; padding: 0 12px; color: var(--cursor-text-primary); background: var(--cursor-bg-input); border: 1px solid var(--cursor-stroke-secondary); border-radius: 8px; font-size: var(--cursor-font-size-base); text-align: left; }
+.ui-select-trigger { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 12px; color: var(--cursor-text-primary); background: var(--cursor-bg-input); border: 1px solid var(--cursor-stroke-secondary); border-radius: 8px; font-size: var(--cursor-font-size-base); text-align: left; }
 .ui-select-trigger:hover { border-color: var(--cursor-stroke-primary, var(--cursor-stroke-secondary)); }
 .ui-select-trigger[aria-expanded="true"] { border-color: var(--cursor-stroke-focused); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cursor-stroke-focused) 25%, transparent); }
 .ui-select-trigger__label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -637,3 +637,18 @@ button, textarea, input { font: inherit; }
   .sand-agents-sidebar__search:not(#\#):not(#\#):not(#\#):not(#\#) > span,
   .sand-agents-sidebar__plugins:not(#\#):not(#\#):not(#\#):not(#\#) { justify-content: center; }
 }
+
+/* h. Block 15 gave every select trigger `width: 100%`. In the New dialog the trigger is the only
+ *    item on its grid row, so it stretches anyway -- but the Settings rows are `display: flex` with
+ *    the label and the control as siblings, and there 100% resolved against the whole row: the
+ *    trigger covered its own label ("Theme" behind "Follow System"), and "Execution on Local
+ *    Computer" was squeezed to one word per line. Let the trigger size to its content and stretch
+ *    only where the layout asks it to. */
+.sand-new-chat-dialog__row > .ui-select-trigger,
+.sand-new-chat-dialog__cwd .ui-select-trigger { width: 100%; }
+
+/* i. Settings dialog close button: view.css asks for `position: absolute; top: 11px; right: 14px`,
+ *    but SandIconButton's atomic `position: relative` carries a threefold `:not(#\#)` boost and won.
+ *    The button therefore sat in normal flow at the panel's top-left, shifted 14px out of it by the
+ *    now-relative `right` offset, so it rendered half-clipped over the nav column. */
+.sand-settings-panel__close:not(#\#):not(#\#):not(#\#) { position: absolute; }

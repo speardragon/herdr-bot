@@ -180,3 +180,28 @@ comparing every rect against the neighbour it is supposed to line up with. Fixes
 Not changed, and why: `.sand-chat-input-dock`'s 8px/18px vertical padding, `.sand-chat-header__controls`'
 2px gap against the sidebar cluster's 3px, and the transcript's 24px/8px padding are recovered
 upstream values, not ours.
+
+### Settings dialog (same pass)
+
+Reachable from the account menu, and badly broken before this pass -- both causes are ours or a
+recovered specificity boost, not upstream layout:
+
+- `production.css` (25h): block 15 gave every `.ui-select-trigger` `width: 100%`. In the New dialog
+  the trigger is the only item on its grid row and would stretch anyway, but the Settings rows are
+  `display: flex` with the label and the control as siblings: 100% resolved against the whole row, so
+  each trigger covered its own label ("Follow System" over "Theme", "Auto-detect (Asia/Seoul)" over
+  "Timezone") and squeezed "Execution on Local Computer" to one word per line. The trigger now sizes
+  to its content; `width: 100%` is scoped to the two New-dialog rows that need it.
+- `production.css` (25i): `.sand-settings-panel__close` asks for `position: absolute; top: 11px;
+  right: 14px`, but SandIconButton's atomic `position: relative` carries a threefold `:not(#\#)`
+  boost and won, so the button sat in normal flow at the panel's top-left and the now-relative
+  `right` offset pushed it 14px out over the nav column, half-clipped. Boosted to absolute.
+
+### Noted, not changed
+
+- `.sand-room-message__gutter` collapses to `22x0` on bubbles that carry no avatar. Harmless with
+  `align-items: flex-end` and today's bubble heights (a bubble is never shorter than the 22px
+  avatar), but a shorter bubble would let the avatar overflow above the row.
+- `assistantTextBlocks`' paragraph trimming has no unit test: the renderer workspace has no test
+  runner at all (`npm test` covers core, cli and desktop), and the function lives in a `.tsx` file
+  that `node --test` cannot strip. Verified live instead.
