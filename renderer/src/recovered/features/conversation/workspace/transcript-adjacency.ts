@@ -17,6 +17,10 @@ export interface TranscriptAdjacency {
   readonly isRunStart: boolean;
   readonly isFollowedByThreadChip: boolean;
   readonly isGroupEnd: boolean;
+  /** herdr-bot: true on the last bubble of a same-author, same-time-window run (Slack-style: name
+   * on the first bubble, avatar on the last). Unlike `isGroupEnd`, this is meaningful for
+   * assistant rows too. */
+  readonly isAssistantRunEnd: boolean;
 }
 
 export interface TranscriptAdjacencyOptions {
@@ -35,6 +39,7 @@ const EMPTY_ADJACENCY: TranscriptAdjacency = Object.freeze({
   isRunStart: false,
   isFollowedByThreadChip: false,
   isGroupEnd: false,
+  isAssistantRunEnd: false,
 });
 
 type TranscriptRole = "assistant" | "user" | "other";
@@ -111,6 +116,22 @@ function safeThreadChip(options: TranscriptAdjacencyOptions, entry: Conversation
  * transcript window. Unsupported rows intentionally become an all-false
  * boundary and never borrow identity from adjacent message-like entries.
  */
+/** herdr-bot: a same-author run breaks after this much silence, Slack-style, even with no other
+ * boundary -- otherwise a bot's messages sent hours apart would still read as one uninterrupted
+ * group. */
+const RUN_TIME_WINDOW_MS = 5 * 60 * 1000;
+
+function entryTimestampMs(entry: ConversationTranscriptEntry | undefined): number | undefined {
+  const value = (entry as { timestampMs?: unknown } | undefined)?.timestampMs;
+  return typeof value === "number" ? value : undefined;
+}
+
+function tooFarApart(a: ConversationTranscriptEntry | undefined, b: ConversationTranscriptEntry | undefined): boolean {
+  const first = entryTimestampMs(a);
+  const second = entryTimestampMs(b);
+  return first == null || second == null || Math.abs(second - first) > RUN_TIME_WINDOW_MS;
+}
+
 export function projectTranscriptAdjacency(
   entries: readonly ConversationTranscriptEntry[],
   options: TranscriptAdjacencyOptions = {},
@@ -131,18 +152,21 @@ export function projectTranscriptAdjacency(
       && !entryHasThreadChip
       && !current.hasReaction;
     const isAssistantGroup = current.role === "assistant";
+    const sameGroupAsPrev = previous?.groupKey === current.groupKey && !tooFarApart(previousEntry, entry);
+    const sameGroupAsNext = next?.groupKey === current.groupKey && !tooFarApart(entry, nextEntry);
 
     return {
       isContinuedFromPrev: current.isBubble
-        && previous?.groupKey === current.groupKey
-        && previous.isBubble
+        && sameGroupAsPrev
+        && previous!.isBubble
         && !prevHasThreadChip,
       isContinuedToNext: current.isBubble
-        && ((next?.groupKey === current.groupKey && next.isBubble) || isIndicatorSeaming),
-      isGroupStart: previousEntry !== undefined && previous?.groupKey !== current.groupKey,
-      isRunStart: previousEntry === undefined || previous?.groupKey !== current.groupKey,
+        && ((sameGroupAsNext && next!.isBubble) || isIndicatorSeaming),
+      isGroupStart: previousEntry !== undefined && !sameGroupAsPrev,
+      isRunStart: previousEntry === undefined || !sameGroupAsPrev,
       isFollowedByThreadChip: current.isBubble && entryHasThreadChip && !current.hasReaction,
-      isGroupEnd: !isAssistantGroup && (nextEntry === undefined || next?.groupKey !== current.groupKey),
+      isGroupEnd: !isAssistantGroup && (nextEntry === undefined || !sameGroupAsNext),
+      isAssistantRunEnd: isAssistantGroup && (nextEntry === undefined || !sameGroupAsNext),
     };
   });
 }

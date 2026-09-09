@@ -513,10 +513,11 @@ button, textarea, input { font: inherit; }
  * kind gets a colour-coded initial instead of an unlicensed icon. */
 .sand-kind-badge { display: inline-flex; flex: 0 0 18px; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #fff; font-size: 10px; font-weight: 700; line-height: 1; }
 
-/* 19. Room messages: the author's avatar sits in a fixed-width gutter to the left (empty, but
- * still reserved, on every bubble after the first of that sender's run), with the coloured name
- * above the first bubble -- the same layout and colour as the sidebar/DM header. */
-.sand-room-message { display: flex; align-items: flex-start; gap: 8px; }
+/* 19. Room messages, Slack-style: the author's avatar sits in a fixed-width gutter to the left,
+ * anchored to the BOTTOM of the last bubble in that sender's run (reserved but empty on every
+ * earlier bubble), while the coloured name labels only the first bubble -- the same avatar and
+ * colour as the sidebar/DM header. */
+.sand-room-message { display: flex; align-items: flex-end; gap: 8px; }
 .sand-room-message__gutter { flex: 0 0 22px; width: 22px; }
 .sand-room-message__content { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .sand-message__author { display: block; font-size: var(--cursor-font-size-xs); font-weight: 600; letter-spacing: 0.01em; }

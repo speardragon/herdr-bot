@@ -48,10 +48,14 @@ export function SendMessageTextTranscriptCard(props: TranscriptCardLeafProps) {
   </div>;
   if (!isRoomMessage) return bubble;
 
+  // herdr-bot: Slack-style run -- the name labels the first bubble, the avatar anchors the last
+  // (and sits at the bottom of it), silence stays on the same author, and each bot's own colour
+  // ties the two together.
+  const isRunEnd = props.adjacency?.isAssistantRunEnd ?? true;
   const avatar = providers?.authorAvatar?.(author.id) ?? null;
-  return <div className="sand-room-message" data-group-start={isGroupStart || undefined}>
+  return <div className="sand-room-message" data-group-start={isGroupStart || undefined} data-run-end={isRunEnd || undefined}>
     <div className="sand-room-message__gutter">
-      {isGroupStart ? <AgentAvatar agentId={author.id} color={avatar?.avatarColor} dataUrl={avatar?.avatarDataUrl} name={author.name} shape={avatar?.avatarShape} size="sm" /> : null}
+      {isRunEnd ? <AgentAvatar agentId={author.id} color={avatar?.avatarColor} dataUrl={avatar?.avatarDataUrl} name={author.name} shape={avatar?.avatarShape} size="sm" /> : null}
     </div>
     <div className="sand-room-message__content">
       {isGroupStart ? <span className="sand-message__author" data-author-id={author.id} style={{ color: resolvePersonaColorHex(author.id, avatar?.avatarColor) }}>{author.name}</span> : null}

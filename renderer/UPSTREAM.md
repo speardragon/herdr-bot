@@ -70,3 +70,14 @@ Found by inspecting the live renderer over CDP against the real Grok Bot 0.18 wi
   included; restored to `text`. Also un-did a padding-top-only quirk (present on the shared "md"
   button size class for pixel-exact fidelity elsewhere) that was pushing the sidebar Search and
   Plugins button labels a few px below centre.
+
+## Slack-style room message grouping (2026-09-09, fourth pass)
+
+- `.../workspace/transcript-adjacency.ts`: grouping is now also time-gated (`RUN_TIME_WINDOW_MS`,
+  5 minutes) -- a same-author run breaks after enough silence even with no other boundary. Added
+  `isAssistantRunEnd` (the shipped `isGroupEnd` field deliberately excludes assistant rows for
+  reasons unrelated to this, so this is a parallel herdr-bot-owned field, not a repurposing of it).
+- `.../transcript-card/views/shared.tsx`: `TranscriptCardAdjacency` gained `isAssistantRunEnd`.
+- `.../transcript-card/views/send-message-text.tsx` + `production.css` (block 19): matches Slack --
+  the author name labels only the *first* bubble of a run; the avatar anchors the *last* bubble and
+  sits at its bottom edge (`align-items: flex-end` on the row), not the top of the first.

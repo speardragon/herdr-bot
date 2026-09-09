@@ -47,6 +47,8 @@ export function useTranscriptCardLeafProviders(): TranscriptCardLeafProviders | 
 export interface TranscriptCardAdjacency {
   isGroupStart?: boolean;
   isGroupEnd?: boolean;
+  /** herdr-bot: see TranscriptAdjacency.isAssistantRunEnd. */
+  isAssistantRunEnd?: boolean;
 }
 
 export interface TranscriptCardLeafProps {
