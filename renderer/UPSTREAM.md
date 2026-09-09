@@ -91,3 +91,11 @@ Found by inspecting the live renderer over CDP against the real Grok Bot 0.18 wi
   wrap/clamp, the full message rendered at the ambient body size and pushed the row (and the whole
   list under it) taller for as long as the bot was working. Matched it to `.sand-agent-item__preview`'s
   sizing/clamping, keeping the accent colour.
+
+## Sidebar last-message preview markdown stripping (2026-09-09, sixth pass)
+
+- `renderer/src/production/model.ts`: `derivedLastMessage`'s "text" branch used the raw stored
+  entry text; the hover card's `previewTextFromLastEntry` (which strips markdown syntax down to
+  plain text) was already there but only wired to the hover card, not the row itself. A reply
+  opening with `## Heading` or a markdown list showed the literal `##`/`-` in the sidebar row.
+  Routed the row through the same stripper.

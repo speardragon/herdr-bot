@@ -17,6 +17,7 @@ import { projectSendMessageText, type SendMessageTextAdjacency } from "../recove
 import { projectTimelineEvent } from "../recovered/features/conversation/cards/timeline-event-registry";
 import { projectTranscriptReactions } from "../recovered/features/conversation/cards/transcript-card/reaction-actions";
 import type { TranscriptThreadSummary } from "../recovered/features/conversation/cards/transcript-card/thread-summary-controller";
+import { previewTextFromLastEntry } from "../recovered/features/conversation/workspace/sidebar-agent-preview-content";
 
 export type { DeepLinkInfo } from "../recovered/features/deep-links/overlay/model";
 
@@ -115,8 +116,11 @@ export function parseRendererAgentLastEntry(value: unknown): RendererAgentLastEn
   return null;
 }
 
+/** herdr-bot: the sidebar row (unlike its hover card) used the raw stored text for a "text" last
+ * entry, so a reply that opened with "## Heading" or a markdown list showed the literal "##"/"-"
+ * in the row. Route it through the same plain-text stripper the hover card already uses. */
 function derivedLastMessage(entry: RendererAgentLastEntry | null, fallback: unknown): string | undefined {
-  if (entry?.kind === "text") return entry.text;
+  if (entry?.kind === "text") return previewTextFromLastEntry(entry) || undefined;
   if (typeof fallback === "string") return fallback;
   if (entry?.kind === "link") return `Sent a link · ${entry.url}`;
   if (entry?.kind === "attachment") {
