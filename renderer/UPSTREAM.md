@@ -99,3 +99,14 @@ Found by inspecting the live renderer over CDP against the real Grok Bot 0.18 wi
   plain text) was already there but only wired to the hover card, not the row itself. A reply
   opening with `## Heading` or a markdown list showed the literal `##`/`-` in the sidebar row.
   Routed the row through the same stripper.
+
+## Composer send button + top padding fix (2026-09-09, seventh pass)
+
+- `production.css` (block 9): the send button lives inside `.sand-prompt-actions-trailing` (a
+  sibling of the mic button), not a direct child of `.sand-prompt-actions-row` -- the earlier
+  selector never matched, so it fell back to its own recovered atomic classes, which render it
+  square. Retargeted the selector and gave it the same round-pill treatment as the mic button.
+- Tiptap renders each line as a `<p>` with no reset, so it kept the browser's default paragraph
+  margin (1em top) and inherited the default 16px font-size (vs. the app's 14px base) instead of
+  its own -- together showing as extra empty space above the typed text and a taller composer than
+  intended. Zeroed the paragraph margin and set the field's font-size explicitly.

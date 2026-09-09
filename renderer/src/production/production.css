@@ -434,8 +434,20 @@ button, textarea, input { font: inherit; }
 .sand-prompt-actions-row > .sand-kit-icon-button.sand-prompt-attach { grid-column: 1; grid-row: 2; width: 34px; height: 34px; }
 .sand-prompt-actions-trailing { grid-column: 3; grid-row: 2; align-items: center; }
 .sand-prompt-actions-trailing > .sand-kit-icon-button.sand-prompt-mic { width: 34px; height: 34px; color: var(--cursor-bg-editor); background: var(--cursor-text-primary); border-radius: 50%; }
-.sand-prompt-actions-row > .sand-prompt-send { width: 34px; height: 34px; }
-.sand-prompt-field { min-height: 34px; padding: 7px 4px; line-height: 20px; }
+/* The send button lives inside .sand-prompt-actions-trailing (a sibling of the mic button, not a
+ * direct child of .sand-prompt-actions-row), so the original selector here never matched and it
+ * fell back to its recovered atomic classes' own (unreliable) sizing -- a square button instead of
+ * the round pill every other composer control uses. */
+.sand-prompt-actions-trailing > .sand-prompt-send { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border-radius: 50%; }
+.sand-prompt-field {
+  min-height: 34px;
+  padding: 7px 4px;
+  font-size: var(--cursor-font-size-base);
+  line-height: 20px;
+}
+/* Tiptap renders each line as a <p>; with no reset it keeps the browser's default paragraph
+ * margin (1em), which showed up as extra empty space above the typed text. */
+.sand-prompt-field p { margin: 0; }
 .sand-prompt-field p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; color: var(--cursor-input-placeholder-foreground, var(--cursor-text-tertiary)); pointer-events: none; }
 
 /* 10. The connection host above the agent list renders nothing while connected, so the aside fell
