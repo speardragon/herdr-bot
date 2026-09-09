@@ -14,7 +14,7 @@ test("host serves the control protocol end to end", async () => {
   const temp = makeTempHome();
   const fake = installFakeHerdr(temp.home, { agents: [], workspaces: [], onPrompt: { a: { say: ["A here"], sayOnce: true }, b: { say: ["B here"], sayOnce: true } } });
   const config = resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BIN_PATH: fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" });
-  const host = createHost(config, { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null });
+  const host = createHost(config, { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null, ensureSession: null });
   await host.start();
   const sock = config.controlSocketPath;
   try {
@@ -44,7 +44,7 @@ test("deleting and recreating a bot with the same id starts with an empty transc
   const temp = makeTempHome();
   const fake = installFakeHerdr(temp.home, { agents: [], workspaces: [], onPrompt: { reviewer: { say: ["hi from reviewer"], sayOnce: true } } });
   const config = resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BIN_PATH: fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" });
-  const host = createHost(config, { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null });
+  const host = createHost(config, { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null, ensureSession: null });
   await host.start();
   const sock = config.controlSocketPath;
   try {
@@ -77,7 +77,7 @@ test("bot.create maps a failing agentStart to herdr_error, and a duplicate id to
   const config = resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BIN_PATH: fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" });
   const baseCli = createHerdrCli(fake.binPath, fake.env);
   const failingCli: HerdrCli = { ...baseCli, async agentStart() { throw new HerdrError("herdr_error", "boom"); } };
-  const failingHost = createHost(config, { cli: failingCli, socketPath: null });
+  const failingHost = createHost(config, { cli: failingCli, socketPath: null, ensureSession: null });
   await failingHost.start();
   try {
     setLogSink(() => undefined);
@@ -90,7 +90,7 @@ test("bot.create maps a failing agentStart to herdr_error, and a duplicate id to
     await failingHost.stop();
   }
 
-  const workingHost = createHost(config, { cli: baseCli, socketPath: null });
+  const workingHost = createHost(config, { cli: baseCli, socketPath: null, ensureSession: null });
   await workingHost.start();
   try {
     await controlRequest(config.controlSocketPath, "bot.create", { id: "a", name: "A" });

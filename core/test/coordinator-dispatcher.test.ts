@@ -11,7 +11,7 @@ async function harness() {
   const temp = makeTempHome();
   const fake = installFakeHerdr(temp.home, { agents: [], workspaces: [], onPrompt: { reviewer: { say: ["hi from reviewer"] } } });
   const config = resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BIN_PATH: fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" });
-  const host = createHost(config, { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null });
+  const host = createHost(config, { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null, ensureSession: null });
   await host.start();
   const dispatch = createCoordinatorDispatcher(host);
   const call = async (method: string, args: unknown = {}) => {

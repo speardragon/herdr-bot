@@ -20,6 +20,7 @@ npm run desktop:package        # .build/desktop/mac-arm64/herdr-bot.app
 - `+` → **Bot**: herdr에 새 에이전트를 띄우거나(Start) 이미 떠 있는 에이전트를 채택(Adopt).
 - `+` → **Room**: 봇을 골라 단체방을 만든다. 방에 쓰면 봇들이 라운드로빈으로 답하고, `@id`로 특정 봇만 부를 수 있다.
 - 봇 DM 헤더의 터미널 버튼은 herdr에서 그 봇의 pane으로 이동한다.
+- 봇은 메인 herdr 세션이 아니라 전용 세션 `herdr-bot`에 뜬다(없으면 앱이 헤드리스로 띄운다). 봇 pane을 보려면 터미널에서 `herdr session attach herdr-bot`. 터미널 버튼(Open in herdr)도 그 세션에 붙어 있을 때만 화면이 움직인다. 메인 세션에 두고 싶으면 `HERDR_BOT_SESSION=default`.
 
 UI는 grok-bot 0.18 재구성 렌더러를 포크한 것이다(`renderer/UPSTREAM.md`). 원본 번들의 에셋(아이콘·이모지 데이터 등)은 포함하지 않으며 개인 용도 빌드다.
 
@@ -36,7 +37,7 @@ node cli/src/main.ts read <room-id>
 
 ## 동작 원리
 
-- 봇 = herdr가 pane 안에서 감지하는 이름 붙은 에이전트. 스폰(`herdr agent start`)하거나 이미 떠 있는 에이전트를 채택(`herdr agent rename`).
+- 봇 = herdr가 pane 안에서 감지하는 이름 붙은 에이전트. 스폰(`herdr agent start`)하거나 이미 떠 있는 에이전트를 채택(`herdr agent rename`). 모든 herdr 호출은 `herdr --session <HERDR_BOT_SESSION> …`으로 전용 세션을 향하고, 채택 대상도 그 세션의 에이전트다.
 - 방에 사용자가 말하면 호스트가 grok-bot식 라운드로빈(최대 3라운드·10발언, @멘션이면 그 봇만)을 돌린다. 각 턴은 `herdr agent prompt <bot> … --wait`.
 - 봇이 방에 말하는 유일한 방법은 `~/.herdr-bot/bin/herdr-bot say <room> "…"`. 터미널 출력은 방에 보이지 않는다.
 - 상태 저장: `~/.herdr-bot/` (`HERDR_BOT_HOME`으로 변경). 트랜스크립트는 JSONL.
@@ -47,7 +48,8 @@ node cli/src/main.ts read <room-id>
 |---|---|---|
 | `HERDR_BOT_HOME` | `~/.herdr-bot` | 상태 루트 |
 | `HERDR_BIN_PATH` | `herdr` | herdr 바이너리 |
-| `HERDR_SOCKET_PATH` | `~/.config/herdr/herdr.sock` | herdr 이벤트 구독용 |
+| `HERDR_BOT_SESSION` | `herdr-bot` | 봇이 뜨는 herdr 세션. `default`면 메인 세션 |
+| `HERDR_SOCKET_PATH` | 세션의 `herdr.sock`(`~/.config/herdr/sessions/<세션>/herdr.sock`, `default`는 `~/.config/herdr/herdr.sock`) | herdr 이벤트 구독용 |
 | `HERDR_BOT_USER_NAME` | OS 사용자명 | 방에서 보이는 사용자 이름 |
 | `HERDR_BOT_TURN_TIMEOUT_MS` | `180000` | 봇 한 턴 최대 대기 |
 | `HERDR_BOT_DEFAULT_KIND` / `HERDR_BOT_DEFAULT_CWD` | `claude` / `$HOME` | 봇 생성 기본값 |

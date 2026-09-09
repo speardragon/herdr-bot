@@ -4,10 +4,14 @@ import { join } from "node:path";
 export const DEFAULT_TURN_TIMEOUT_MS = 180_000;
 export const DEFAULT_BRIEF_TIMEOUT_MS = 60_000;
 export const DEFAULT_BOT_KIND = "claude";
+/** Bots live in their own named herdr session so they never crowd the user's main (`default`) session. */
+export const DEFAULT_HERDR_SESSION = "herdr-bot";
 
 export interface HostConfig {
   readonly home: string;
   readonly herdrBin: string;
+  /** Named herdr session every herdr call targets (`herdr --session <name> …`); `default` is the main session. */
+  readonly herdrSession: string;
   readonly herdrSocketPath: string;
   readonly controlSocketPath: string;
   readonly cliPath: string;
@@ -35,12 +39,20 @@ function defaultUserName(): string {
   }
 }
 
+/** Where herdr keeps a session's API socket: the main session at the config root, named ones under `sessions/<name>/`. */
+export function herdrSessionSocketPath(session: string): string {
+  const root = join(homedir(), ".config", "herdr");
+  return session === "default" ? join(root, "herdr.sock") : join(root, "sessions", session, "herdr.sock");
+}
+
 export function resolveConfig(env: NodeJS.ProcessEnv = process.env): HostConfig {
   const home = nonEmpty(env.HERDR_BOT_HOME) ?? join(homedir(), ".herdr-bot");
+  const herdrSession = nonEmpty(env.HERDR_BOT_SESSION) ?? DEFAULT_HERDR_SESSION;
   return {
     home,
     herdrBin: nonEmpty(env.HERDR_BIN_PATH) ?? "herdr",
-    herdrSocketPath: nonEmpty(env.HERDR_SOCKET_PATH) ?? join(homedir(), ".config", "herdr", "herdr.sock"),
+    herdrSession,
+    herdrSocketPath: nonEmpty(env.HERDR_SOCKET_PATH) ?? herdrSessionSocketPath(herdrSession),
     controlSocketPath: join(home, "host.sock"),
     cliPath: join(home, "bin", "herdr-bot"),
     userName: nonEmpty(env.HERDR_BOT_USER_NAME) ?? defaultUserName(),

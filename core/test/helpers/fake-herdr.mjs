@@ -16,7 +16,10 @@ state.onPrompt ??= {};
 state.prompts ??= [];
 if (logPath) appendFileSync(logPath, `${JSON.stringify({ argv: process.argv.slice(2) })}\n`);
 
-const argv = process.argv.slice(2);
+// A leading global `--session <name>` selects the herdr session, exactly like the real binary.
+const rawArgv = process.argv.slice(2);
+const sessionName = rawArgv[0] === "--session" ? rawArgv[1] : "default";
+const argv = rawArgv[0] === "--session" ? rawArgv.slice(2) : rawArgv;
 const [group, command, ...rest] = argv;
 
 function ok(result, mutated = true) {
@@ -103,6 +106,14 @@ async function agentPrompt() {
 }
 
 async function main() {
+  if (group === "session" && command === "list") {
+    // Bare payload without the { id, result } envelope, as real herdr prints it. Sockets live under HERDR_BOT_HOME here.
+    const home = process.env.HERDR_BOT_HOME ?? "";
+    const socket = sessionName === "default" ? join(home, "herdr.sock") : join(home, "sessions", sessionName, "herdr.sock");
+    process.stdout.write(`${JSON.stringify({ sessions: [{ default: sessionName === "default", name: sessionName, running: true, session_dir: home, socket_path: socket }] })}\n`);
+    process.exit(0);
+  }
+  if (group === "server") process.exit(0);
   if (group === "agent" && command === "list") return ok({ agents: state.agents }, false);
   if (group === "agent" && command === "get") {
     const agent = findAgent(positionals()[0]);

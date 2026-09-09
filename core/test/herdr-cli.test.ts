@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createHerdrCli } from "../src/herdr/cli.ts";
+import { createHerdrCli, createHerdrCliFromRunner } from "../src/herdr/cli.ts";
 import { HerdrError } from "../src/herdr/types.ts";
 import { installFakeHerdr } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
@@ -76,4 +76,33 @@ test("workspace/tab/pane helpers return ids from the json result", async () => {
 test("a missing binary surfaces as herdr_spawn_failed", async () => {
   const cli = createHerdrCli("/definitely/not/herdr", {});
   await assert.rejects(cli.agentList(), (error: unknown) => error instanceof HerdrError && error.code === "herdr_spawn_failed");
+});
+
+test("a session name is passed to herdr as a global --session flag on every call", async () => {
+  const temp = makeTempHome();
+  try {
+    const fake = installFakeHerdr(temp.home, { agents: [idleAgent], workspaces: [] });
+    const cli = createHerdrCli(fake.binPath, fake.env, "herdr-bot");
+    assert.equal((await cli.agentList())[0]?.name, "reviewer");
+    assert.deepEqual(fake.readLog().at(-1), ["--session", "herdr-bot", "agent", "list"]);
+    const sessions = await cli.sessionList();
+    assert.deepEqual(sessions, [{ name: "herdr-bot", running: true, socketPath: `${temp.home}/sessions/herdr-bot/herdr.sock` }]);
+    assert.deepEqual(fake.readLog().at(-1), ["--session", "herdr-bot", "session", "list", "--json"]);
+  } finally {
+    temp.cleanup();
+  }
+});
+
+test("an error object printed on stdout with exit 0 becomes a HerdrError with herdr's code", async () => {
+  const cli = createHerdrCliFromRunner(async () => ({ stdout: `${JSON.stringify({ id: "cli:agent:list", error: { code: "server_not_running", message: "no herdr server is running" } })}\n`, stderr: "", code: 0 }));
+  await assert.rejects(cli.agentList(), (error: unknown) => error instanceof HerdrError && error.code === "server_not_running");
+});
+
+test("sessionList parses herdr's bare sessions payload", async () => {
+  const payload = { sessions: [{ default: true, name: "default", running: true, session_dir: "/h/.config/herdr", socket_path: "/h/.config/herdr/herdr.sock" }, { default: false, name: "herdr-bot", running: false, session_dir: "/h/.config/herdr/sessions/herdr-bot", socket_path: "/h/.config/herdr/sessions/herdr-bot/herdr.sock" }] };
+  const cli = createHerdrCliFromRunner(async () => ({ stdout: `${JSON.stringify(payload)}\n`, stderr: "", code: 0 }));
+  assert.deepEqual(await cli.sessionList(), [
+    { name: "default", running: true, socketPath: "/h/.config/herdr/herdr.sock" },
+    { name: "herdr-bot", running: false, socketPath: "/h/.config/herdr/sessions/herdr-bot/herdr.sock" },
+  ]);
 });

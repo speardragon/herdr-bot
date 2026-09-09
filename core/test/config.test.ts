@@ -12,6 +12,15 @@ test("resolveConfig defaults home to ~/.herdr-bot and herdr to PATH binary", () 
   assert.equal(config.cliPath, join(homedir(), ".herdr-bot", "bin", "herdr-bot"));
   assert.equal(config.turnTimeoutMs, 180_000);
   assert.equal(config.defaultKind, "claude");
+  assert.equal(config.herdrSession, "herdr-bot");
+  assert.equal(config.herdrSocketPath, join(homedir(), ".config", "herdr", "sessions", "herdr-bot", "herdr.sock"));
+});
+
+test("HERDR_BOT_SESSION=default targets the main herdr session and its socket", () => {
+  const config = resolveConfig({ HERDR_BOT_SESSION: "default" });
+  assert.equal(config.herdrSession, "default");
+  assert.equal(config.herdrSocketPath, join(homedir(), ".config", "herdr", "herdr.sock"));
+  assert.equal(resolveConfig({ HERDR_BOT_SESSION: "lab" }).herdrSocketPath, join(homedir(), ".config", "herdr", "sessions", "lab", "herdr.sock"));
 });
 
 test("resolveConfig honours env overrides and ignores garbage numbers", () => {
@@ -22,7 +31,9 @@ test("resolveConfig honours env overrides and ignores garbage numbers", () => {
     HERDR_BOT_USER_NAME: "ray",
     HERDR_BOT_TURN_TIMEOUT_MS: "abc",
     HERDR_BOT_DEFAULT_KIND: "codex",
+    HERDR_BOT_SESSION: "lab",
   });
+  assert.equal(config.herdrSession, "lab");
   assert.equal(config.home, "/tmp/hb");
   assert.equal(config.herdrBin, "/opt/herdr");
   assert.equal(config.herdrSocketPath, "/tmp/h.sock");

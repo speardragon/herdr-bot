@@ -19,6 +19,9 @@
 - `cli/src/shim.ts`: 홈 경로를 큰따옴표 안에 그대로 넣는다. `$`, 백틱, `"`가 든 경로는 `sh`에서 확장된다.
 - `core/test/helpers/fake-herdr.mjs`: `positionals()`가 `--`로 시작하는 프롬프트 본문을 플래그로 취급한다. 에러 코드 8개 중 4개만 테스트가 실행한다.
 
+- 세션은 호스트 전체에 하나(`HERDR_BOT_SESSION`, 기본 `herdr-bot`)다. 그래서 채택(Adopt) 목록도 그 세션의 에이전트만 보인다. 메인 세션의 에이전트를 방에 넣고 싶다는 요구가 생기면 봇 프로필에 `herdr.session`을 두고 `HerdrCli`가 호출마다 세션을 받도록 바꾼다(StatusMirror는 세션별 소켓을 하나씩 구독). 지금은 `HERDR_BOT_SESSION=default`가 우회로다.
+- `ensureHerdrSession`은 `herdr --session <name> server`를 detached로 띄운다. 세션 서버는 앱이 꺼져도 남는다(herdr의 의도된 모델). 정리하려면 `herdr session stop herdr-bot`.
+
 ## 고치지 않기로 한 것 (won't fix), 이유
 
 - 프로젝션 함수(`projectBotProfile`, `projectRoomConfig`)가 id 형식을 검증하지 않음. 생성 시 `RosterService`가 검증하고, 저장된 파일에 대한 관용은 의도한 것이다.

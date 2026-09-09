@@ -6,6 +6,7 @@
 
 - **앱 안 라이브 E2E(플랜 Task 8 Step 3)**는 GUI 클릭이 필요해 자동으로 수행하지 않았다. 체크리스트는 README의 "앱 (macOS)" 절과 플랜 문서 Task 8을 따른다. 전제는 herdr 0.9.0 실행 중, claude 로그인. 패키징된 앱(`.build/desktop/mac-arm64/herdr-bot.app`)은 실제 `~/.herdr-bot`을 홈으로 쓴다. ad-hoc 서명이므로 첫 실행은 우클릭 → 열기.
 - **E2E 전 준비 두 가지.** (1) 데스크톱 main은 `~/.herdr-bot/bin/herdr-bot` shim을 설치하지 않는다(코어의 `installShim`은 `cli/src/main.ts`의 `serve`/`install-shim`에서만 불린다). 앱을 켜기 전에 레포 루트에서 `node cli/src/main.ts install-shim`을 한 번 실행한다. 빠뜨리면 체크리스트 4단계에서 claude가 `herdr-bot: command not found`를 낸다. (2) 호스트는 `execFile("herdr")`로 herdr를 찾는데, Finder에서 연 앱의 PATH는 `/usr/bin:/bin:/usr/sbin:/sbin`뿐이라 `/opt/homebrew/bin/herdr`를 못 찾고 1단계 Start bot이 `herdr_spawn_failed`로 실패한다. 터미널에서 `npm run desktop:start`로 실행하거나, `HERDR_BIN_PATH=$(which herdr)`를 준 채 `.build/desktop/mac-arm64/herdr-bot.app/Contents/MacOS/herdr-bot`을 직접 실행한다(`open`이 아니라). 두 문제 모두 가짜 herdr 테스트에서는 드러나지 않는다(가짜 herdr는 `say`를 컨트롤 소켓에 직접 보내고, 바이너리 경로는 `HERDR_BIN_PATH`로 넘긴다).
+- 봇은 전용 herdr 세션 `herdr-bot`에 뜬다. 앱만 켜면 봇 pane은 어디에도 보이지 않는다: 터미널에서 `herdr session attach herdr-bot`을 열어 두고 체크리스트 6단계(터미널 버튼 → pane 포커스)를 확인한다. 나중에 "Open in herdr"가 세션에 붙은 클라이언트가 없을 때 Terminal.app으로 `herdr session attach herdr-bot`을 열어 주면 좋다.
 - 사이드바·컴포저·리액션·삭제·저자 라벨·"Open in herdr" 버튼 같은 시각 요소는 `npm run desktop:dev:fake`로 가짜 herdr 위에서 눈으로 확인한다.
 
 ## 2026-09-09 UI 점검에서 고친 것

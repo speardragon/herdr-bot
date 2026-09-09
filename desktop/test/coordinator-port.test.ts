@@ -22,7 +22,7 @@ function fakePort() {
 test("renderer frames reach the dispatcher and host events are forwarded as coordinator events", async () => {
   const temp = makeTempHome();
   const fake = installFakeHerdr(temp.home);
-  const host = createHost(resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BIN_PATH: fake.binPath }), { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null });
+  const host = createHost(resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BIN_PATH: fake.binPath }), { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null, ensureSession: null });
   await host.start();
   const { port, posted, emit } = fakePort();
   const attached = attachRendererPort(port, host);

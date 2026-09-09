@@ -1,7 +1,14 @@
 import { execFile } from "node:child_process";
 import { HerdrError, projectHerdrAgentInfo, type HerdrAgentInfo, type HerdrAgentStatus } from "./types.ts";
 
+export interface HerdrSessionInfo {
+  readonly name: string;
+  readonly running: boolean;
+  readonly socketPath: string;
+}
+
 export interface HerdrCli {
+  sessionList(): Promise<HerdrSessionInfo[]>;
   agentList(): Promise<HerdrAgentInfo[]>;
   agentGet(target: string): Promise<HerdrAgentInfo>;
   agentStart(args: { name: string; kind: string; paneId: string; agentArgs: readonly string[]; timeoutMs?: number }): Promise<HerdrAgentInfo>;
@@ -22,20 +29,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function herdrErrorFromPayload(parsed: unknown, fallback: string): HerdrError {
+  const error = isRecord(parsed) && isRecord(parsed.error) ? parsed.error : parsed;
+  const code = isRecord(error) && typeof error.code === "string" ? error.code : "herdr_error";
+  const message = isRecord(error) && typeof error.message === "string" ? error.message : fallback;
+  return new HerdrError(code, message, parsed);
+}
+
 function errorFromStderr(stderr: string, fallback: string): HerdrError {
   const line = stderr.trim().split("\n").find((candidate) => candidate.startsWith("{"));
   if (line != null) {
     try {
-      const parsed: unknown = JSON.parse(line);
-      const error = isRecord(parsed) && isRecord(parsed.error) ? parsed.error : parsed;
-      const code = isRecord(error) && typeof error.code === "string" ? error.code : "herdr_error";
-      const message = isRecord(error) && typeof error.message === "string" ? error.message : fallback;
-      return new HerdrError(code, message, parsed);
+      return herdrErrorFromPayload(JSON.parse(line), fallback);
     } catch {
       // fall through to a generic error
     }
   }
   return new HerdrError("herdr_error", stderr.trim().length > 0 ? stderr.trim() : fallback);
+}
+
+function parseJsonOutput(stdout: string): unknown {
+  try {
+    return JSON.parse(stdout);
+  } catch {
+    return undefined;
+  }
 }
 
 export interface RawHerdrRunner {
@@ -62,14 +80,26 @@ export function createExecFileRunner(binPath: string, env: NodeJS.ProcessEnv): R
 async function runJson(runner: RawHerdrRunner, args: readonly string[]): Promise<Record<string, unknown>> {
   const { stdout, stderr, code } = await runner(args);
   if (code !== 0) throw errorFromStderr(stderr, `herdr ${args.join(" ")} exited with ${code}`);
-  try {
-    const parsed: unknown = JSON.parse(stdout);
-    const result = isRecord(parsed) && isRecord(parsed.result) ? parsed.result : null;
-    if (result == null) throw new Error("no result");
-    return result;
-  } catch {
-    throw new HerdrError("herdr_bad_json", `herdr ${args.slice(0, 2).join(" ")} returned non-JSON output: ${stdout.slice(0, 200)}`);
-  }
+  const parsed = parseJsonOutput(stdout);
+  // herdr reports some failures (e.g. server_not_running) as an error object on stdout with exit 0.
+  if (isRecord(parsed) && isRecord(parsed.error)) throw herdrErrorFromPayload(parsed, `herdr ${args.join(" ")} failed`);
+  const result = isRecord(parsed) && isRecord(parsed.result) ? parsed.result : null;
+  if (result == null) throw new HerdrError("herdr_bad_json", `herdr ${args.slice(0, 2).join(" ")} returned non-JSON output: ${stdout.slice(0, 200)}`);
+  return result;
+}
+
+/** `session list --json` prints a bare `{ sessions: [...] }` payload, not the `{ id, result }` envelope. */
+async function runSessionList(runner: RawHerdrRunner): Promise<HerdrSessionInfo[]> {
+  const args = ["session", "list", "--json"];
+  const { stdout, stderr, code } = await runner(args);
+  if (code !== 0) throw errorFromStderr(stderr, `herdr ${args.join(" ")} exited with ${code}`);
+  const parsed = parseJsonOutput(stdout);
+  if (isRecord(parsed) && isRecord(parsed.error)) throw herdrErrorFromPayload(parsed, "herdr session list failed");
+  const sessions = isRecord(parsed) && Array.isArray(parsed.sessions) ? parsed.sessions : null;
+  if (sessions == null) throw new HerdrError("herdr_bad_json", `herdr session list returned non-JSON output: ${stdout.slice(0, 200)}`);
+  return sessions.flatMap((value) => isRecord(value) && typeof value.name === "string" && typeof value.socket_path === "string"
+    ? [{ name: value.name, running: value.running === true, socketPath: value.socket_path }]
+    : []);
 }
 
 function requireAgent(result: Record<string, unknown>, context: string): HerdrAgentInfo {
@@ -160,10 +190,16 @@ function createWorkspaceMethods(runner: RawHerdrRunner): WorkspaceMethods {
   };
 }
 
-export function createHerdrCliFromRunner(runner: RawHerdrRunner): HerdrCli {
-  return { ...createAgentMethods(runner), ...createWorkspaceMethods(runner) };
+/** Every call targets one named herdr session via the global `--session` flag; `null` inherits herdr's own default. */
+export function withSession(runner: RawHerdrRunner, session: string | null): RawHerdrRunner {
+  if (session == null || session.length === 0) return runner;
+  return (args) => runner(["--session", session, ...args]);
 }
 
-export function createHerdrCli(binPath: string, env: NodeJS.ProcessEnv = process.env): HerdrCli {
-  return createHerdrCliFromRunner(createExecFileRunner(binPath, env));
+export function createHerdrCliFromRunner(runner: RawHerdrRunner): HerdrCli {
+  return { sessionList: () => runSessionList(runner), ...createAgentMethods(runner), ...createWorkspaceMethods(runner) };
+}
+
+export function createHerdrCli(binPath: string, env: NodeJS.ProcessEnv = process.env, session: string | null = null): HerdrCli {
+  return createHerdrCliFromRunner(withSession(createExecFileRunner(binPath, env), session));
 }
