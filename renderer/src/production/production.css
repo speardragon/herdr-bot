@@ -427,7 +427,8 @@ button, textarea, input { font: inherit; }
 .sand-prompt-shell > .sand-prompt-attachments,
 .sand-prompt-shell > .sand-prompt-attachment-notice,
 .sand-prompt-shell > .sand-prompt-voice-status,
-.sand-prompt-shell > .sand-prompt-voice-error { grid-column: 1 / -1; }
+.sand-prompt-shell > .sand-prompt-voice-error,
+.sand-prompt-shell > .sand-prompt-reply-pill { grid-column: 1 / -1; }
 .sand-prompt-shell > .sand-prompt-attachments { margin: 6px 6px 8px; }
 .sand-prompt-actions-row { display: contents; }
 .sand-prompt-actions-row > .sand-kit-icon-button.sand-prompt-attach { grid-column: 1; grid-row: 2; width: 34px; height: 34px; }
