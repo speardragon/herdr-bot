@@ -425,3 +425,11 @@ button, textarea, input { font: inherit; }
  *     into the `auto` row and stopped at its content height. Pin it to the 1fr row. */
 .sand-sidebar-column .sand-agents-sidebar { grid-row: 2; }
 .sand-prompt-actions-row > .sand-kit-icon-button.sand-prompt-attach { color: var(--cursor-text-primary); }
+
+/* 11. The New dialog had no surface: OverlayDialog only positions the panel, so labels and fields
+ *     floated over the transcript. Same surface recipe as the settings dialog; selects match too. */
+.sand-new-chat-dialog { color: var(--cursor-text-primary); background: var(--cursor-bg-elevated); border: 1px solid var(--cursor-border-secondary); border-radius: 14px; box-shadow: var(--cursor-box-shadow-md, 0 24px 80px rgba(0, 0, 0, 0.35)); }
+.sand-new-chat-dialog .ui-select-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; padding: 6px 9px; color: inherit; background: var(--cursor-button-secondary-background, var(--cursor-bg-secondary)); border: 1px solid var(--cursor-stroke-tertiary, var(--cursor-border-secondary)); border-radius: 6px; font: inherit; cursor: pointer; }
+.sand-new-chat-dialog select.ui-select-trigger { appearance: none; }
+.sand-new-chat-dialog .ui-select-trigger[aria-expanded="true"] { border-color: var(--cursor-stroke-focused); }
+.sand-new-chat-dialog__row > span { color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-sm); }
