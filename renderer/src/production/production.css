@@ -234,8 +234,11 @@ button, textarea, input { font: inherit; }
 .sand-about-dialog footer button,
 .sand-feedback-dialog footer button,
 .sand-alert-dialog footer button { padding: 8px 12px; color: var(--cursor-text-primary); background: var(--cursor-bg-secondary); border: 0; border-radius: 7px; }
-.sand-feedback-dialog footer button:last-child,
-.sand-alert-dialog footer button:last-child { color: var(--cursor-text-on-color); background: var(--cursor-bg-accent); }
+/* Confirm buttons: the recovered utilities paint the label with --sand-text-on-color (white) under a
+ * :not(#\#) boost, so the fill must win with the same boost or the label disappears on the card. */
+.sand-feedback-dialog footer button:last-child:not(#\#):not(#\#):not(#\#) { color: var(--sand-text-on-color, #fff); background: var(--sand-fill-primary, var(--cursor-bg-accent)); }
+.sand-alert-dialog footer button:last-child:not(#\#):not(#\#):not(#\#) { color: var(--sand-text-on-color, #fff); background: var(--sand-fill-danger, var(--cursor-red)); }
+.sand-alert-dialog footer button:last-child:not(#\#):not(#\#):not(#\#):hover:not(:disabled) { background: var(--sand-fill-danger-hover, var(--cursor-red)); }
 .sand-feedback-dialog header { padding: 18px 20px 0; }
 .sand-feedback-dialog header h2 { margin: 0; }
 .sand-feedback-dialog > div { display: grid; gap: 14px; padding: 16px 20px 20px; }
@@ -342,6 +345,20 @@ button, textarea, input { font: inherit; }
 
 /* herdr-bot: room member attribution on bot messages */
 .sand-message__author { display: block; margin: 0 0 2px; color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-xs); font-weight: 600; letter-spacing: 0.01em; }
+
+
+/* Tokens the recovered code references that the shipped palette never defines. The runtime theme
+ * installer appends its own :root block after this stylesheet, so these only fill the gaps. */
+:root {
+  --cursor-border-secondary: var(--cursor-stroke-secondary);
+  --cursor-text-on-color: var(--sand-text-on-color, #fff);
+  --cursor-bg-scrim: rgba(0, 0, 0, 0.35);
+  --cursor-spinner-sync-delay: 0ms;
+  --cursor-spinner-sync-duration: 1000ms;
+  --sand-font-weight-medium: 500;
+  --sand-font-weight-semibold: 600;
+  --sand-window-controls-block: 52px;
+}
 
 /* ── herdr-bot: Grok Bot 0.18 look parity ─────────────────────────────────────
  * Fixes found by inspecting the live renderer (see docs/superpowers/plans/…-desktop-followups.md).
