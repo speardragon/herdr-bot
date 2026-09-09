@@ -2838,6 +2838,20 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     const value = await client.call("herdrBot.listAdoptable");
     return Array.isArray(value) ? (value as AdoptableAgent[]) : [];
   }, [client]);
+  const getNewBotDefaults = useCallback(async (): Promise<{ cwd: string; kind: string }> => {
+    if (client == null) return { cwd: "", kind: "claude" };
+    const value = await client.call("herdrBot.defaults");
+    return value && typeof value === "object" && typeof (value as { cwd?: unknown }).cwd === "string" && typeof (value as { kind?: unknown }).kind === "string"
+      ? (value as { cwd: string; kind: string })
+      : { cwd: "", kind: "claude" };
+  }, [client]);
+  const listWorkingDirectories = useCallback(async (path: string): Promise<{ exists: boolean; entries: readonly string[] }> => {
+    if (client == null) return { exists: false, entries: [] };
+    const value = await client.call("herdrBot.listDirectories", { path });
+    return value && typeof value === "object" && Array.isArray((value as { entries?: unknown }).entries)
+      ? (value as { exists: boolean; entries: readonly string[] })
+      : { exists: false, entries: [] };
+  }, [client]);
 
   createAgentRef.current = createAgent;
   openAgentRef.current = openAgent;
@@ -3748,7 +3762,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         onSearchQueryChange={updatePaletteSearchQuery}
       />
       <AgentDeleteConfirmation agent={deleteAgent} onClose={() => setDeleteAgent(null)} onConfirm={deleteAgentById} />
-      <NewChatDialog agents={agents} defaultCwd="" listAdoptable={listAdoptable} onClose={() => setNewChatOpen(false)} onCreateBot={createBotFromDialog} onCreateRoom={createRoomFromDialog} open={newChatOpen} />
+      <NewChatDialog agents={agents} getDefaults={getNewBotDefaults} listAdoptable={listAdoptable} listDirectories={listWorkingDirectories} onClose={() => setNewChatOpen(false)} onCreateBot={createBotFromDialog} onCreateRoom={createRoomFromDialog} open={newChatOpen} />
       <SidebarSectionDeleteConfirmation section={deleteSection} onClose={() => setDeleteSection(null)} onConfirm={deleteSectionById} />
       <Suspense fallback={null}><ComputerOverlayRouteView params={{}} /></Suspense>
     </div>

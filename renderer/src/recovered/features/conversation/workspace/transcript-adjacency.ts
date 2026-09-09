@@ -85,9 +85,12 @@ function entrySemantics(entry: ConversationTranscriptEntry): TranscriptSemantics
   if (entry.kind === "message") return messageSemantics(entry);
   if (entry.kind === "send-message") {
     const hasReaction = Array.isArray(entry.reactions) && entry.reactions.length > 0;
-    // The current card protocol has no author identity. The immutable owner
-    // falls back to the assistant group when that identity is absent.
-    return { role: "assistant", groupKey: "assistant", isBubble: false, hasReaction };
+    // herdr-bot: the shipped protocol carried no author identity for send-message cards. Ours
+    // does (room messages carry the sending bot's id/name), so group consecutive bubbles by
+    // author, not by role alone -- otherwise two different bots posting back to back in a room
+    // look like one uninterrupted run.
+    const groupKey = entry.author != null ? `assistant:${entry.author.id}` : "assistant";
+    return { role: "assistant", groupKey, isBubble: false, hasReaction };
   }
   return { role: "other", groupKey: null, isBubble: false, hasReaction: false };
 }

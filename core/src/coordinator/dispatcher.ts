@@ -3,6 +3,7 @@ import { RosterError } from "../services/roster-service.ts";
 import type { PermissionMode } from "../store/profile-store.ts";
 import type { AgentSummary } from "../model/summaries.ts";
 import { COORDINATOR_INVALID_ARGS, COORDINATOR_UNKNOWN_METHOD, COORDINATOR_UNSUPPORTED, type CoordinatorReplyOutcome } from "./frames.ts";
+import { listDirectories } from "../services/directory-browser.ts";
 
 type Args = Record<string, unknown>;
 type Handler = (host: Host, args: Args) => Promise<unknown> | unknown;
@@ -182,6 +183,10 @@ async function herdrBotFocus(host: Host, args: Args): Promise<null> {
   return null;
 }
 
+function herdrBotDefaults(host: Host): unknown {
+  return { cwd: host.config.defaultCwd, kind: host.config.defaultKind };
+}
+
 const METHOD_TABLE: Readonly<Record<string, Handler>> = {
   listAgents: (host) => host.chat.listSummaries(),
   countAgents: (host) => host.chat.listSummaries().length,
@@ -203,6 +208,8 @@ const METHOD_TABLE: Readonly<Record<string, Handler>> = {
   setAgentNotifyOnUpdates,
   "herdrBot.listAdoptable": (host) => host.roster.listAdoptable(),
   "herdrBot.focus": herdrBotFocus,
+  "herdrBot.defaults": herdrBotDefaults,
+  "herdrBot.listDirectories": (_host, args) => listDirectories(optStr(args, "path") ?? ""),
 };
 
 function ok(value: unknown): CoordinatorReplyOutcome {

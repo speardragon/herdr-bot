@@ -29,7 +29,9 @@ export function SendMessageTextTranscriptCard(props: TranscriptCardLeafProps) {
   }
 
   const author = entry.author;
-  const showAuthor = author != null && providers?.scope.agentId != null && author.id !== providers.scope.agentId;
+  // herdr-bot: only label the first bubble of a sender's run (matches the tightened spacing in
+  // production.css); adjacency is optional in some read-only render paths, so default to showing it.
+  const showAuthor = author != null && providers?.scope.agentId != null && author.id !== providers.scope.agentId && (props.adjacency?.isGroupStart ?? true);
   return <div aria-label="Agent message" className="sand-message" data-group-start={props.adjacency?.isGroupStart || undefined} data-role="assistant" role="group">
     {showAuthor ? <span className="sand-message__author" data-author-id={author.id}>{author.name}</span> : null}
     <AssistantMessageContent

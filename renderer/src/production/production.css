@@ -465,3 +465,50 @@ button, textarea, input { font: inherit; }
 [aria-label="Agent actions"] .sand-kit-button[role="menuitem"]:not(#\#):not(#\#):not(#\#)[data-sentiment="danger"] .ui-icon { color: var(--cursor-red); }
 [aria-label="Agent actions"] .sand-kit-button[role="menuitem"]:not(#\#):not(#\#):not(#\#)[data-sentiment="danger"]:hover { background: color-mix(in srgb, var(--cursor-red) 10%, transparent); }
 .sand-agent-menu__separator { height: 1px; margin: 5px 2px; background: var(--cursor-stroke-tertiary); }
+
+/* 13. Message spacing: consecutive same-sender bubbles sit close; a new sender/turn gets a clear
+ * gap. Both message-kind paths (plain user text, and bot "send-message" cards) share the
+ * `.sand-message-action-anchor` wrapper -- merged onto `.sand-message` itself for user text, a
+ * separate outer `[role=article]` for bot cards -- so the whole rhythm lives there, and the
+ * legacy fixed 22px on `.sand-transcript-row` (which only wraps the user-text path) is neutralised
+ * to avoid a double gap. */
+.sand-transcript-row { margin: 0; }
+.sand-message-action-anchor { margin-bottom: 3px; }
+.sand-message-action-anchor[data-group-start],
+.sand-message-action-anchor:has(> .sand-message[data-group-start]) { margin-top: 14px; }
+
+/* 14. The three-button hover toolbar (reply / more actions / react) sits on every message; this
+ * also removes the right-click "more actions" menu and the reaction picker entry point, since both
+ * live inside the same toolbar. */
+.sand-message-hover-actions { display: none !important; }
+
+/* 15. Shared look for every dropdown-style control (New Bot dialog selects, the working-directory
+ * autocomplete, and any future one): same height/radius/border as text fields, a chevron so it
+ * reads as a control rather than a plain button, and the option list matches the app's other
+ * floating menus. */
+.ui-select-trigger { display: inline-flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 0 10px; color: var(--cursor-text-primary); background: var(--cursor-bg-input); border: 1px solid var(--cursor-stroke-secondary); border-radius: 8px; font-size: var(--cursor-font-size-base); text-align: left; }
+.ui-select-trigger:hover { border-color: var(--cursor-stroke-primary, var(--cursor-stroke-secondary)); }
+.ui-select-trigger[aria-expanded="true"] { border-color: var(--cursor-stroke-focused); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cursor-stroke-focused) 25%, transparent); }
+.ui-select-trigger__label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-select-trigger::after { content: ""; flex: 0 0 auto; width: 7px; height: 7px; margin-top: -3px; border-right: 1.5px solid var(--cursor-text-tertiary); border-bottom: 1.5px solid var(--cursor-text-tertiary); transform: rotate(45deg); }
+
+/* 16. Field rhythm: every labelled control (SandField-wrapped inputs, and the New dialog's
+ * beside-a-select rows) uses the same vertical gap and label style, so the dialog stops reading as
+ * two different form systems stitched together. */
+[data-component="field"] { display: grid; gap: 6px; }
+[data-component="field"] > label { color: var(--cursor-text-secondary); font-size: 12px; font-weight: 500; }
+[data-component="field"] > div[role="alert"],
+[data-component="field"] > div:last-child:not(.ui-input-group) { color: var(--cursor-text-tertiary); font-size: 12px; }
+[data-component="field"][data-invalid="true"] > div:last-child { color: var(--cursor-danger, var(--cursor-red)); }
+.sand-new-chat-dialog__row { display: grid; gap: 6px; }
+.sand-new-chat-dialog__row > span:first-child { color: var(--cursor-text-secondary); font-size: 12px; font-weight: 500; }
+
+/* 17. Working-directory autocomplete: a plain text field with a select-style suggestion list
+ * anchored beneath it (the field's own value drives the query, so it isn't a SandSelect). */
+.sand-new-chat-dialog__cwd { position: relative; }
+.sand-new-chat-dialog__cwd-menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 10; width: 100%; max-height: 180px; overflow: auto; }
+.sand-new-chat-dialog__cwd-menu .ui-menu__row { font-size: 12px; font-family: var(--cursor-font-family-mono, monospace); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 18. Agent-kind monogram badge (New Bot dialog): the repo ships no third-party CLI logos, so each
+ * kind gets a colour-coded initial instead of an unlicensed icon. */
+.sand-kind-badge { display: inline-flex; flex: 0 0 18px; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #fff; font-size: 10px; font-weight: 700; line-height: 1; }

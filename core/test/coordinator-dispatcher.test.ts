@@ -84,3 +84,27 @@ test("stubs and unknown methods behave as the renderer expects", async () => {
     await h.cleanup();
   }
 });
+
+test("herdrBot.defaults surfaces the host's default cwd/kind for the New Bot dialog", async () => {
+  const h = await harness();
+  try {
+    assert.deepEqual(await h.call("herdrBot.defaults"), { cwd: "/tmp/repo", kind: "claude" });
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("herdrBot.listDirectories resolves relative to the coordinator, for the working-directory autocomplete", async () => {
+  const h = await harness();
+  try {
+    const { mkdirSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    mkdirSync(join(h.temp.home, "sub-a"));
+    mkdirSync(join(h.temp.home, "sub-b"));
+    const listing = await h.call("herdrBot.listDirectories", { path: `${h.temp.home}/sub-` });
+    assert.equal(listing.exists, false);
+    assert.deepEqual(listing.entries, [join(h.temp.home, "sub-a"), join(h.temp.home, "sub-b")]);
+  } finally {
+    await h.cleanup();
+  }
+});

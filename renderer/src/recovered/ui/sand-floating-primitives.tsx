@@ -442,7 +442,7 @@ export function SandSelect<T extends string | number = string>({ value: controll
   const updateOpen = (next: boolean) => { if (open === undefined) setIsOpen(next); onOpenChange?.(next); };
   const select = (next: T) => { if (controlledValue === undefined) setValue(next); onValueChange?.(next); updateOpen(false); };
   return <FloatingRoot open={actualOpen} onOpenChange={updateOpen} placement={placement} offset={offset}>
-    <SandFloatingTrigger popupRole="listbox"><button aria-expanded={actualOpen} aria-haspopup="listbox" aria-label={ariaLabel} className={className} disabled={disabled} type="button">{selected?.label ?? placeholder}</button></SandFloatingTrigger>
+    <SandFloatingTrigger popupRole="listbox"><button aria-expanded={actualOpen} aria-haspopup="listbox" aria-label={ariaLabel} className={className} disabled={disabled} type="button">{selected?.leading}<span className="ui-select-trigger__label">{selected?.label ?? placeholder}</span></button></SandFloatingTrigger>
     <FloatingBackdrop onPointerDown={() => updateOpen(false)} />
     <FloatingSurface className="ui-menu__content" dataComponent="select-popup" role="listbox" ariaLabel={ariaLabel} style={{ minWidth: matchAnchorWidth ? "var(--anchor-width)" : contentWidth ?? 200 }}>
       <div className="ui-menu__layout" data-component="select-positioner" data-size={menuSize}>
