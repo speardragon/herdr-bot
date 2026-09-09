@@ -110,3 +110,12 @@ Found by inspecting the live renderer over CDP against the real Grok Bot 0.18 wi
   margin (1em top) and inherited the default 16px font-size (vs. the app's 14px base) instead of
   its own -- together showing as extra empty space above the typed text and a taller composer than
   intended. Zeroed the paragraph margin and set the field's font-size explicitly.
+
+## Inline code text colour (2026-09-09, eighth pass)
+
+- `production.css` (block 24): inline `<code>` had a background tint (color-mix over the body text
+  colour) but no text colour of its own, from the recovered atomic classes, so it rendered as plain
+  body-coloured text on a grey chip -- missing the coral/pink Notion (and the shipped app) use for
+  inline code. Added `color: #eb5757`, scoped to `.sand-message-prose code`; fenced code blocks get
+  an explicit override back to their own grey (`#d9ded4`) via a more specific selector so they
+  aren't caught by the broader rule.

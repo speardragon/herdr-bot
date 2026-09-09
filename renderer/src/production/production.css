@@ -565,3 +565,12 @@ button, textarea, input { font: inherit; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 24. Inline code text colour: the recovered atomic classes only ever gave inline code a
+ * background tint (color-mix over the body text colour) and never a text colour of its own, so it
+ * rendered as plain body-coloured text on a grey chip -- missing the coral/pink that Notion (and
+ * the shipped app) uses for inline code specifically. Fenced code blocks keep their own explicit
+ * grey (#d9ded4); the extra class in the selector below outweighs this rule so it isn't caught by
+ * the broader .sand-message-prose code match. */
+.sand-message-prose code { color: #eb5757; }
+.sand-code-figure .sand-code-block code { color: #d9ded4; }
