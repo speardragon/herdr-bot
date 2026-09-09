@@ -119,3 +119,11 @@ Found by inspecting the live renderer over CDP against the real Grok Bot 0.18 wi
   inline code. Added `color: #eb5757`, scoped to `.sand-message-prose code`; fenced code blocks get
   an explicit override back to their own grey (`#d9ded4`) via a more specific selector so they
   aren't caught by the broader rule.
+
+## Send button icon centering (2026-09-09, ninth pass)
+
+- `production.css` (block 9 addendum): the mic/arrow-up crossfade toggle inside the send button
+  only ever had `opacity` on its two icons (from the recovered atomic classes) -- the hidden one
+  still occupied inline layout space next to the visible one, pushing the visible icon off-centre
+  within its span. Stacked both icons absolutely inside a fixed-size relative span so only the
+  visible one's position matters.

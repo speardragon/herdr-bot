@@ -439,6 +439,10 @@ button, textarea, input { font: inherit; }
  * fell back to its recovered atomic classes' own (unreliable) sizing -- a square button instead of
  * the round pill every other composer control uses. */
 .sand-prompt-actions-trailing > .sand-prompt-send { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border-radius: 50%; }
+/* The mic/arrow-up crossfade toggle only ever set opacity on the two icons, so the hidden one
+ * still took up inline layout space next to the visible one, pushing it off-centre. Stack them. */
+.sand-prompt-send > span { position: relative; display: inline-block; width: 16px; height: 16px; }
+.sand-prompt-send > span > .ui-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .sand-prompt-field {
   min-height: 34px;
   padding: 7px 4px;
