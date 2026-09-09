@@ -9,6 +9,7 @@ files:
   - from: ../renderer/dist
     to: renderer/dist
 mac:
+  icon: build/icon.icns
   category: public.app-category.developer-tools
   identity: null
   target:

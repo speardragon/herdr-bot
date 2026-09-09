@@ -16,6 +16,9 @@ const rendererIndex = app.isPackaged
   ? join(process.resourcesPath, "app", "renderer", "dist", "index.html")
   : join(here, "..", "..", "..", "..", "renderer", "dist", "index.html");
 const preloadPath = join(here, "preload.cjs");
+// electron-builder bakes build/icon.icns into the packaged bundle; an unpackaged run has to point
+// at it itself, or the Dock and the window show Electron's own icon.
+const appIconPath = join(here, "..", "..", "..", "build", "icon.png");
 
 async function bootHost(): Promise<Host> {
   const config = resolveConfig(process.env);
@@ -31,6 +34,7 @@ function createWindow(host: Host): BrowserWindow {
     minWidth: MIN_WINDOW_SIZE.width,
     minHeight: MIN_WINDOW_SIZE.height,
     backgroundColor: windowBackground(nativeTheme.shouldUseDarkColors),
+    ...(app.isPackaged || !existsSync(appIconPath) ? {} : { icon: appIconPath }),
     show: false,
     ...windowChromeOptions(process.platform),
     webPreferences: { preload: preloadPath, contextIsolation: true, sandbox: true, nodeIntegration: false },
@@ -61,6 +65,7 @@ async function loadRenderer(window: BrowserWindow): Promise<void> {
 }
 
 app.whenReady().then(async () => {
+  if (!app.isPackaged && app.dock != null && existsSync(appIconPath)) app.dock.setIcon(appIconPath);
   const host = await bootHost();
   const window = createWindow(host);
   await loadRenderer(window);

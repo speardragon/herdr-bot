@@ -22,6 +22,20 @@ npm run desktop:package        # .build/desktop/mac-arm64/herdr-bot.app
 - 봇 DM 헤더의 터미널 버튼은 herdr에서 그 봇의 pane으로 이동한다.
 - 봇은 메인 herdr 세션이 아니라 전용 세션 `herdr-bot`에 뜬다(없으면 앱이 헤드리스로 띄운다). 봇 pane을 보려면 터미널에서 `herdr session attach herdr-bot`. 터미널 버튼(Open in herdr)도 그 세션에 붙어 있을 때만 화면이 움직인다. 메인 세션에 두고 싶으면 `HERDR_BOT_SESSION=default`.
 
+### 앱 아이콘
+
+`desktop/build/icon.icns`(패키징)와 `icon.png`(패키징하지 않고 실행할 때의 Dock·창 아이콘)는
+`desktop/build/icon-source.jpg`에서 만든다. 원본은 둥근 사각형 로고가 바탕색 위에 여백을 두고
+놓인 그림이라, 바탕을 지우고 로고만 잘라 macOS 아이콘 격자(1024 캔버스 안에 824 본체, 사방 100px
+여백)에 맞춘다. 아트워크 자체의 모서리 곡률은 그대로 둔다.
+
+```bash
+pip install pillow
+python3 scripts/make-app-icon.py
+iconutil -c icns desktop/build/herdr-bot.iconset -o desktop/build/icon.icns
+rm -rf desktop/build/herdr-bot.iconset
+```
+
 UI는 grok-bot 0.18 재구성 렌더러를 포크한 것이다(`renderer/UPSTREAM.md`). 원본 번들의 에셋(아이콘·이모지 데이터 등)은 포함하지 않으며 개인 용도 빌드다.
 
 ## 빠른 시작 (헤드리스)
