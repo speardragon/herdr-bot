@@ -81,3 +81,13 @@ Found by inspecting the live renderer over CDP against the real Grok Bot 0.18 wi
 - `.../transcript-card/views/send-message-text.tsx` + `production.css` (block 19): matches Slack --
   the author name labels only the *first* bubble of a run; the avatar anchors the *last* bubble and
   sits at its bottom edge (`align-items: flex-end` on the row), not the top of the first.
+
+## Sidebar "Working" row layout fix (2026-09-09, fifth pass)
+
+- `production.css` (block 23): while a bot is `isRunning`, the sidebar row swaps its usual
+  `.sand-agent-item__preview` (small, single-line, ellipsis-clamped) for `SidebarAgentActivity`'s
+  `.sand-agent-item__activity` span -- whose only recovered rule was a text colour (the component's
+  own comment notes the private activity styling wasn't recovered). With no font-size or
+  wrap/clamp, the full message rendered at the ambient body size and pushed the row (and the whole
+  list under it) taller for as long as the bot was working. Matched it to `.sand-agent-item__preview`'s
+  sizing/clamping, keeping the accent colour.

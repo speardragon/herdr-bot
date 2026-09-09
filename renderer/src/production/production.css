@@ -538,3 +538,18 @@ button, textarea, input { font: inherit; }
  * chip -- see renderer/UPSTREAM.md for source/licence. Kinds with no available mark (Grok) fall
  * back to the plain monogram badge. */
 .sand-kind-badge__icon { width: 12px; height: 12px; background-color: #fff; -webkit-mask: var(--kind-icon) center / contain no-repeat; mask: var(--kind-icon) center / contain no-repeat; }
+
+/* 23. Sidebar row while a bot is "Working": SidebarAgentActivity swaps in for the usual
+ * .sand-agent-item__preview, but the recovered CSS only ever gave it a colour (the comment on the
+ * component notes the private activity styling wasn't recovered). With no font-size or
+ * truncation, the full message rendered at the body font size and pushed the row (and the whole
+ * list below it) taller for as long as the bot was working. Match .sand-agent-item__preview's
+ * sizing/clamping and keep the accent colour. */
+.sand-agent-item__activity {
+  overflow: hidden;
+  color: var(--sand-fill-accent);
+  font-size: var(--cursor-font-size-xs);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
