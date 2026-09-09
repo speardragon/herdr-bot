@@ -252,3 +252,6 @@ helper.
 - Not changed: one `npm test` run showed a single failure that did not reproduce on two immediate
   re-runs (the core suite has timing-based tests noted in the core follow-ups); unrelated to the
   renderer.
+- Auto-review ON state: the rules editor's toolbar is a bare `<div>` (text field + behaviour select
+  + "Add Rule"); the field is block-level, so the other two wrapped beneath it at three heights
+  (38/28/24). Now one 28px flex row with the field taking the slack.

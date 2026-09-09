@@ -730,3 +730,11 @@ button, textarea, input { font: inherit; }
  * set a plain `background: var(--cursor-danger)`, so every danger button rendered as white text on
  * nothing (Settings > Updates > "Reset" was unreadable). Match the boost. */
 .sand-kit-button:is(.sand-18he5m, .sand-6y9aml):not(#\#):not(#\#):not(#\#) { background-color: var(--cursor-danger); }
+/* Auto-review rules editor (shown when the toggle is on): its toolbar is a bare <div> holding the
+ * text field, the behaviour select and "Add Rule"; the field is block-level so the other two
+ * wrapped under it at three different heights (38/28/24). One 28px flex row, field taking the slack. */
+.sand-settings-dialog .sand-auto-review > div > div:has(> .ui-select-trigger) { display: flex; gap: 8px; align-items: center; }
+.sand-settings-dialog .sand-auto-review > div > div:has(> .ui-select-trigger) > div { flex: 1 1 auto; min-width: 0; }
+.sand-settings-dialog .sand-auto-review .ui-input-group__input:not(#\#) { height: 28px; min-height: 28px; padding: 0 10px; font-size: 13px; border-radius: 8px; }
+.sand-settings-dialog .sand-auto-review .sand-kit-button:not(#\#):not(#\#):not(#\#):not(#\#) { height: 28px; }
+.sand-settings-dialog .sand-auto-review > div h3 { line-height: 20px; }
