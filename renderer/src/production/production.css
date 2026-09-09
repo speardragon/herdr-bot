@@ -342,3 +342,86 @@ button, textarea, input { font: inherit; }
 
 /* herdr-bot: room member attribution on bot messages */
 .sand-message__author { display: block; margin: 0 0 2px; color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-xs); font-weight: 600; letter-spacing: 0.01em; }
+
+/* ── herdr-bot: Grok Bot 0.18 look parity ─────────────────────────────────────
+ * Fixes found by inspecting the live renderer (see docs/superpowers/plans/…-desktop-followups.md).
+ * production.css loads last, so these override the recovered feature stylesheets. */
+
+/* 1. The titlebar drag cover (fixed, 52px, z-index 4999) swallowed every click on the sidebar
+ *    header and chat header. Let clicks through; mark the controls as no-drag so the OS does not
+ *    treat them as titlebar. */
+.sand-cover-drag { pointer-events: none; }
+.sand-agents-sidebar__header button,
+.sand-chat-header > .sand-chat-header__identity,
+.sand-chat-header__controls,
+.sand-chat-header__controls button { -webkit-app-region: no-drag; app-region: no-drag; }
+
+/* 2. Sidebar header controls sit right, clear of the macOS traffic lights at (16,15). */
+.sand-agents-sidebar__header { justify-content: flex-end; }
+
+/* 3. The whole sidebar column is chrome-coloured (plugins + account rows included); the aside
+ *    no longer paints its own border so there is a single edge. */
+.sand-sidebar-column { min-height: 0; background: var(--cursor-bg-chrome); border-right: 1px solid var(--cursor-stroke-tertiary); }
+.sand-sidebar-column .sand-agents-sidebar { border-right: 0; }
+
+/* 4. The chat title lives in the chat header; drop the duplicate titlebar label. The transport dot
+ *    is shown only while connecting or down (the sidebar unread dots share the class, hence the
+ *    direct-child scope). */
+.sand-chat-header__title { display: none; }
+.sand-shell > .sand-kit-status-dot[role="status"][data-status="info"] { display: none; }
+
+/* 5. Bubbles. `max-width: … calc(100% - 82px)` on the bubble resolved against its fit-content
+ *    anchor, collapsing user bubbles to a few pixels (one Korean character per line). Put the
+ *    limit on the anchor, right-align and invert the user bubble, and stop centring the
+ *    transcript in a 690px column. */
+.sand-message-action-anchor { max-width: min(88%, 640px, calc(100% - 82px)); }
+.sand-message { max-width: none; }
+.sand-transcript-row[data-role="user"] .sand-message-action-anchor { margin-left: auto; }
+.sand-message[data-role="user"] { color: var(--cursor-bg-editor); background: var(--cursor-text-primary); }
+.sand-message[data-role="user"] .sand-message-prose,
+.sand-message[data-role="user"] .sand-message-prose a { color: inherit; }
+.sand-message-prose a { color: var(--cursor-text-link, var(--sand-fill-accent, #2f7cf6)); }
+.sand-virtual-transcript { padding: 24px 24px 8px; }
+.sand-chat-input-dock { padding: 8px 24px 18px; }
+
+/* 6. Recovered transcript chrome carried dark-theme literals; use theme tokens. */
+.sand-message-typing { background: var(--cursor-bg-secondary); }
+.sand-message-typing__dot { background: var(--cursor-text-tertiary); }
+.sand-transcript-time-separator { color: var(--cursor-text-tertiary); }
+.sand-message-hover-actions__button { color: var(--cursor-text-secondary); background: var(--cursor-bg-elevated); border-color: var(--cursor-stroke-secondary); }
+.sand-message-hover-actions__button:focus-visible { color: var(--cursor-text-primary); background: var(--cursor-bg-secondary); outline-color: var(--sand-border-accent); }
+.sand-message-attachment { background: var(--cursor-bg-tertiary); border-color: var(--cursor-stroke-secondary); }
+.sand-message-attachment small { color: var(--cursor-text-tertiary); }
+
+/* 7. Chat header identity reads as the title. */
+.sand-chat-header > .sand-chat-header__identity { color: var(--cursor-text-primary); }
+.sand-chat-header__identity #sand-conversation-heading { font-size: var(--cursor-font-size-lg); font-weight: 600; }
+.sand-chat-header__avatar { width: 32px; height: 32px; }
+
+/* 8. Sidebar rows: active highlight, rounded rows, left-aligned search. */
+.sand-agent-item { border-radius: var(--cursor-radius-lg); }
+.sand-agent-item[data-active="true"] { background: var(--cursor-bg-secondary); }
+.sand-agents-sidebar__search,
+.sand-agents-sidebar__search > span { justify-content: flex-start; }
+
+/* 9. Composer: one pill row [attach | editor | mic/send]. Attachments, notices and voice status
+ *    take full-width rows above it. The tiptap placeholder had no rule at all. */
+.sand-prompt-shell { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; column-gap: 6px; padding: 6px 8px; border-radius: 28px; }
+.sand-prompt-shell > div:not([class]) { grid-column: 2; grid-row: 2; min-width: 0; }
+.sand-prompt-shell > .sand-prompt-attachments,
+.sand-prompt-shell > .sand-prompt-attachment-notice,
+.sand-prompt-shell > .sand-prompt-voice-status,
+.sand-prompt-shell > .sand-prompt-voice-error { grid-column: 1 / -1; }
+.sand-prompt-shell > .sand-prompt-attachments { margin: 6px 6px 8px; }
+.sand-prompt-actions-row { display: contents; }
+.sand-prompt-actions-row > .sand-kit-icon-button.sand-prompt-attach { grid-column: 1; grid-row: 2; width: 34px; height: 34px; }
+.sand-prompt-actions-trailing { grid-column: 3; grid-row: 2; align-items: center; }
+.sand-prompt-actions-trailing > .sand-kit-icon-button.sand-prompt-mic { width: 34px; height: 34px; color: var(--cursor-bg-editor); background: var(--cursor-text-primary); border-radius: 50%; }
+.sand-prompt-actions-row > .sand-prompt-send { width: 34px; height: 34px; }
+.sand-prompt-field { min-height: 34px; padding: 7px 4px; line-height: 20px; }
+.sand-prompt-field p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; color: var(--cursor-input-placeholder-foreground, var(--cursor-text-tertiary)); pointer-events: none; }
+
+/* 10. The connection host above the agent list renders nothing while connected, so the aside fell
+ *     into the `auto` row and stopped at its content height. Pin it to the 1fr row. */
+.sand-sidebar-column .sand-agents-sidebar { grid-row: 2; }
+.sand-prompt-actions-row > .sand-kit-icon-button.sand-prompt-attach { color: var(--cursor-text-primary); }

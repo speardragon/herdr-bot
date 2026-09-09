@@ -9,7 +9,7 @@ import { log } from "../../core/src/log.ts";
 import { registerBridge } from "./bridge-main.ts";
 import { attachRendererPort } from "./coordinator-port.ts";
 import { SettingsStore } from "./settings-store.ts";
-import { DEFAULT_WINDOW_SIZE, MIN_WINDOW_SIZE, WINDOW_BACKGROUND, windowChromeOptions } from "./window-chrome.ts";
+import { DEFAULT_WINDOW_SIZE, MIN_WINDOW_SIZE, windowBackground, windowChromeOptions } from "./window-chrome.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const rendererIndex = app.isPackaged
@@ -30,7 +30,7 @@ function createWindow(host: Host): BrowserWindow {
     ...DEFAULT_WINDOW_SIZE,
     minWidth: MIN_WINDOW_SIZE.width,
     minHeight: MIN_WINDOW_SIZE.height,
-    backgroundColor: WINDOW_BACKGROUND,
+    backgroundColor: windowBackground(nativeTheme.shouldUseDarkColors),
     show: false,
     ...windowChromeOptions(process.platform),
     webPreferences: { preload: preloadPath, contextIsolation: true, sandbox: true, nodeIntegration: false },

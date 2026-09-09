@@ -640,7 +640,7 @@ const MacEmacsLineMotion = Extension.create({
   }
 });
 
-export function createPromptEditorExtensions(placeholder: string, providers?: PromptEditorProviders) {
+export function createPromptEditorExtensions(placeholder: string | (() => string), providers?: PromptEditorProviders) {
   const mention = providers?.mention;
   const workflow = providers?.workflow;
   const prReference = providers?.prReference;
@@ -673,7 +673,7 @@ export function createPromptEditorExtensions(placeholder: string, providers?: Pr
     PromptLink.configure({ openOnClick: false, defaultProtocol: "https" }),
     ScrollCaretIntoView,
     MacEmacsLineMotion,
-    Placeholder.configure({ placeholder, emptyEditorClass: PROMPT_EMPTY_EDITOR_CLASS, showOnlyWhenEditable: false }),
+    Placeholder.configure({ placeholder: typeof placeholder === "function" ? () => placeholder() : placeholder, emptyEditorClass: PROMPT_EMPTY_EDITOR_CLASS, showOnlyWhenEditable: false }),
     PromptMention.configure({
       HTMLAttributes: { class: "sand-mention" },
       renderText: ({ node }) => `@${node.attrs.label ?? node.attrs.id ?? ""}`,
@@ -711,7 +711,11 @@ function isPromptEditingTarget(target: EventTarget | null): boolean {
 export function PromptRichTextEditor({ prompt, richText, scopeKey = "", clearGeneration = 0, disabled = false, placeholder, providers, canSubmit, onChange, onSubmit, onEscape, onPasteFiles, onControls }: PromptRichTextEditorProps) {
   const callbacks = useRef({ canSubmit, onChange, onSubmit, onEscape, onPasteFiles });
   callbacks.current = { canSubmit, onChange, onSubmit, onEscape, onPasteFiles };
-  const extensions = useMemo(() => createPromptEditorExtensions(placeholder, providers), [placeholder, providers]);
+  // herdr-bot: useEditor keeps its first extension set, so a placeholder baked into the Placeholder
+  // extension stayed on the first chat's name. Read it through a ref and repaint on change instead.
+  const placeholderRef = useRef(placeholder);
+  placeholderRef.current = placeholder;
+  const extensions = useMemo(() => createPromptEditorExtensions(() => placeholderRef.current, providers), [providers]);
   const initialContent = useMemo(() => promptEditorContent(prompt, richText), []);
   const previousExternalContent = useRef({ prompt, richText });
   const clearFence = useRef<{ generation: number; before: string } | null>(null);
@@ -781,6 +785,10 @@ export function PromptRichTextEditor({ prompt, richText, scopeKey = "", clearGen
       callbacks.current.onChange({ prompt: text, ...(json == null ? {} : { richText: json }) });
     }
   });
+  useEffect(() => {
+    if (editor == null || editor.isDestroyed) return;
+    editor.view.dispatch(editor.state.tr.setMeta("addToHistory", false));
+  }, [editor, placeholder]);
 
   // This runs during render so the fence is installed before the child
   // editor's external-content effect can observe the accepted empty draft.

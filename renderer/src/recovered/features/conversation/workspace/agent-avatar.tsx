@@ -78,6 +78,9 @@ function avatarStyle(sizePx: number): CSSProperties {
   return { height: sizePx, width: sizePx };
 }
 
+// herdr-bot: bots without an explicit avatar shape render as clouds, matching the shipped Grok Bot look.
+const HERDR_BOT_DEFAULT_SHAPE = "cloud";
+
 function PersonaMark({ agentId, color, shape, size, sizePx, state, isStatic, paused, isFollowingPointer, followTarget, emphasis, spinSignal }: { agentId: string; color: string; shape: string; state: PersonaState; size?: AgentAvatarSize } & Pick<AgentAvatarProps, "isStatic" | "paused" | "isFollowingPointer" | "followTarget" | "emphasis" | "spinSignal"> & { sizePx: number }) {
   return <span aria-hidden="true" className="sand-agent-avatar sand-grok-bot-mark" data-avatar-color={color} data-avatar-shape={shape} data-size={typeof size === "string" ? size : undefined} data-emphasis={emphasis || undefined} style={{ ...avatarStyle(sizePx), filter: emphasis ? "drop-shadow(0 0 3px color-mix(in srgb, currentColor 32%, transparent))" : undefined }}>
     <OnboardingCharacter
@@ -117,7 +120,7 @@ function GroupAvatar({ agentId, memberIds, sizePx, state, isStatic, paused }: { 
   return <span aria-hidden="true" className="sand-agent-avatar sand-group-avatar" data-avatar-kind="group" data-member-count={participants.length} style={avatarStyle(sizePx)}>
     {visible.slice(0, slots.length).map((memberId, index) => {
       const color = resolvePersonaColor(memberId);
-      const shape = resolvePersonaShape(memberId);
+      const shape = resolvePersonaShape(memberId, HERDR_BOT_DEFAULT_SHAPE);
       const slot = slots[index];
       return <span key={memberId} style={{ display: "block", height: slot.size, left: slot.x, overflow: "hidden", position: "absolute", top: slot.y, width: slot.size }}><PersonaMark agentId={memberId} color={color} isStatic={isStatic ?? true} paused={paused} shape={shape} sizePx={slot.size} state={state} /></span>;
     })}
@@ -130,7 +133,7 @@ export function AgentAvatar(props: AgentAvatarProps) {
   const sizePx = SIZE_PX[size];
   const state = avatarState(props);
   const color = useMemo(() => resolvePersonaColor(props.agentId, props.color), [props.agentId, props.color]);
-  const shape = useMemo(() => resolvePersonaShape(props.agentId, props.shape), [props.agentId, props.shape]);
+  const shape = useMemo(() => resolvePersonaShape(props.agentId, props.shape ?? HERDR_BOT_DEFAULT_SHAPE), [props.agentId, props.shape]);
   const dataUrl = typeof props.dataUrl === "string" && props.dataUrl.length > 0 ? props.dataUrl : null;
   const kind = props.kind ?? "agent";
   if (dataUrl != null) return <img alt="" aria-hidden="true" className="sand-agent-avatar" data-avatar-kind="photo" data-size={size} draggable={false} height={sizePx} src={dataUrl} style={avatarStyle(sizePx)} width={sizePx} />;
