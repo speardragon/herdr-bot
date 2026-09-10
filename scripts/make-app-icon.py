@@ -5,21 +5,28 @@ Run by hand after changing the source artwork; needs Pillow (`pip install pillow
 
     python3 scripts/make-app-icon.py && iconutil -c icns desktop/build/herdr-bot.iconset -o desktop/build/icon.icns
 
-
 The source is the artwork's rounded square sitting on a backdrop with a wide outer margin.
-The constants below are the square's measured edges and corner radius -- found by scanning
-in from all four sides for the strongest luminance step. Re-measure if the source changes.
+`L, T, R, B` / `RADIUS` are that square's measured edges and corner radius (found by scanning in
+from all four sides for the strongest luminance step); re-measure if the source image changes.
+
+A too-thin INSET here previously left a fringe of the photographed backdrop visible once the icon
+was actually rendered by Finder/Dock at smaller sizes -- each mip level halves the inset in device
+pixels, so a couple of px at 1024 can vanish entirely by 16x16, and the leftover ring survives
+resampling as a hard-edged sliver of the wrong colour rather than smoothly disappearing. INSET is
+now large enough (~1% of the crop) to hold up at every size, and the mask itself is feathered a
+couple of px so what edge remains blends to transparent instead of ending on a hard boundary.
 """
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 HERE = Path(__file__).resolve().parent.parent / "desktop" / "build"
 SRC = HERE / "icon-source.jpg"
 ISET = HERE / "herdr-bot.iconset"
 L, T, R, B = 79, 51, 1343, 1317          # right/bottom exclusive
 RADIUS = 198
-INSET = 2                                 # eat the anti-aliased rim so no backdrop survives
+INSET = 14                                # eat the anti-aliased rim AND survive downscaling to 16x16
+FEATHER = 3                               # px, blur the mask edge so it fades rather than cuts
 CANVAS = 1024
 BODY = 824                                # Apple's macOS icon grid: 100px margin each side
 
@@ -28,12 +35,13 @@ side = max(art.size)
 square = Image.new("RGB", (side, side))
 square.paste(art, ((side - art.width) // 2, (side - art.height) // 2))
 
-# Rounded-rect alpha at 4x, then downsampled -- smoother corners than a 1x draw.
+# Rounded-rect alpha at 4x, feathered, then downsampled -- smoother corners than a 1x draw.
 SS = 4
 mask = Image.new("L", (side * SS, side * SS), 0)
 ImageDraw.Draw(mask).rounded_rectangle(
     (INSET * SS, INSET * SS, (side - INSET) * SS - 1, (side - INSET) * SS - 1),
     radius=RADIUS * SS, fill=255)
+mask = mask.filter(ImageFilter.GaussianBlur(FEATHER * SS))
 mask = mask.resize((side, side), Image.LANCZOS)
 
 body = square.convert("RGBA")

@@ -255,3 +255,22 @@ helper.
 - Auto-review ON state: the rules editor's toolbar is a bare `<div>` (text field + behaviour select
   + "Add Rule"); the field is block-level, so the other two wrapped beneath it at three heights
   (38/28/24). Now one 28px flex row with the field taking the slack.
+
+## App icon: harden the alpha mask against edge fringe (2026-09-10)
+
+The rounded-square alpha mask cut from `icon-source.jpg` used only a 2px inset (`INSET = 2` at the
+1264px crop scale) to eat the source photo's anti-aliased rim. That is not proportional: macOS
+generates the icon at many sizes (16 up to 1024), each roughly halving the previous, and a 2px
+margin at full res shrinks toward nothing well before 16x16 -- so a hairline of the photographed
+backdrop survived at small sizes as a hard-edged ring, visible in Finder/Dock as "the old
+background poking out at the edges."
+
+Fix: `INSET` raised to 14px (~1% of the crop, holds up at every mip size) and the mask is now
+Gaussian-blurred a few px before the final downsample, so any edge that remains fades to
+transparent rather than ending on a hard boundary. Verified against the real rendering this time,
+not just a synthetic composite: packaged the app, re-registered it with Launch Services, and
+screenshotted both the Finder icon-view icon and the Dock icon -- clean edges in both, no fringe.
+
+(A same-session detour tried replacing the source photo with a frame-less mark on a hand-drawn
+background instead of hardening the mask; reverted after the user preferred the original
+photographed-bezel look. `icon-source.jpg` is back to the original framed artwork.)
