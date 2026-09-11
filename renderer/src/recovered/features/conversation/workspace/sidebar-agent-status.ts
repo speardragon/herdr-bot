@@ -83,10 +83,14 @@ export function SidebarAgentActivity({ preview, previewTitle }: SidebarAgentActi
   }, preview ?? null);
 }
 
-export function projectSidebarAgentStatus({ layout = "expanded", waitingReason, hasUnread = false, isRunning = false, isActivityNamed = false }: SidebarAgentStatusInput): SidebarAgentStatusProjection {
+// herdr-bot (task 3): this corner marker now owns ONLY the blue blocked/unread indicator. The
+// avatar-corner "running" (green) rendering it used to also own for collapsed/pinned rows has been
+// superseded by the independent green working/done dot (bot-activity.ts + sidebar.tsx's
+// `.herdr-working-dot`), which is driven by the root-owned activity map rather than isRunning/
+// isActivityNamed. Keeping both here would stack two dots in the same corner.
+export function projectSidebarAgentStatus({ layout = "expanded", waitingReason, hasUnread = false, isRunning = false }: SidebarAgentStatusInput): SidebarAgentStatusProjection {
   const marker: SidebarAgentStatusMarker = waitingReason != null ? "blocked" : hasUnread ? "unread" : null;
   const isWorking = waitingReason == null && isRunning;
-  const runningState: Exclude<SidebarAgentStatusCorner, "marker" | null> | null = isWorking ? (isActivityNamed ? "ring" : "running") : null;
   const markerLabel = marker === "blocked" ? "Needs attention" : marker === "unread" ? "Unread activity" : undefined;
 
   const markerCorner: SidebarAgentStatusCorner = marker == null ? null : "marker";
@@ -94,7 +98,7 @@ export function projectSidebarAgentStatus({ layout = "expanded", waitingReason, 
     marker,
     markerLabel,
     isWorking,
-    corner: layout === "expanded" ? (runningState === "running" ? "running" : null) : markerCorner ?? runningState,
+    corner: layout === "expanded" ? null : markerCorner,
     trailing: layout === "expanded" && marker != null ? "marker" : null
   };
 }
@@ -104,10 +108,12 @@ function indicatorFor(projection: SidebarAgentStatusProjection, renderIndicator?
   return (renderIndicator ?? ((nextStatus) => createElement(SidebarStatusDot, { status: nextStatus })))(status);
 }
 
-/** Exact corner wrapper used for running/marker states; named-activity rings stay fail-closed without the private spinner. */
+/** Exact corner wrapper for the blocked/unread marker on collapsed/pinned rows. Positioned top-right
+ * (task 3) -- not bottom-right -- so it never overlaps the independent green working/done dot, which
+ * owns the avatar's bottom-right corner (`.herdr-working-dot`) for every row layout. */
 export function SidebarAgentStatusCorner({ layout = "expanded", renderIndicator, ...input }: SidebarAgentStatusViewProps) {
   const projection = projectSidebarAgentStatus({ ...input, layout });
-  if (projection.corner == null || projection.corner === "ring") return null;
+  if (projection.corner == null) return null;
   const pinned = layout === "pinned";
   const size = pinned ? 10 : 8;
   const status = projection.markerLabel == null ? undefined : projection.markerLabel;
@@ -119,7 +125,7 @@ export function SidebarAgentStatusCorner({ layout = "expanded", renderIndicator,
   return createElement("span", {
     ...(status == null ? { "aria-hidden": true } : { "aria-label": status, role: "status" }),
     className,
-    style: { width: size, height: size, right: 2, bottom: 2 }
+    style: { width: size, height: size, right: 2, top: 2 }
   }, indicatorFor(projection, renderIndicator));
 }
 

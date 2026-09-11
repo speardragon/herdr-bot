@@ -36,3 +36,16 @@ export function movePinnedAgent(storedIds: readonly string[], movedId: string, t
   const insertIndex = position === "before" ? targetIndex : targetIndex + 1;
   return [...withoutMoved.slice(0, insertIndex), movedId, ...withoutMoved.slice(insertIndex)];
 }
+
+/**
+ * Single most-recent-message-ordered chat list (Bots + groups together). Falls back to `createdAt`
+ * for a chat that has never had a message, and breaks exact ties by id so same-timestamp entries
+ * (e.g. a host-assigned monotonic bump landing on the same ms) still sort deterministically. Renaming,
+ * marking read, or a working/done status change never touches `lastMessageAt`, so none of those
+ * reorder the list -- only a new message (host-bumped `lastMessageAt`) does.
+ */
+export function sortRecentChats<T extends { id: string; lastMessageAt: number; createdAt: number }>(agents: readonly T[]): T[] {
+  return [...agents].sort((a, b) =>
+    (b.lastMessageAt || b.createdAt) - (a.lastMessageAt || a.createdAt)
+    || a.id.localeCompare(b.id));
+}

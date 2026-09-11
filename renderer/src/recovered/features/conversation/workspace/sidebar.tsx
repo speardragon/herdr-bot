@@ -84,7 +84,16 @@ export interface ConversationSidebarProps {
   isPreviewEnabled?: boolean;
 }
 
-export type SidebarAgent = ConversationAgentSummary & { description?: string; hasUnread?: boolean; isGroup?: boolean; raw?: { readonly isSharedRoom?: boolean } };
+export type SidebarAgent = ConversationAgentSummary & {
+  description?: string;
+  hasUnread?: boolean;
+  isGroup?: boolean;
+  raw?: { readonly isSharedRoom?: boolean };
+  /** herdr-bot: the independent green working/done activity dot (task 3). `null`/`undefined` means
+   * hidden -- distinct from, and never derived from, `hasUnread` (the blue dot). Owned at the root
+   * lifecycle (bot-activity.ts's activity map), not recomputed per row. */
+  activityStatus?: "working" | "done" | null;
+};
 
 export interface SidebarSelectionActionsProps {
   selectedAgentIds: readonly string[];
@@ -266,9 +275,12 @@ export function AgentSidebarItem({ agent, active, now, isCollapsed = false, isSe
     }}
     type="button"
   >
-    <span className="sand-agent-item__avatar">
+    <span className="sand-agent-item__avatar herdr-avatar-wrap">
       <span aria-hidden="true"><AgentAvatar agentId={agent.id} kind={agent.isSharedRoom === true || agent.raw?.isSharedRoom === true ? "shared-room" : agent.isGroup === true ? "group" : "agent"} memberIds={agent.memberIds} dataUrl={agent.avatarDataUrl} color={agent.avatarColor} shape={agent.avatarShape} currentActivity={agent.currentActivity} isComposingMessage={agent.isComposingMessage} isRunning={agent.isRunning} awaitingUserResponse={agent.awaitingUserResponse} size="md" /></span>
       <SidebarAgentStatusCorner hasUnread={agent.hasUnread} isRunning={agent.isRunning} layout={rowLayout} waitingReason={agent.waitingReason} />
+      {/* herdr-bot: independent green working/done activity dot (task 3) -- avatar-wrap bottom-right,
+          deliberately never the same DOM node/position as the blue unread marker above. */}
+      {agent.activityStatus == null ? null : <span aria-label={agent.activityStatus === "working" ? t("Working") : t("Done", "작업 완료")} className="herdr-working-dot" role="status" />}
     </span>
     {isCollapsed ? null : <>
       <span className="sand-agent-item__body">

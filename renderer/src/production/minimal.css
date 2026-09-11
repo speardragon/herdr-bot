@@ -39,3 +39,19 @@
 .sand-group-member-add-row [role="menu"] { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; padding: 6px; border: 1px solid var(--cursor-stroke-secondary); border-radius: 10px; background: var(--cursor-bg-input-surface); }
 .sand-group-member-add-row [role="menuitem"] { text-align: left; }
 .sand-group-members-footer { color: var(--cursor-text-secondary); font-size: 12px; line-height: 1.5; }
+
+/* herdr-bot (task 3): independent green working/done activity dot. `--herdr-surface` resolves to the
+ * sidebar row's actual background in both themes -- `--cursor-bg-chrome` is exactly what
+ * `.sand-agents-sidebar` (and therefore every unselected row) paints, in both light and dark, via the
+ * app's own runtime theme installer -- so the dot's ring always cuts cleanly against the real row
+ * behind it instead of a guessed hardcoded color. */
+:root { --herdr-surface: var(--cursor-bg-chrome); }
+/* The active/selected row paints --cursor-bg-secondary (see production.css's
+ * `.sand-agent-item[data-active="true"]`), so the dot's ring must match that row's real background too. */
+.sand-agent-item[data-active="true"] .herdr-working-dot { --herdr-surface: var(--cursor-bg-secondary); }
+.herdr-avatar-wrap { position: relative; flex: 0 0 auto; }
+.herdr-working-dot {
+  position: absolute; right: 0; bottom: 0;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #22c55e; box-shadow: 0 0 0 2px var(--herdr-surface);
+}

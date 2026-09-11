@@ -113,7 +113,8 @@ import { UI_TEXT } from "./evidence";
 import { LocalSettings } from "./LocalSettings";
 import { t, useLocale } from "./locale";
 import "./minimal.css";
-import { movePinnedAgent, partitionSidebarAgents } from "./sidebar-model";
+import { movePinnedAgent, partitionSidebarAgents, sortRecentChats } from "./sidebar-model";
+import { activityVisible, nextActivityTimeout, reconcileActivityMap, type ActivityMap } from "./bot-activity";
 import { SignOutDialog } from "../recovered/features/account/session/sign-out";
 import { FeedbackDialog, type FeedbackCode } from "../recovered/features/feedback/overlay/view";
 import { UpdateRequired } from "../recovered/features/update/required/view";
@@ -866,6 +867,35 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   const [agents, setAgents] = useState<RendererAgent[]>([]);
   const [pinnedAgentIds, setPinnedAgentIds] = useState<string[]>([]);
   const [hasLoadedAgents, setHasLoadedAgents] = useState(false);
+  // herdr-bot: the independent green working/done activity map (task 3) lives at this root lifecycle,
+  // not per sidebar row -- rows only ever read `activityVisible` off it. It is reconciled from the
+  // roster's runtimeStatus whenever `agents` changes, and cleared while the transport is down so a
+  // reconnect's fresh snapshot never inherits a stale "was working" memory (which would otherwise wrongly
+  // grant an already-done snapshot a new afterglow).
+  const [activityMap, setActivityMap] = useState<ActivityMap>(() => new Map());
+  useEffect(() => {
+    if (transport !== "connected") {
+      setActivityMap((current) => current.size === 0 ? current : new Map());
+      return;
+    }
+    const statuses = new Map(agents.map((agent) => [agent.id, agent.runtimeStatus] as const));
+    setActivityMap((current) => reconcileActivityMap(current, statuses, Date.now()));
+  }, [agents, transport]);
+  // A single root-owned timer, rescheduled to the earliest pending "done" afterglow expiry so it
+  // disappears on time even without a new host event. Repeated `done` upserts never extend it --
+  // reconcileActivityMap's updateActivity call is a no-op when the status hasn't changed, so
+  // `visibleUntil` is never pushed out.
+  useEffect(() => {
+    const at = nextActivityTimeout(activityMap, Date.now());
+    if (at == null) return;
+    const timer = setTimeout(() => {
+      setActivityMap((current) => {
+        const statuses = new Map(Array.from(current, ([id, state]) => [id, state.status] as const));
+        return reconcileActivityMap(current, statuses, Date.now());
+      });
+    }, Math.max(0, at - Date.now()));
+    return () => clearTimeout(timer);
+  }, [activityMap]);
   const activeAgentId = useSyncExternalStore(
     selectionStore.subscribe,
     () => selectionStore.get().currentAgentId ?? "",
@@ -1425,7 +1455,17 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     },
     [client]
   );
-  const visibleAgents = agents.filter((agent) => !agent.isHidden).map((agent) => ({ ...agent, isPinned: pinnedAgentIds.includes(agent.id) }));
+  // herdr-bot: the green working/done dot (task 3) is derived here, once, from the root-owned
+  // activityMap -- never from agent.isRunning/currentActivity (that pipeline still drives the
+  // existing avatar persona animation, which is unrelated). `null` means "not visible right now",
+  // whether because the bot is idle/blocked/offline or because the transport is down.
+  const activityNow = Date.now();
+  const visibleAgents = agents.filter((agent) => !agent.isHidden).map((agent) => {
+    const activity = activityMap.get(agent.id);
+    const isVisible = transport === "connected" && activity != null && activityVisible(activity, activityNow);
+    const activityStatus: "working" | "done" | null = isVisible && activity != null && activity.status === "working" ? "working" : isVisible ? "done" : null;
+    return { ...agent, isPinned: pinnedAgentIds.includes(agent.id), activityStatus };
+  });
   const pinnedAccountKey = account?.kind === "logged-in" ? account.authId ?? account.email ?? "account" : account?.kind ?? "unknown";
   const settingsNoticeSurface = overlay === "settings" || overlay === "plugins" ? overlay : "none";
   const settingsNoticeScope = `${pinnedAccountKey}:${account?.kind ?? "unknown"}:${settingsNoticeSurface}`;
@@ -2445,7 +2485,10 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     const stopUpsert = client.subscribe("agent-upserted", (value) => {
       if (!isCurrent() || accountRef.current?.kind !== "logged-in") return;
       const projected = projectRendererAgent(value);
-      if (projected != null) setAgents((current) => [projected, ...current.filter((agent) => agent.id !== projected.id)].sort((a, b) => b.updatedAt - a.updatedAt));
+      // herdr-bot: the single most-recent-message-ordered list (task 3) applies to this incremental
+      // upsert too -- a rename/read-state/status-only upsert leaves lastMessageAt untouched, so
+      // sortRecentChats leaves this agent's position unchanged; only a new message reorders it.
+      if (projected != null) setAgents((current) => sortRecentChats([projected, ...current.filter((agent) => agent.id !== projected.id)]));
     });
     const stopTranscript = reactionRoot?.feed.observeEntriesFeed({
       onBaseline: ({ agentId: ownerId, entries: rawEntries }) => {

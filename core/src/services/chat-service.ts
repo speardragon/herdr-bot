@@ -148,12 +148,26 @@ export class ChatService {
     // state is now acknowledged only through the renderer's explicit seq-based ACK (Task 2). Only a
     // bot reply ("send-message") is "incoming" for unread purposes; a notice is neither incoming nor
     // outgoing (mirrors computeMigratedSeqFields, which also only looks at send-message/message).
-    if (fromUser) this.#deps.view.recordOutgoing(chatId, now);
-    else if (stored.kind === "send-message") this.#deps.view.recordIncoming(chatId, stored.seq, now);
+    //
+    // A real message (incoming or outgoing) bumps `lastMessageAt` -- the sidebar's single
+    // most-recent-message ordering key (Task 3) -- with a host-assigned activity time strictly greater
+    // than the current global max across every chat, so two chats that receive a message within the
+    // same millisecond still sort deterministically instead of tying. A notice is neither, so it only
+    // ever bumps `lastActivityAt` via recordActivity, never `lastMessageAt`.
+    if (fromUser) this.#deps.view.recordOutgoing(chatId, this.#messageActivityAt(now));
+    else if (stored.kind === "send-message") this.#deps.view.recordIncoming(chatId, stored.seq, this.#messageActivityAt(now));
     else this.#deps.view.recordActivity(chatId, now);
     this.#deps.events.emit("transcript", { type: "appended", agentId: chatId, entry: stored });
     this.emitUpsert(chatId);
     return stored;
+  }
+
+  /** At least one greater than the current `lastMessageAt` max across every chat, so a new message's
+   * sort key is always strictly ahead of everything already known -- even one received in the same ms. */
+  #messageActivityAt(now: number): number {
+    const ids = [...this.#deps.profiles.list().map((profile) => profile.id), ...this.#deps.rooms.list().map((room) => room.id)];
+    const maxLastMessageAt = ids.reduce((max, id) => Math.max(max, this.#deps.view.get(id).lastMessageAt), 0);
+    return Math.max(now, maxLastMessageAt + 1);
   }
 
   #requireChat(chatId: string): void {

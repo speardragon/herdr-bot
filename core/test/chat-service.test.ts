@@ -13,8 +13,10 @@ import { installFakeHerdr } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
 import { sampleProfile, sampleRoom } from "./helpers/fixtures.ts";
 
-/** Pass an existing home to reopen the same on-disk state with a fresh ChatService (simulates a host restart). */
-function harness(existingHome?: string) {
+/** Pass an existing home to reopen the same on-disk state with a fresh ChatService (simulates a host restart).
+ * Pass `now` to override the default incrementing clock (e.g. a constant clock to simulate two chats
+ * receiving messages within the same real-time millisecond). */
+function harness(existingHome?: string, now?: () => number) {
   const temp = existingHome == null ? makeTempHome() : { home: existingHome, cleanup: () => {} };
   const fake = installFakeHerdr(temp.home);
   const config = resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BOT_USER_NAME: "ray" });
@@ -28,8 +30,8 @@ function harness(existingHome?: string) {
   const events = new HostEvents();
   const seen: { family: string; payload: unknown }[] = [];
   for (const family of ["agents", "agent-upserted", "transcript"] as const) events.on(family, (payload) => seen.push({ family, payload }));
-  let now = 100;
-  const chat = new ChatService({ config, profiles, rooms, view: new ViewStateStore(temp.home), mirror, events, isTurnActive: () => false, now: () => (now += 1) });
+  let tick = 100;
+  const chat = new ChatService({ config, profiles, rooms, view: new ViewStateStore(temp.home), mirror, events, isTurnActive: () => false, now: now ?? (() => (tick += 1)) });
   return { temp, chat, seen };
 }
 
@@ -178,6 +180,36 @@ test("an existing view-state file without seq fields is migrated from the transc
     assert.equal(after?.lastReadSeq, 1);
     assert.equal(after?.lastIncomingSeq, 2);
     assert.equal(after?.hasUnread, true);
+  } finally {
+    h.temp.cleanup();
+  }
+});
+
+test("lastMessageAt is a strictly increasing global sort key: two chats messaged within the same real-time ms still get a deterministic, distinct order (task 3)", () => {
+  // A constant clock simulates two messages landing within the same millisecond of wall time.
+  const h = harness(undefined, () => 500);
+  try {
+    h.chat.appendUser("reviewer", { content: "go" });
+    const reviewerAt = h.chat.summary("reviewer")?.lastMessageAt ?? 0;
+    h.chat.appendUser("fixer", { content: "go too" });
+    const fixerAt = h.chat.summary("fixer")?.lastMessageAt ?? 0;
+    assert.ok(fixerAt > reviewerAt, `expected fixer's lastMessageAt (${fixerAt}) to be strictly greater than reviewer's (${reviewerAt})`);
+    // A bot reply to the chat that is currently behind the global max is bumped past it too.
+    h.chat.appendBot("reviewer", { id: "reviewer", name: "Reviewer" }, "reply");
+    const reviewerReplyAt = h.chat.summary("reviewer")?.lastMessageAt ?? 0;
+    assert.ok(reviewerReplyAt > fixerAt, `expected reviewer's reply lastMessageAt (${reviewerReplyAt}) to be strictly greater than fixer's (${fixerAt})`);
+  } finally {
+    h.temp.cleanup();
+  }
+});
+
+test("a notice never bumps lastMessageAt, even on a constant clock shared with a real message", () => {
+  const h = harness(undefined, () => 500);
+  try {
+    h.chat.appendUser("reviewer", { content: "go" });
+    const before = h.chat.summary("reviewer")?.lastMessageAt;
+    h.chat.appendNotice("reviewer", "fixer is busy");
+    assert.equal(h.chat.summary("reviewer")?.lastMessageAt, before, "a notice must not move lastMessageAt");
   } finally {
     h.temp.cleanup();
   }
