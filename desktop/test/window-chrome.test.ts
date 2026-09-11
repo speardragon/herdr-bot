@@ -9,7 +9,7 @@ test("mac uses hidden-inset traffic lights like grok-bot", () => {
 test("windows uses a title bar overlay and linux a plain frameless window", () => {
   assert.deepEqual(windowChromeOptions("win32"), { frame: false, titleBarStyle: "hidden", titleBarOverlay: { height: 51, color: "#121411", symbolColor: "#FFFFFF" } });
   assert.deepEqual(windowChromeOptions("linux"), { frame: false, titleBarStyle: "default" });
-  assert.deepEqual([MIN_WINDOW_SIZE, DEFAULT_WINDOW_SIZE, WINDOW_BACKGROUND], [{ width: 512, height: 520 }, { width: 1200, height: 800 }, "#121411"]);
+  assert.deepEqual([MIN_WINDOW_SIZE, DEFAULT_WINDOW_SIZE, WINDOW_BACKGROUND], [{ width: 512, height: 520 }, { width: 1040, height: 760 }, "#121411"]);
 });
 
 test("window background follows the resolved theme so light windows do not flash dark", () => {

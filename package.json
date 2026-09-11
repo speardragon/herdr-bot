@@ -13,7 +13,7 @@
     "renderer:build": "npm run build -w @herdr-bot/renderer",
     "renderer:dev": "npm run dev -w @herdr-bot/renderer",
     "desktop:build": "npm run renderer:build && npm run build -w @herdr-bot/desktop",
-    "desktop:start": "npm run build -w @herdr-bot/desktop && npm run start -w @herdr-bot/desktop",
+    "desktop:start": "npm run desktop:build && npm run start -w @herdr-bot/desktop",
     "desktop:dev": "npm run build -w @herdr-bot/desktop && HERDR_BOT_RENDERER_URL=http://localhost:5173 HERDR_BOT_DEV=1 npm run start -w @herdr-bot/desktop",
     "desktop:dev:fake": "npm run build -w @herdr-bot/desktop && node scripts/dev-fake-herdr.mjs",
     "desktop:package": "npm run desktop:build && npx electron-builder --config electron-builder.yml --dir --project desktop"

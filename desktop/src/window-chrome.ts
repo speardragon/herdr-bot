@@ -1,5 +1,5 @@
 export const MIN_WINDOW_SIZE = { width: 512, height: 520 } as const;
-export const DEFAULT_WINDOW_SIZE = { width: 1200, height: 800 } as const;
+export const DEFAULT_WINDOW_SIZE = { width: 1040, height: 760 } as const;
 export const WINDOW_BACKGROUND = "#121411";
 export const LIGHT_WINDOW_BACKGROUND = "#fcfcfc";
 export const MAC_TRAFFIC_LIGHT_POSITION = { x: 16, y: 15 } as const;
