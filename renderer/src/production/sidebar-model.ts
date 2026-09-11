@@ -49,3 +49,17 @@ export function sortRecentChats<T extends { id: string; lastMessageAt: number; c
     (b.lastMessageAt || b.createdAt) - (a.lastMessageAt || a.createdAt)
     || a.id.localeCompare(b.id));
 }
+
+/**
+ * The recent-order screen's list (plan §2.2: "이 화면에서는 정렬 우선권을 적용하지 않고" -- no position
+ * priority on this screen at all). `sortRecentChats` alone is not enough: `ConversationSidebar`/
+ * `partitionSidebarAgents` still floats any item with `isPinned: true` into a separate group above the
+ * recency order, regardless of array order. This normalizes `isPinned` to `false` on every item (a
+ * pure, local override -- it does NOT touch the caller's stored pin state) after sorting by recency, so
+ * that a pinned-but-stale chat can never float above a recently-active one on this screen, while the
+ * underlying pin data a caller passed in is otherwise left alone (id, lastMessageAt, and every other
+ * field are untouched).
+ */
+export function projectRecentOrderList<T extends { id: string; lastMessageAt: number; createdAt: number; isPinned?: boolean }>(agents: readonly T[]): T[] {
+  return sortRecentChats(agents).map((agent) => agent.isPinned ? { ...agent, isPinned: false } : agent);
+}

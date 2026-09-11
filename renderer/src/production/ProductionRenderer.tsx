@@ -113,7 +113,7 @@ import { UI_TEXT } from "./evidence";
 import { LocalSettings } from "./LocalSettings";
 import { t, useLocale } from "./locale";
 import "./minimal.css";
-import { movePinnedAgent, partitionSidebarAgents, sortRecentChats } from "./sidebar-model";
+import { movePinnedAgent, projectRecentOrderList, sortRecentChats } from "./sidebar-model";
 import { nextActivityTimeout, reconcileActivityMap, resolveActivityStatus, type ActivityMap } from "./bot-activity";
 import { SignOutDialog } from "../recovered/features/account/session/sign-out";
 import { FeedbackDialog, type FeedbackCode } from "../recovered/features/feedback/overlay/view";
@@ -1464,6 +1464,13 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     const activityStatus = resolveActivityStatus(activityMap, agent.id, transport === "connected", activityNow);
     return { ...agent, isPinned: pinnedAgentIds.includes(agent.id), activityStatus };
   });
+  // herdr-bot (task 3, plan §2.2 "이 화면에서는 정렬 우선권을 적용하지 않고"): the recent-order screen's
+  // rendered list must be one flat sortRecentChats-ordered list, with no pinned group floated above it
+  // -- ConversationSidebar/partitionSidebarAgents groups any `isPinned: true` item regardless of array
+  // order, so `visibleAgents` (which still carries the real isPinned, for consumers like the hover
+  // preview badge) is NOT what gets passed to <ConversationSidebar agents={...}>; this normalized copy
+  // is. It does not touch the stored pin state -- see projectRecentOrderList's own doc comment.
+  const recentOrderAgents = projectRecentOrderList(visibleAgents);
   const pinnedAccountKey = account?.kind === "logged-in" ? account.authId ?? account.email ?? "account" : account?.kind ?? "unknown";
   const settingsNoticeSurface = overlay === "settings" || overlay === "plugins" ? overlay : "none";
   const settingsNoticeScope = `${pinnedAccountKey}:${account?.kind ?? "unknown"}:${settingsNoticeSurface}`;
@@ -3088,11 +3095,12 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       }
     },
     focusAgent: (index) => {
-      const sidebarAgents = agentsRef.current
-        .filter((agent) => !agent.isHidden)
-        .map((agent) => ({ ...agent, isPinned: pinnedAgentIdsRef.current.includes(agent.id) }));
-      const { pinned, unpinned } = partitionSidebarAgents(sidebarAgents, pinnedAgentIdsRef.current);
-      const agentId = resolveIndexedAgentId([...pinned, ...unpinned].map((agent) => agent.id), index - 1);
+      // herdr-bot (task 3): the recent-order screen renders one flat sortRecentChats-ordered list with
+      // no pinned group (see recentOrderAgents/projectRecentOrderList above) -- this Nth-row shortcut
+      // must resolve against that same flat order, not the old pinned/unpinned partition, or Cmd+N
+      // would jump to the wrong chat once the visible order no longer matches this computation.
+      const visibleAgentIds = projectRecentOrderList(agentsRef.current.filter((agent) => !agent.isHidden)).map((agent) => agent.id);
+      const agentId = resolveIndexedAgentId(visibleAgentIds, index - 1);
       if (agentId != null) void openAgentRef.current(agentId);
     },
     // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=5504264-5504409
@@ -3665,16 +3673,24 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", minHeight: 0 }}>
             {connectionController == null ? null : <CoordinatorConnectionHost controller={connectionController} />}
             {/* herdr-bot (task 3, plan §2.2 "정렬 우선권을 적용하지 않고 관련 편집 메뉴를 감춘다"): this
-                is the single recent-order screen, so the pin and section EDIT menus/affordances are
-                deliberately not wired here -- onTogglePin, onMoveAgentToSection, onMoveAgentToNewSection
-                (Pin/Unpin + Move-to-section on the per-row menu), and onRenameSection/
-                onRequestDeleteSection/onMoveSection (a section header's own rename/delete/move menu,
-                which still renders when a user has pre-existing sections). None of the underlying
-                pin/section data, or the toggleAgentPin/moveAgentsToSection/renameSection/moveSection/
-                requestDeleteSection functions themselves, are removed -- only their wiring on this
-                screen. onToggleSectionCollapsed
-                stays wired: expand/collapse is a view toggle, not an edit menu. */}
-            <ConversationSidebar activeAgentId={activeAgentId} agents={visibleAgents} isHostReachable={transport === "connected"} sections={projectedSidebarSections} sidebarLayout={renderedSidebarLayout} onResize={resizeSidebar} onResizeEnd={finishSidebarResize} onToggleSectionCollapsed={(sectionId, collapsed) => sidebarCollapseStore.setSectionCollapsed(sectionId, collapsed)} listStatus={rosterListStatus} pinnedAgentIds={pinnedAgentIds} onCopyAgentId={copyAgentId} onHideAgent={(agentId) => void hideAgent(agentId)} onNewChat={() => void createAgent()} onOpenAgent={(agentId) => void openAgent(agentId)} onOpenProfile={sidebarProfileAction.onSelect} onShowAsyncTasks={account?.kind === "logged-in" && account.isAnysphereUser === true ? openAsyncTasks : undefined} onShowFullConversation={openConversationOutline} onRenameAgent={(agentId, name) => void renameAgent(agentId, name)} onReorderPinnedAgents={reorderPinnedAgents} onRequestDeleteAgent={(agent) => setDeleteAgent({ id: agent.id, name: agent.name, isGroup: agent.isGroup })} onSetAgentUnread={(agentId, isUnread) => void setAgentUnread(agentId, isUnread)} />
+                is the single recent-order screen, so neither pin nor section POSITION PRIORITY nor
+                their EDIT menus/affordances are wired here:
+                - agents={recentOrderAgents} (not visibleAgents), sections={undefined}, and
+                  pinnedAgentIds={[]} together make ConversationSidebar render ONE flat
+                  sortRecentChats-ordered list -- no "Pinned agents" group, no per-section groups (see
+                  recentOrderAgents/projectRecentOrderList above for why isPinned must be normalized,
+                  not just pinnedAgentIds emptied).
+                - onTogglePin, onMoveAgentToSection, onMoveAgentToNewSection (Pin/Unpin + Move-to-section
+                  on the per-row menu) and onRenameSection/onRequestDeleteSection/onMoveSection (a section
+                  header's own rename/delete/move menu) are not passed, so neither ever offers those
+                  actions on this screen.
+                None of the underlying pin/section data, or the toggleAgentPin/moveAgentsToSection/
+                renameSection/moveSection/requestDeleteSection functions themselves, are removed --
+                only their wiring on this screen. onToggleSectionCollapsed and onReorderPinnedAgents stay
+                wired (a view toggle and a reorder-within-an-empty-pinned-group interaction, respectively
+                -- neither is an edit menu, and neither has anything to act on here since orderedPinned is
+                now always empty). */}
+            <ConversationSidebar activeAgentId={activeAgentId} agents={recentOrderAgents} isHostReachable={transport === "connected"} sections={undefined} sidebarLayout={renderedSidebarLayout} onResize={resizeSidebar} onResizeEnd={finishSidebarResize} onToggleSectionCollapsed={(sectionId, collapsed) => sidebarCollapseStore.setSectionCollapsed(sectionId, collapsed)} listStatus={rosterListStatus} pinnedAgentIds={[]} onCopyAgentId={copyAgentId} onHideAgent={(agentId) => void hideAgent(agentId)} onNewChat={() => void createAgent()} onOpenAgent={(agentId) => void openAgent(agentId)} onOpenProfile={sidebarProfileAction.onSelect} onShowAsyncTasks={account?.kind === "logged-in" && account.isAnysphereUser === true ? openAsyncTasks : undefined} onShowFullConversation={openConversationOutline} onRenameAgent={(agentId, name) => void renameAgent(agentId, name)} onReorderPinnedAgents={reorderPinnedAgents} onRequestDeleteAgent={(agent) => setDeleteAgent({ id: agent.id, name: agent.name, isGroup: agent.isGroup })} onSetAgentUnread={(agentId, isUnread) => void setAgentUnread(agentId, isUnread)} />
           </div>
           {hiddenAgents.length > 0 && visibleAgents.length > 0 ? <SandButton aria-haspopup="dialog" onClick={() => setOverlay("hidden-chats")} size="sm" variant="secondary"><span>{t(UI_TEXT.hiddenBots)}</span><SandBadge aria-label={`${hiddenAgents.length} hidden bots`}>{hiddenAgents.length}</SandBadge></SandButton> : null}
           <div className="hb-settings-footer"><SandButton leadingIcon="settings" onClick={() => setOverlay("settings")} variant="secondary">{t("Settings")}</SandButton></div>
