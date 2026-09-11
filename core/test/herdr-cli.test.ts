@@ -98,6 +98,21 @@ test("an error object printed on stdout with exit 0 becomes a HerdrError with he
   await assert.rejects(cli.agentList(), (error: unknown) => error instanceof HerdrError && error.code === "server_not_running");
 });
 
+test("agentList applies a 10s process timeout that is not applied to other calls", async () => {
+  const calls: { args: string[]; timeoutMs: number | undefined }[] = [];
+  const cli = createHerdrCliFromRunner(async (args, options) => {
+    calls.push({ args: [...args], timeoutMs: options?.timeoutMs });
+    return { stdout: JSON.stringify({ id: "x", result: { agents: [], agent: idleAgent } }), stderr: "", code: 0 };
+  });
+  await cli.agentList();
+  await cli.agentPrompt({ target: "reviewer", text: "hi", wait: true, timeoutMs: 3_600_000 });
+  assert.equal(calls[0]?.args[0], "agent");
+  assert.equal(calls[0]?.args[1], "list");
+  assert.equal(calls[0]?.timeoutMs, 10_000);
+  assert.equal(calls[1]?.args[1], "prompt");
+  assert.equal(calls[1]?.timeoutMs, undefined);
+});
+
 test("sessionList parses herdr's bare sessions payload", async () => {
   const payload = { sessions: [{ default: true, name: "default", running: true, session_dir: "/h/.config/herdr", socket_path: "/h/.config/herdr/herdr.sock" }, { default: false, name: "herdr-bot", running: false, session_dir: "/h/.config/herdr/sessions/herdr-bot", socket_path: "/h/.config/herdr/sessions/herdr-bot/herdr.sock" }] };
   const cli = createHerdrCliFromRunner(async () => ({ stdout: `${JSON.stringify(payload)}\n`, stderr: "", code: 0 }));

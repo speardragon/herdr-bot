@@ -56,15 +56,24 @@ function parseJsonOutput(stdout: string): unknown {
   }
 }
 
+export interface RawHerdrRunnerOptions {
+  /** Hard kill timeout for this one invocation, in ms. Only applied where the caller opts in (e.g. `agent list`) — long-running calls like `agent prompt --wait` must not inherit it. */
+  readonly timeoutMs?: number;
+}
+
 export interface RawHerdrRunner {
-  (args: readonly string[]): Promise<{ stdout: string; stderr: string; code: number }>;
+  (args: readonly string[], options?: RawHerdrRunnerOptions): Promise<{ stdout: string; stderr: string; code: number }>;
 }
 
 export function createExecFileRunner(binPath: string, env: NodeJS.ProcessEnv): RawHerdrRunner {
-  return (args) => new Promise((resolve, reject) => {
-    execFile(binPath, [...args], { env, maxBuffer: MAX_BUFFER, encoding: "utf8" }, (error, stdout, stderr) => {
+  return (args, options) => new Promise((resolve, reject) => {
+    execFile(binPath, [...args], { env, maxBuffer: MAX_BUFFER, encoding: "utf8", ...(options?.timeoutMs == null ? {} : { timeout: options.timeoutMs }) }, (error, stdout, stderr) => {
       if (error != null && (error as NodeJS.ErrnoException).code === "ENOENT") {
         reject(new HerdrError("herdr_spawn_failed", `cannot run herdr binary at ${binPath}`));
+        return;
+      }
+      if (error != null && (error as { killed?: boolean }).killed === true && (error as { code?: unknown }).code !== "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
+        reject(new HerdrError("herdr_timeout", `herdr ${args.join(" ")} timed out`));
         return;
       }
       if (error != null && typeof (error as { code?: unknown }).code !== "number" && stdout.length === 0 && stderr.length === 0) {
@@ -77,8 +86,8 @@ export function createExecFileRunner(binPath: string, env: NodeJS.ProcessEnv): R
   });
 }
 
-async function runJson(runner: RawHerdrRunner, args: readonly string[]): Promise<Record<string, unknown>> {
-  const { stdout, stderr, code } = await runner(args);
+async function runJson(runner: RawHerdrRunner, args: readonly string[], options?: RawHerdrRunnerOptions): Promise<Record<string, unknown>> {
+  const { stdout, stderr, code } = await runner(args, options);
   if (code !== 0) throw errorFromStderr(stderr, `herdr ${args.join(" ")} exited with ${code}`);
   const parsed = parseJsonOutput(stdout);
   // herdr reports some failures (e.g. server_not_running) as an error object on stdout with exit 0.
@@ -134,7 +143,7 @@ type WorkspaceMethods = Pick<HerdrCli, "workspaceList" | "workspaceCreate" | "ta
 function createAgentMethods(runner: RawHerdrRunner): AgentMethods {
   return {
     async agentList() {
-      const result = await runJson(runner, ["agent", "list"]);
+      const result = await runJson(runner, ["agent", "list"], { timeoutMs: 10_000 });
       return Array.isArray(result.agents) ? result.agents.flatMap((value) => { const agent = projectHerdrAgentInfo(value); return agent == null ? [] : [agent]; }) : [];
     },
     async agentGet(target) {
@@ -193,7 +202,7 @@ function createWorkspaceMethods(runner: RawHerdrRunner): WorkspaceMethods {
 /** Every call targets one named herdr session via the global `--session` flag; `null` inherits herdr's own default. */
 export function withSession(runner: RawHerdrRunner, session: string | null): RawHerdrRunner {
   if (session == null || session.length === 0) return runner;
-  return (args) => runner(["--session", session, ...args]);
+  return (args, options) => runner(["--session", session, ...args], options);
 }
 
 export function createHerdrCliFromRunner(runner: RawHerdrRunner): HerdrCli {

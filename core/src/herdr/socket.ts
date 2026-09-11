@@ -1,4 +1,5 @@
 import { connect } from "node:net";
+import { HerdrError } from "./types.ts";
 
 export interface HerdrEvent {
   readonly event: string;
@@ -9,6 +10,10 @@ export interface HerdrSubscriptionHandlers {
   readonly onEvent: (event: HerdrEvent) => void;
   readonly onReady?: () => void;
   readonly onClose: (error: Error | null) => void;
+}
+
+export interface HerdrSubscriptionOptions {
+  readonly handshakeTimeoutMs?: number;
 }
 
 export interface HerdrSubscription {
@@ -34,11 +39,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** One connection = one events.subscribe; nothing else is ever written on it. */
-export function subscribeHerdrEvents(socketPath: string, subscriptions: readonly Record<string, unknown>[], handlers: HerdrSubscriptionHandlers): HerdrSubscription {
+export function subscribeHerdrEvents(socketPath: string, subscriptions: readonly Record<string, unknown>[], handlers: HerdrSubscriptionHandlers, options: HerdrSubscriptionOptions = {}): HerdrSubscription {
   const socket = connect(socketPath);
   let ready = false;
-  let closedByUs = false;
+  let notified = false;
   let lastError: Error | null = null;
+
+  const handshakeTimer = setTimeout(() => {
+    finish(new HerdrError("handshake_timeout", "herdr subscription handshake timed out"));
+  }, options.handshakeTimeoutMs ?? 5_000);
+  handshakeTimer.unref();
+
+  function clearHandshakeTimer(): void {
+    clearTimeout(handshakeTimer);
+  }
+
+  function finish(error: Error | null): void {
+    clearHandshakeTimer();
+    if (notified) return;
+    notified = true;
+    socket.destroy();
+    handlers.onClose(error);
+  }
 
   socket.on("connect", () => {
     socket.write(`${JSON.stringify({ id: "hb-sub", method: "events.subscribe", params: { subscriptions } })}\n`);
@@ -55,12 +77,13 @@ export function subscribeHerdrEvents(socketPath: string, subscriptions: readonly
       const result = isRecord(message.result) ? message.result : null;
       if (result?.type === "subscription_started") {
         ready = true;
+        clearHandshakeTimer();
         handlers.onReady?.();
       } else {
-        closedByUs = true;
-        socket.destroy();
         const error = isRecord(message.error) ? message.error : {};
-        handlers.onClose(new Error(typeof error.message === "string" ? error.message : "subscription refused"));
+        const code = typeof error.code === "string" ? error.code : "herdr_error";
+        const errorMessage = typeof error.message === "string" ? error.message : "subscription refused";
+        finish(new HerdrError(code, errorMessage));
       }
       return;
     }
@@ -70,13 +93,12 @@ export function subscribeHerdrEvents(socketPath: string, subscriptions: readonly
     lastError = error;
   });
   socket.on("close", () => {
-    if (!closedByUs) handlers.onClose(lastError);
+    finish(lastError);
   });
 
   return {
     close() {
-      closedByUs = true;
-      socket.destroy();
+      finish(null);
     },
   };
 }
