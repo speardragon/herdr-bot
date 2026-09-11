@@ -4,6 +4,7 @@ import type { RoomConfig } from "../store/room-store.ts";
 import type { StoredEntry } from "../store/transcript-store.ts";
 import type { ChatViewState } from "../store/view-state-store.ts";
 import { entryText, lastEntryPreview } from "./entries.ts";
+import { hasUnread } from "./read-state.ts";
 
 export type AwaitingReason = "approval" | "offline" | "setup";
 
@@ -39,6 +40,9 @@ export interface AgentSummary {
   readonly unreadCount: number;
   readonly lastViewedAt: number;
   readonly lastActivityAt: number;
+  readonly lastReadSeq: number;
+  readonly lastIncomingSeq: number;
+  readonly lastMessageAt: number;
   readonly awaitingUserResponse: { readonly reason: AwaitingReason } | null;
   readonly notificationsEnabled: boolean;
   readonly notifyOnUpdatesEnabled: boolean;
@@ -51,7 +55,7 @@ export interface AgentSummary {
 }
 
 function unread(view: ChatViewState): boolean {
-  return view.isManuallyUnread || view.lastActivityAt > view.lastViewedAt;
+  return hasUnread(view);
 }
 
 function awaiting(runtime: BotRuntime): { reason: AwaitingReason } | null {
@@ -94,6 +98,9 @@ export function botSummary(args: {
     unreadCount: isUnread ? 1 : 0,
     lastViewedAt: view.lastViewedAt,
     lastActivityAt: view.lastActivityAt,
+    lastReadSeq: view.lastReadSeq,
+    lastIncomingSeq: view.lastIncomingSeq,
+    lastMessageAt: view.lastMessageAt,
     awaitingUserResponse: awaiting(runtime),
     notificationsEnabled: false,
     notifyOnUpdatesEnabled: profile.notifyOnUpdatesEnabled,
@@ -133,6 +140,9 @@ export function roomSummary(args: {
     unreadCount: isUnread ? 1 : 0,
     lastViewedAt: view.lastViewedAt,
     lastActivityAt: view.lastActivityAt,
+    lastReadSeq: view.lastReadSeq,
+    lastIncomingSeq: view.lastIncomingSeq,
+    lastMessageAt: view.lastMessageAt,
     awaitingUserResponse: null,
     notificationsEnabled: false,
     notifyOnUpdatesEnabled: true,

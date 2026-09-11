@@ -115,10 +115,12 @@ function duplicateAgent(): never {
   throw new Unsupported("duplicating bots is not supported");
 }
 
+// herdr-bot: openAgentTail is read-only. Loading (or preloading/searching) a transcript page must
+// never itself acknowledge messages as read -- the renderer ACKs explicitly via markChatRead once it
+// has actually rendered a page (Task 2: read ACKs are decoupled from transcript loading).
 function openAgentTail(host: Host, args: Args): unknown {
   const id = str(args, "id");
   requireSummary(host, id);
-  host.chat.markViewed(id);
   return host.chat.tail(id, num(args, "limit", 200));
 }
 
@@ -159,6 +161,16 @@ function reactToMessage(host: Host, args: Args): null {
 function setAgentUnread(host: Host, args: Args): null {
   host.chat.setUnread(str(args, "id"), args.isUnread === true);
   return null;
+}
+
+function markChatRead(host: Host, args: Args): unknown {
+  const id = str(args, "id");
+  requireSummary(host, id);
+  const throughSeq = args.throughSeq;
+  if (typeof throughSeq !== "number" || !Number.isInteger(throughSeq) || throughSeq < 0) {
+    throw new ArgsError("throughSeq must be a non-negative integer");
+  }
+  return host.chat.markRead(id, throughSeq);
 }
 
 function setAgentHiddenFromSidebar(host: Host, args: Args): null {
@@ -206,6 +218,7 @@ const METHOD_TABLE: Readonly<Record<string, Handler>> = {
   setAgentUnread,
   setAgentHiddenFromSidebar,
   setAgentNotifyOnUpdates,
+  "herdrBot.markChatRead": markChatRead,
   "herdrBot.listAdoptable": (host) => host.roster.listAdoptable(),
   "herdrBot.focus": herdrBotFocus,
   "herdrBot.defaults": herdrBotDefaults,

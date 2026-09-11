@@ -85,6 +85,38 @@ test("stubs and unknown methods behave as the renderer expects", async () => {
   }
 });
 
+test("openAgentTail no longer marks a chat as read; herdrBot.markChatRead is the only way to acknowledge", async () => {
+  const h = await harness();
+  try {
+    await h.call("createAgent", { name: "Reviewer", herdrBot: { id: "reviewer" } });
+    await h.call("sendPrompt", { agentId: "reviewer", prompt: "hello" });
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    const before = (await h.call("listAgents")).find((a: { id: string }) => a.id === "reviewer");
+    assert.equal(before.hasUnread, true);
+
+    // Loading (or preloading) the tail is read-only: it must not itself acknowledge anything.
+    await h.call("openAgentTail", { id: "reviewer", limit: 50 });
+    const afterTail = (await h.call("listAgents")).find((a: { id: string }) => a.id === "reviewer");
+    assert.equal(afterTail.hasUnread, true);
+
+    // An ACK below the latest seq leaves the chat unread.
+    const partial = await h.call("herdrBot.markChatRead", { id: "reviewer", throughSeq: 1 });
+    assert.equal(partial.lastReadSeq, 1);
+    assert.equal((await h.call("listAgents")).find((a: { id: string }) => a.id === "reviewer").hasUnread, true);
+
+    // ACKing through the actual latest seq clears unread.
+    const latestSeq = before.lastIncomingSeq as number;
+    const full = await h.call("herdrBot.markChatRead", { id: "reviewer", throughSeq: latestSeq });
+    assert.equal(full.lastReadSeq, latestSeq);
+    assert.equal((await h.call("listAgents")).find((a: { id: string }) => a.id === "reviewer").hasUnread, false);
+
+    const invalid = await h.dispatch("herdrBot.markChatRead", { id: "reviewer", throughSeq: -1 });
+    assert.equal(invalid.status === "failed" && invalid.failure.code, "invalid-args");
+  } finally {
+    await h.cleanup();
+  }
+});
+
 test("herdrBot.defaults surfaces the host's default cwd/kind for the New Bot dialog", async () => {
   const h = await harness();
   try {

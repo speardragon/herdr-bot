@@ -3,6 +3,8 @@ import {
   validateCoordinatorReply,
   type CoordinatorAgentThreadRequest,
   type CoordinatorAgentThreadResponse,
+  type CoordinatorMarkChatReadRequest,
+  type CoordinatorMarkChatReadResponse,
   type CoordinatorTranscriptWindowRequest,
   type CoordinatorTranscriptWindowResponse
 } from "../shared/rpc/coordinator";
@@ -31,7 +33,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function validateReply(method: string, value: unknown): unknown {
-  if (method === "getAgentTranscriptWindow" || method === "getAgentThread") return validateCoordinatorReply(method, value);
+  if (method === "getAgentTranscriptWindow" || method === "getAgentThread" || method === "herdrBot.markChatRead") return validateCoordinatorReply(method, value);
   if (["listAgents", "searchAgents", "getTrays", "listAllAutomations"].includes(method)) {
     if (!Array.isArray(value)) throw new Error(`${method} returned a malformed array reply`);
   }
@@ -53,6 +55,7 @@ export interface ProductionCoordinatorClient {
   call(method: string, args?: unknown): Promise<unknown>;
   getAgentTranscriptWindow(args: CoordinatorTranscriptWindowRequest): Promise<CoordinatorTranscriptWindowResponse>;
   getAgentThread(args: CoordinatorAgentThreadRequest): Promise<CoordinatorAgentThreadResponse>;
+  markChatRead(args: CoordinatorMarkChatReadRequest): Promise<CoordinatorMarkChatReadResponse>;
   isEgressTunnelAvailable(): Promise<boolean>;
   subscribe(family: string, listener: EventListener): () => void;
   subscribeTransport(listener: TransportListener): () => void;
@@ -168,6 +171,7 @@ export function createCoordinatorClient(portBridge: CoordinatorPortBridge): Prod
     call,
     getAgentTranscriptWindow: async (args) => await call("getAgentTranscriptWindow", args) as CoordinatorTranscriptWindowResponse,
     getAgentThread: async (args) => await call("getAgentThread", args) as CoordinatorAgentThreadResponse,
+    markChatRead: async (args) => await call("herdrBot.markChatRead", args) as CoordinatorMarkChatReadResponse,
     isEgressTunnelAvailable: async () => await call("isEgressTunnelAvailable") === true,
     subscribe(family, listener) {
       const listeners = eventListeners.get(family) ?? new Set<EventListener>();

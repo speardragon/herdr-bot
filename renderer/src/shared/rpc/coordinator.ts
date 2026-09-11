@@ -79,12 +79,29 @@ export function parseCoordinatorAgentThreadRequest(value: unknown): CoordinatorA
     : null;
 }
 
+/** Renderer request/response for the read-receipt controller's `herdrBot.markChatRead` ACK call. */
+export interface CoordinatorMarkChatReadRequest {
+  readonly id: string;
+  readonly throughSeq: number;
+}
+
+export interface CoordinatorMarkChatReadResponse {
+  readonly lastReadSeq: number;
+}
+
+export function parseCoordinatorMarkChatReadResponse(value: unknown): CoordinatorMarkChatReadResponse | null {
+  return isRecord(value) && isFiniteNumber(value.lastReadSeq) ? { lastReadSeq: value.lastReadSeq } : null;
+}
+
 export function validateCoordinatorReply(method: string, value: unknown): unknown {
   if (method === "getAgentTranscriptWindow" && parseCoordinatorTranscriptWindowResponse(value) == null) {
     throw new Error("getAgentTranscriptWindow returned a malformed transcript window");
   }
   if (method === "getAgentThread" && parseCoordinatorAgentThreadResponse(value) == null) {
     throw new Error("getAgentThread returned a malformed agent thread");
+  }
+  if (method === "herdrBot.markChatRead" && parseCoordinatorMarkChatReadResponse(value) == null) {
+    throw new Error("herdrBot.markChatRead returned a malformed reply");
   }
   return value;
 }

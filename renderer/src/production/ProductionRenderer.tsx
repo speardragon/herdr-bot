@@ -133,6 +133,7 @@ import { createRosterSnapshotSource, createRosterSnapshotStore } from "../recove
 import { createSettingsUpdateController } from "../recovered/features/settings/overlay/updates-controller";
 import { SettingsNoticeView } from "../recovered/features/settings/overlay/notice";
 import { createSettingsNoticeController } from "./settings-notice-controller";
+import { canAcknowledge, createReadReceiptController } from "./read-receipt-controller";
 import { createGroupMembersRootScope } from "./group-members-root";
 import { createProductionReactionRootScope } from "./reaction-root";
 import { createStrictModeDisposalGuard, type StrictModeDisposable } from "./strict-mode-disposal";
@@ -141,6 +142,8 @@ import type { TranscriptMessageReactionSlotProps } from "../recovered/features/c
 import { LocalToolPermissionDock, type LocalToolPermissionRequest } from "../recovered/features/permissions/local-tool/view";
 import { NewChatDialog, type AdoptableAgent, type CreateBotRequest, type CreateRoomRequest } from "./NewChatDialog";
 import {
+  isRecord,
+  maxEntrySeq,
   parseDesktopIntent,
   projectRendererAgent,
   projectRendererAgents,
@@ -624,6 +627,19 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   const locale = useLocale();
   useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   const [client] = useState(() => createCoordinatorClient(coordinatorPort));
+  // herdr-bot: read ACKs are independent of transcript loading (Task 2). This controller tracks, per
+  // chat, the highest seq actually acknowledged and any in-flight ACK -- it survives reconnects since
+  // `client` itself is a stable singleton for the life of this component.
+  const [readReceiptController] = useState(() => createReadReceiptController({
+    markChatRead: async (id, throughSeq) => {
+      if (client == null) throw new Error("coordinator is unavailable");
+      return await client.markChatRead({ id, throughSeq });
+    }
+  }));
+  // herdr-bot: no unmount-dispose here on purpose -- this is a plain Map with no timers/listeners to
+  // leak, and React StrictMode's dev-only mount->unmount->mount would otherwise permanently disarm
+  // the controller (its `disposed` flag has no reset) after the very first render.
+  const loadedSeqByAgentRef = useRef<Record<string, number>>({});
   const [groupMembersRoot] = useState(() => createGroupMembersRootScope(client));
   const [sharedRoomProvider] = useState(() => client == null ? null : createSharedRoomProvider(client));
   const [conversationOutlineProvider] = useState(() => createConversationOutlineProvider({
@@ -2230,6 +2246,17 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     }
   }, [client]);
 
+  // herdr-bot: the only place that decides whether the currently-visible chat may ACK what it has
+  // loaded. Loading/preloading a page never acknowledges anything by itself -- see read-receipt-controller.ts.
+  const ackChatLoadedThrough = useCallback((agentId: string, throughSeq: number) => {
+    if (throughSeq <= 0) return;
+    const selected = activeAgentIdRef.current === agentId;
+    const visible = document.visibilityState === "visible";
+    const focused = document.hasFocus();
+    if (!canAcknowledge(selected, true, visible, focused)) return;
+    void readReceiptController.acknowledge(agentId, throughSeq).catch(() => {});
+  }, [readReceiptController]);
+
   const openAgent = useCallback(async (agentId: string) => {
     const accountScopeGeneration = accountScopeGenerationRef.current;
     const transportScopeGeneration = transportScopeGenerationRef.current;
@@ -2244,6 +2271,10 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     if (hasLoadedEntries) selectionStore.settle(agentId);
     if (!shouldOpen || hasLoadedEntries || client == null) {
       if (client == null) selectionStore.settle(agentId);
+      // Cache revisit: the transcript is already loaded, so ack whatever we already know was loaded
+      // for this chat. This does not itself re-fetch the tail -- the live "transcript" event stream
+      // (onAppended, below) is what keeps loadedSeqByAgentRef current between visits.
+      if (hasLoadedEntries) ackChatLoadedThrough(agentId, loadedSeqByAgentRef.current[agentId] ?? 0);
       return;
     }
     // herdr-bot: bump the request generation only once a fetch is really issued. The auto-open effect
@@ -2263,6 +2294,13 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       selectionStore.settle(agentId);
       selectionStore.reconcile({ agentIds: completeRosterAgentIdsRef.current, isRosterComplete: hasLoadedAgentsRef.current });
       setTranscriptLoadError((current) => current?.agentId === agentId ? null : current);
+      // ACK exactly the max seq of the page we actually rendered -- not the roster summary's latest
+      // seq, and only once this response is still current (the generation checks above already
+      // guard a stale/late load response from acknowledging anything).
+      const rawEntries = isRecord(page) && Array.isArray(page.entries) ? page.entries : [];
+      const loadedSeq = maxEntrySeq(rawEntries);
+      loadedSeqByAgentRef.current[agentId] = Math.max(loadedSeqByAgentRef.current[agentId] ?? 0, loadedSeq);
+      ackChatLoadedThrough(agentId, loadedSeqByAgentRef.current[agentId]);
     } catch {
       if (accountScopeGenerationRef.current !== accountScopeGeneration
         || openAgentRequestGenerationRef.current !== requestGeneration
@@ -2272,7 +2310,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       selectionStore.reconcile({ agentIds: completeRosterAgentIdsRef.current, isRosterComplete: hasLoadedAgentsRef.current });
       setTranscriptLoadError({ agentId, accountScopeGeneration });
     }
-  }, [client, selectionStore, transcriptAccountSlot, transcriptPaginationController]);
+  }, [ackChatLoadedThrough, client, selectionStore, transcriptAccountSlot, transcriptPaginationController]);
 
   const openGroupMemberChat = useCallback((agentId: string) => {
     setGroupInfoPaneOpen(false);
@@ -2395,6 +2433,11 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           delete next[ownerId];
           return next;
         });
+        // herdr-bot: a chat id can be reused (delete then recreate with the same id). Without
+        // dropping its watermark here, the new chat -- starting back at seq 1 -- would inherit the
+        // old chat's much-higher acked seq and every ACK for it would silently no-op.
+        delete loadedSeqByAgentRef.current[ownerId];
+        readReceiptController.forget(ownerId);
         if (activeAgentIdRef.current !== ownerId) return;
         acknowledgementController.reset();
         transcriptPaginationController.reset();
@@ -2431,6 +2474,14 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           ? existing.map((entry) => entry.kind === "message" && entry.id === pendingId ? projected : entry)
           : [...existing, projected] };
       });
+      // herdr-bot: reflect a live append into the active chat's known-loaded watermark and, if the
+      // chat is actually selected/visible/focused right now, ack it immediately -- this is what keeps
+      // a chat left open on-screen from showing a stale unread dot for messages it is already showing.
+      const appendedSeq = maxEntrySeq([event]);
+      if (appendedSeq > 0) {
+        loadedSeqByAgentRef.current[ownerId] = Math.max(loadedSeqByAgentRef.current[ownerId] ?? 0, appendedSeq);
+        ackChatLoadedThrough(ownerId, loadedSeqByAgentRef.current[ownerId]);
+      }
       }
     }) ?? null;
     return () => {
@@ -2444,7 +2495,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         if (clientLifecycleGenerationRef.current === lifecycleGeneration) client.dispose();
       });
     };
-  }, [account?.kind, client, clientLifecycleGenerationRef, connectionController, pinnedAccountKey, reactionRoot, refreshAgentNetworkAvailability, refreshRoster, selectionStore, transcriptAccountSlot]);
+  }, [account?.kind, ackChatLoadedThrough, client, clientLifecycleGenerationRef, connectionController, pinnedAccountKey, reactionRoot, readReceiptController, refreshAgentNetworkAvailability, refreshRoster, selectionStore, transcriptAccountSlot]);
 
   useEffect(() => {
     if (bridge == null || account?.kind !== "logged-in") {
@@ -2725,6 +2776,8 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       if (accountIdentityRef.current != null && accountIdentityRef.current !== identity) {
         selectionStore.reset();
         acknowledgementController.reset();
+        readReceiptController.reset();
+        loadedSeqByAgentRef.current = {};
         completeRosterAgentIdsRef.current = [];
         setAgents([]); setHasLoadedAgents(false); setActiveAgentId(""); setEntriesByAgent({});
         setPrivacyBlocked(false);
@@ -2830,6 +2883,24 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     window.addEventListener("focus", onFocus);
     return () => { active = false; window.removeEventListener("focus", onFocus); };
   }, [client, refreshRoster, transport]);
+
+  // herdr-bot: window focus/visibility return is one of the four moments the plan calls out for
+  // acknowledging the active chat (Task 2) -- e.g. the window was backgrounded when a reply arrived,
+  // so it was never acked; regaining focus/visibility acks whatever is already known-loaded for it.
+  useEffect(() => {
+    const ackActiveChatIfVisible = () => {
+      const agentId = activeAgentIdRef.current;
+      if (agentId.length === 0) return;
+      ackChatLoadedThrough(agentId, loadedSeqByAgentRef.current[agentId] ?? 0);
+    };
+    const onVisibilityChange = () => { if (document.visibilityState === "visible") ackActiveChatIfVisible(); };
+    window.addEventListener("focus", ackActiveChatIfVisible);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", ackActiveChatIfVisible);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [ackChatLoadedThrough]);
 
   const [newChatOpen, setNewChatOpen] = useState(false);
   const openNewChat = () => setNewChatOpen(true);

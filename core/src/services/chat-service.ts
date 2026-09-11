@@ -88,17 +88,31 @@ export class ChatService {
     return updated;
   }
 
-  markViewed(chatId: string): void {
-    this.#deps.view.markViewed(chatId, this.#now());
+  /** Seq-based read acknowledgement (RPC `herdrBot.markChatRead`). Clamped to the transcript's actual latest seq. */
+  markRead(chatId: string, throughSeq: number): { readonly lastReadSeq: number } {
+    this.#requireChat(chatId);
+    this.#ensureMigrated(chatId);
+    const latestSeq = this.transcript(chatId).last()?.seq ?? 0;
+    const updated = this.#deps.view.applyRead(chatId, throughSeq, latestSeq, this.#now());
     this.emitUpsert(chatId);
+    return { lastReadSeq: updated.lastReadSeq };
   }
 
+  /** `isUnread: false` acknowledges everything through the chat's current latest seq (an explicit "mark read"). */
   setUnread(chatId: string, isUnread: boolean): void {
-    this.#deps.view.setManuallyUnread(chatId, isUnread);
+    this.#requireChat(chatId);
+    this.#ensureMigrated(chatId);
+    if (isUnread) {
+      this.#deps.view.setManuallyUnread(chatId, true);
+    } else {
+      const latestSeq = this.transcript(chatId).last()?.seq ?? 0;
+      this.#deps.view.applyRead(chatId, latestSeq, latestSeq, this.#now());
+    }
     this.emitUpsert(chatId);
   }
 
   summary(chatId: string): AgentSummary | null {
+    this.#ensureMigrated(chatId);
     const view = this.#deps.view.get(chatId);
     const isTurnActive = this.#deps.isTurnActive(chatId);
     if (isRoomId(chatId)) {
@@ -127,10 +141,16 @@ export class ChatService {
   }
 
   #append(chatId: string, entry: NewEntry, fromUser: boolean): StoredEntry {
+    this.#ensureMigrated(chatId);
     const stored = this.transcript(chatId).append(entry);
     const now = this.#now();
-    this.#deps.view.markActivity(chatId, now);
-    if (fromUser) this.#deps.view.markViewed(chatId, now);
+    // Sending a message no longer implies the sender has read every prior incoming message -- read
+    // state is now acknowledged only through the renderer's explicit seq-based ACK (Task 2). Only a
+    // bot reply ("send-message") is "incoming" for unread purposes; a notice is neither incoming nor
+    // outgoing (mirrors computeMigratedSeqFields, which also only looks at send-message/message).
+    if (fromUser) this.#deps.view.recordOutgoing(chatId, now);
+    else if (stored.kind === "send-message") this.#deps.view.recordIncoming(chatId, stored.seq, now);
+    else this.#deps.view.recordActivity(chatId, now);
     this.#deps.events.emit("transcript", { type: "appended", agentId: chatId, entry: stored });
     this.emitUpsert(chatId);
     return stored;
@@ -143,4 +163,30 @@ export class ChatService {
   #now(): number {
     return (this.#deps.now ?? Date.now)();
   }
+
+  /**
+   * Backfills seq fields for a chat whose view-state entry predates seq-based read tracking.
+   * `lastReadSeq` is the highest seq whose entry timestamp falls at/before the old `lastViewedAt`
+   * watermark; `lastIncomingSeq` is the last bot ("send-message") entry's seq; `lastMessageAt` is the
+   * timestamp of the last message/send-message entry. An empty transcript migrates to all zeros.
+   */
+  #ensureMigrated(chatId: string): void {
+    if (this.#deps.view.hasSeqFields(chatId) || this.chatKind(chatId) == null) return;
+    const view = this.#deps.view.get(chatId);
+    const entries = this.transcript(chatId).readAll();
+    const computed = computeMigratedSeqFields(entries, view.lastViewedAt);
+    this.#deps.view.migrateSeqFields(chatId, computed);
+  }
+}
+
+function computeMigratedSeqFields(entries: readonly StoredEntry[], lastViewedAt: number): { lastReadSeq: number; lastIncomingSeq: number; lastMessageAt: number } {
+  let lastReadSeq = 0;
+  let lastIncomingSeq = 0;
+  let lastMessageAt = 0;
+  for (const entry of entries) {
+    if (entry.timestampMs <= lastViewedAt) lastReadSeq = Math.max(lastReadSeq, entry.seq);
+    if (entry.kind === "send-message") lastIncomingSeq = entry.seq;
+    if (entry.kind === "message" || entry.kind === "send-message") lastMessageAt = entry.timestampMs;
+  }
+  return { lastReadSeq, lastIncomingSeq, lastMessageAt };
 }
