@@ -140,11 +140,12 @@ test("herdrBot.quickCreateBot reserves instantly and herdrBot.retryBotSetup reus
     await host.onboarding.settled(id);
     assert.equal(host.chat.summary(id)?.herdrBot?.onboarding?.stage, "ready");
 
-    // retry reuses the existing profile (same id), never a new one.
-    const retried = await dispatch("herdrBot.retryBotSetup", { id });
-    assert.equal(retried.status, "ok");
-    assert.equal((retried as { status: "ok"; value: { agent: { id: string } } }).value.agent.id, id);
-    await host.onboarding.settled(id);
+    // retrying a bot that already reached ready is a guarded error -- it must not re-provision.
+    const briefsBefore = (fake.readState().prompts ?? []).length;
+    const retryReady = await dispatch("herdrBot.retryBotSetup", { id });
+    assert.equal(retryReady.status === "failed" && retryReady.failure.code, "bot_not_ready");
+    assert.equal(host.chat.summary(id)?.herdrBot?.onboarding?.stage, "ready");
+    assert.equal((fake.readState().prompts ?? []).length, briefsBefore, "a guarded retry must not send another brief/greeting");
     assert.equal(host.chat.listSummaries().filter((s) => s.id === id).length, 1);
   } finally {
     await host.stop();

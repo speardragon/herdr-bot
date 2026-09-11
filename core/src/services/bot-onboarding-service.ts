@@ -54,10 +54,17 @@ export class BotOnboardingService {
     return profile;
   }
 
-  /** Re-runs provisioning against the SAME profile (never a new one). */
+  /**
+   * Re-runs provisioning against the SAME profile (never a new one). Only a bot whose onboarding has
+   * actually `failed` and has no provision still in flight may be retried -- so a stray retry on a
+   * live/ready bot (or a double-clicked retry) can never flip it back through briefing/greeting and
+   * re-prompt an agent the user is already talking to.
+   */
   retry(id: string): BotProfile {
     const profile = this.#deps.profiles.get(id);
     if (profile == null || profile.onboarding == null) throw new RosterError("unknown_bot", `no onboarding bot "${id}" to retry`);
+    if (this.#inflight.has(id)) throw new RosterError("bot_not_ready", `"${id}" is still being set up`);
+    if (profile.onboarding.stage !== "failed") throw new RosterError("bot_not_ready", `"${id}" is not in a failed setup state`);
     const requestId = profile.onboarding.requestId;
     const locale = profile.onboarding.locale;
     const next: BotProfile = { ...profile, onboarding: { requestId, locale, stage: "provisioning", error: null }, updatedAt: this.#now() };
@@ -150,7 +157,7 @@ export class BotOnboardingService {
     const now = this.#now();
     return {
       id,
-      name: request.locale === "ko" ? "새 봇" : "New bot",
+      name: request.locale === "ko" ? `새 Bot ${id.slice(-6)}` : `New Bot ${id.slice(-6)}`,
       description: "",
       kind: this.#deps.config.defaultKind,
       cwd: this.#deps.config.defaultCwd,

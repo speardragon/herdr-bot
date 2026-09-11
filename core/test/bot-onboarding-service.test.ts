@@ -6,11 +6,13 @@ import { createHerdrCli, type HerdrCli } from "../src/herdr/cli.ts";
 import { HerdrError } from "../src/herdr/types.ts";
 import { ControlError } from "../src/control/protocol.ts";
 import { greetingText } from "../src/bots/onboarding.ts";
+import { RosterError } from "../src/services/roster-service.ts";
 import { entryText } from "../src/model/entries.ts";
 import { ProfileStore } from "../src/store/profile-store.ts";
 import { setLogSink } from "../src/log.ts";
 import { installFakeHerdr, type FakeHerdrState } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
+import { waitFor } from "./helpers/wait-for.ts";
 
 const REQ = "11111111-1111-1111-1111-111111111111";
 const ID = `bot-${REQ}`;
@@ -81,6 +83,31 @@ test("a brief that is not confirmed stops before the greeting: no say, stage fai
     assert.equal(h.host.chat.transcript(ID).readAll().filter((e) => e.kind === "send-message").length, 0);
   } finally {
     setLogSink((line) => process.stderr.write(`${line}\n`));
+    await h.cleanup();
+  }
+});
+
+test("retry only runs on a failed, not-in-flight bot; a ready bot is a guarded error", async () => {
+  const h = await harness();
+  try {
+    h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    await h.host.onboarding.settled(ID);
+    assert.equal(h.stage(), "ready");
+    // A retry on a ready bot must be refused, never re-provisioned.
+    assert.throws(() => h.host.onboarding.retry(ID), (e: unknown) => e instanceof RosterError && e.code === "bot_not_ready");
+    assert.equal(h.stage(), "ready");
+    assert.equal(h.greetings().length, 1);
+
+    // Force it to a failed state, then retry: it must re-provision back to ready with one greeting.
+    const profiles = new ProfileStore(h.config.home);
+    const failed = profiles.get(ID)!;
+    profiles.save({ ...failed, onboarding: { ...failed.onboarding!, stage: "failed", error: "boom" } });
+    const retried = h.host.onboarding.retry(ID);
+    assert.equal(retried.onboarding?.stage, "provisioning");
+    await h.host.onboarding.settled(ID);
+    assert.equal(h.stage(), "ready");
+    assert.equal(h.greetings().length, 1);
+  } finally {
     await h.cleanup();
   }
 });
@@ -172,8 +199,9 @@ test("deleting a bot mid-provision does not resurrect it once the async spawn re
   const h = await harness({ wrapCli: (base) => ({ ...base, async agentStart(args) { await gate; return base.agentStart(args); } }) });
   try {
     h.host.onboarding.create({ requestId: REQ, locale: "ko" });
-    // Let provisioning create + persist the pane, then block on the gated agentStart.
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // Wait until provisioning has created + persisted the pane and is blocked on the gated agentStart
+    // (its paneId is now on the profile) -- the actual race we want to exercise, not a fixed sleep.
+    await waitFor(() => h.host.chat.summary(ID)?.herdrBot?.paneId != null, { message: "reserved pane was never persisted" });
     await h.host.roster.deleteBot(ID);
     release();
     await h.host.onboarding.settled(ID);
