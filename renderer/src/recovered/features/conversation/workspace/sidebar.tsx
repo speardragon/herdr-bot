@@ -46,6 +46,10 @@ export interface ConversationSidebarProps {
   sections?: readonly SidebarSectionProjection<SidebarAgent>[];
   pinnedAgentIds?: readonly string[];
   activeAgentId: string;
+  /** herdr-bot (Task 5): a temporary "New chat" row shown above the real roster while the header
+   * combobox is drafting a chat. Deliberately not a `SidebarAgent` -- it never enters `agents` and
+   * carries none of AgentSidebarItem's roster affordances (hide/delete/rename/copy-id/drag). */
+  draftRow?: { readonly id: string; readonly name: string };
   onNewChat(): void;
   onOpenAgent(agentId: string): void;
   onHideAgent?(agentId: string): void;
@@ -446,7 +450,7 @@ function SidebarSectionNameEditor({ initialValue, onCommit, onExit }: { initialV
   />;
 }
 
-export function ConversationSidebar({ agents, sections, pinnedAgentIds = [], activeAgentId, onBroadcast, onNewChat, onOpenAgent, onHideAgent, onRequestDeleteAgent, onRenameAgent, onCopyAgentId, onDuplicateAgent, onTogglePin, onReorderPinnedAgents, onSetAgentUnread, onToggleSectionCollapsed, onStartRenameSection, onRenameSection, onRequestDeleteSection, onMoveSection, onOpenNetwork, onOpenSearch, onOpenProfile, onShowFullConversation, onShowAsyncTasks, onMoveAgentToSection, onMoveAgentToNewSection, selectedAgentIds = [], onToggleAgentSelection, onRangeSelectAgent, onDeleteSelectedAgents, onClearAgentSelection, onMoveSelectedAgentsToSection, onMoveSelectedAgentsToNewSection, sidebarLayout, onResize, onResizeEnd, listStatus, isHostReachable = false, isPreviewEnabled = true }: ConversationSidebarProps) {
+export function ConversationSidebar({ agents, sections, pinnedAgentIds = [], activeAgentId, draftRow, onBroadcast, onNewChat, onOpenAgent, onHideAgent, onRequestDeleteAgent, onRenameAgent, onCopyAgentId, onDuplicateAgent, onTogglePin, onReorderPinnedAgents, onSetAgentUnread, onToggleSectionCollapsed, onStartRenameSection, onRenameSection, onRequestDeleteSection, onMoveSection, onOpenNetwork, onOpenSearch, onOpenProfile, onShowFullConversation, onShowAsyncTasks, onMoveAgentToSection, onMoveAgentToNewSection, selectedAgentIds = [], onToggleAgentSelection, onRangeSelectAgent, onDeleteSelectedAgents, onClearAgentSelection, onMoveSelectedAgentsToSection, onMoveSelectedAgentsToNewSection, sidebarLayout, onResize, onResizeEnd, listStatus, isHostReachable = false, isPreviewEnabled = true }: ConversationSidebarProps) {
   const now = Date.now();
   const isCollapsed = sidebarLayout?.isCollapsed ?? false;
   const sidebarWidthRaw = isCollapsed ? SIDEBAR_LAYOUT_BOUNDS.collapsedWidth : sidebarLayout?.expandedWidth;
@@ -470,6 +474,10 @@ export function ConversationSidebar({ agents, sections, pinnedAgentIds = [], act
       {selectedAgentIds.length > 0 ? <SidebarSelectionActions onClearAgentSelection={onClearAgentSelection} onCreatedSection={setRenamingSectionId} onDeleteSelectedAgents={onDeleteSelectedAgents} onMoveSelectedAgentsToNewSection={createSectionForSelection} onMoveSelectedAgentsToSection={onMoveSelectedAgentsToSection} sections={sections} selectedAgentIds={selectedAgentIds} selectedSectionableCount={selectedSectionableCount} /> : <AgentSidebarHeader isCollapsed={isCollapsed} onBroadcast={onBroadcast} onNewChat={onNewChat} onOpenNetwork={onOpenNetwork} onOpenSearch={onOpenSearch} />}
       {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2597261 (Wpn scroll-region carrier) */}
       <nav aria-label={t("Agent list")} className="sand-agents-list" data-sidebar-collapsed={isCollapsed || undefined} role="region" tabIndex={0}>
+        {draftRow == null ? null : <button aria-current="page" aria-label={draftRow.name} className="sand-agent-item herdr-new-chat-draft-row" data-active type="button">
+          <span className="sand-agent-item__avatar herdr-avatar-wrap"><AgentAvatar agentId={draftRow.id} kind="agent" size="md" /></span>
+          {isCollapsed ? null : <span className="sand-agent-item__body"><strong className="sand-agent-item__name">{draftRow.name}</strong></span>}
+        </button>}
         {listStatus ?? <>
           {orderedPinned.length > 0 ? <div aria-label="Pinned agents" className="sand-agents-pinned" role="group">{orderedPinned.map((agent) => renderAgent(agent))}</div> : null}
           {sections == null ? <div className="sand-agents-list__rows">{unpinned.map((agent) => renderAgent(agent))}</div> : sections.map((section) => isCollapsed ? section.agents.map((agent) => renderAgent(agent, section.id)) : <div

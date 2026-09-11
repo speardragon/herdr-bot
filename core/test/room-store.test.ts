@@ -22,3 +22,17 @@ test("projectRoomConfig validates shape", () => {
   assert.equal(projectRoomConfig({ id: "room-x" }), null);
   assert.deepEqual(projectRoomConfig({ ...sampleRoom(), memberIds: ["a", "a", "b"] })?.memberIds, ["a", "b"]);
 });
+
+test("room store round-trips an optional creationRequestId", () => {
+  const temp = makeTempHome();
+  try {
+    const store = new RoomStore(temp.home);
+    const requestId = "11111111-1111-1111-1111-111111111111";
+    store.save(sampleRoom({ creationRequestId: requestId }));
+    assert.equal(store.get("room-auth-1a2b")?.creationRequestId, requestId);
+    assert.equal(store.get("room-auth-1a2b")?.creationRequestId, requestId);
+    assert.equal(projectRoomConfig(sampleRoom())?.creationRequestId, undefined);
+  } finally {
+    temp.cleanup();
+  }
+});

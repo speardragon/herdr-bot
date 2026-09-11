@@ -113,10 +113,26 @@ export class RosterService {
     return next;
   }
 
-  createRoom(args: { readonly name: string; readonly description?: string; readonly memberIds: readonly string[] }): RoomConfig {
+  createRoom(args: { readonly name: string; readonly description?: string; readonly memberIds: readonly string[]; readonly requestId?: string }): RoomConfig {
+    // Idempotency: a retried group-create submit (e.g. after a client timeout) carries the same
+    // requestId, so the coordinator must return the room already created instead of a duplicate --
+    // checked before member revalidation, since a retry must succeed even if a member's status changed.
+    if (args.requestId != null) {
+      const existing = this.#deps.rooms.list().find((room) => room.creationRequestId === args.requestId);
+      if (existing != null) return existing;
+    }
     const memberIds = this.#validMembers(args.memberIds);
     const now = this.#now();
-    const room: RoomConfig = { id: makeRoomId(args.name), name: args.name.trim().length > 0 ? args.name.trim() : "New room", description: args.description ?? "", memberIds, isHiddenFromSidebar: false, createdAt: now, updatedAt: now };
+    const room: RoomConfig = {
+      id: makeRoomId(args.name),
+      name: args.name.trim().length > 0 ? args.name.trim() : "New room",
+      description: args.description ?? "",
+      memberIds,
+      isHiddenFromSidebar: false,
+      createdAt: now,
+      updatedAt: now,
+      ...(args.requestId == null ? {} : { creationRequestId: args.requestId }),
+    };
     this.#deps.rooms.save(room);
     return room;
   }

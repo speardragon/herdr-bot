@@ -55,3 +55,42 @@
   width: 8px; height: 8px; border-radius: 50%;
   background: #22c55e; box-shadow: 0 0 0 2px var(--herdr-surface);
 }
+
+/* herdr-bot (task 5): the header-based "new chat" combobox -- chips + the real <input> share one
+ * bordered flex wrapper (an <input> cannot contain elements), and every interactive child stays
+ * no-drag since the header sits inside the app's Electron drag region. */
+.herdr-new-chat-header { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--cursor-stroke-tertiary); }
+.herdr-new-chat-combobox {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  min-height: 36px; padding: 4px 8px; border: 1px solid var(--cursor-stroke-secondary); border-radius: 10px;
+  background: var(--cursor-bg-input-surface);
+  -webkit-app-region: no-drag; app-region: no-drag;
+}
+.herdr-new-chat-combobox input {
+  flex: 1 1 120px; min-width: 120px; border: 0; background: transparent; color: inherit; font: inherit; outline: none;
+  -webkit-app-region: no-drag; app-region: no-drag;
+}
+.herdr-member-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px 2px 2px;
+  border-radius: 999px; background: var(--cursor-bg-hover); font-size: 12px; white-space: nowrap;
+}
+.herdr-member-chip button {
+  border: 0; background: transparent; color: var(--cursor-text-secondary); cursor: pointer; line-height: 1;
+  -webkit-app-region: no-drag; app-region: no-drag;
+}
+.herdr-new-chat-dropdown {
+  position: absolute; z-index: 20; top: calc(100% + 4px); left: 16px; right: 16px;
+  max-height: min(320px, calc(100vh - 160px)); overflow-y: auto;
+  border: 1px solid var(--cursor-stroke-secondary); border-radius: 10px; background: var(--cursor-bg-elevated);
+  box-shadow: 0 8px 24px #0003;
+  -webkit-app-region: no-drag; app-region: no-drag;
+}
+.herdr-new-chat-option {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer;
+  -webkit-app-region: no-drag; app-region: no-drag;
+}
+.herdr-new-chat-option[data-active] { background: var(--cursor-bg-selected); }
+.herdr-new-chat-cancel { align-self: flex-start; border: 0; background: transparent; color: var(--cursor-text-secondary); cursor: pointer; -webkit-app-region: no-drag; app-region: no-drag; }
+.herdr-new-chat-error { color: var(--cursor-text-danger, #e5484d); font-size: 12px; margin: 0; }
+.herdr-new-chat-draft-row { opacity: 0.85; }
+.herdr-bot-setup-failed { display: flex; align-items: center; gap: 8px; padding: 6px 16px; color: var(--cursor-text-danger, #e5484d); font-size: 12px; }

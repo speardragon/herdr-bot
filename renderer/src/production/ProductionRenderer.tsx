@@ -141,7 +141,8 @@ import { createStrictModeDisposalGuard, type StrictModeDisposable } from "./stri
 import { MessageReactionAction, ReactionPills } from "../recovered/features/conversation/cards/transcript-card/reaction-picker";
 import type { TranscriptMessageReactionSlotProps } from "../recovered/features/conversation/cards/transcript-card/message-actions";
 import { LocalToolPermissionDock, type LocalToolPermissionRequest } from "../recovered/features/permissions/local-tool/view";
-import { NewChatDialog, type AdoptableAgent, type CreateBotRequest, type CreateRoomRequest } from "./NewChatDialog";
+import { NewChatHeader, type NewChatHeaderBot } from "./NewChatHeader";
+import { createNewChatDraft, defaultGroupName, pruneDraftMembers, selectedMembers, type NewChatDraft } from "./new-chat-model";
 import {
   isRecord,
   parseDesktopIntent,
@@ -3002,47 +3003,137 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     };
   }, [ackChatLoadedThrough]);
 
-  const [newChatOpen, setNewChatOpen] = useState(false);
-  const openNewChat = () => setNewChatOpen(true);
-  const createAgent = async () => { openNewChat(); };
-  const createBotFromDialog = async (request: CreateBotRequest): Promise<void> => {
-    if (client == null) throw new Error("coordinator is unavailable");
-    const result = await client.call("createAgent", {
-      name: request.name, description: request.description, origin: "user", isKickstartRequested: false, clientNonce: makeClientNonce(),
-      herdrBot: { id: request.id, kind: request.kind, cwd: request.cwd, permissionMode: request.permissionMode, ...(request.adoptPaneId == null ? {} : { adoptPaneId: request.adoptPaneId }) },
-    });
-    const created = result && typeof result === "object" && "agent" in result ? (result as { agent: unknown }).agent : result;
-    const projected = projectRendererAgent(created);
-    await refreshRoster();
-    if (projected != null) await openAgent(projected.id);
-  };
-  const createRoomFromDialog = async (request: CreateRoomRequest): Promise<void> => {
-    if (client == null) throw new Error("coordinator is unavailable");
-    const result = await client.call("createGroup", { name: request.name, description: request.description, memberIds: request.memberIds });
-    const created = result && typeof result === "object" && "agent" in result ? (result as { agent: unknown }).agent : result;
-    const projected = projectRendererAgent(created);
-    await refreshRoster();
-    if (projected != null) await openAgent(projected.id);
-  };
-  const listAdoptable = useCallback(async (): Promise<AdoptableAgent[]> => {
-    if (client == null) return [];
-    const value = await client.call("herdrBot.listAdoptable");
-    return Array.isArray(value) ? (value as AdoptableAgent[]) : [];
-  }, [client]);
-  const getNewBotDefaults = useCallback(async (): Promise<{ cwd: string; kind: string }> => {
-    if (client == null) return { cwd: "", kind: "claude" };
-    const value = await client.call("herdrBot.defaults");
-    return value && typeof value === "object" && typeof (value as { cwd?: unknown }).cwd === "string" && typeof (value as { kind?: unknown }).kind === "string"
-      ? (value as { cwd: string; kind: string })
-      : { cwd: "", kind: "claude" };
-  }, [client]);
-  const listWorkingDirectories = useCallback(async (path: string): Promise<{ exists: boolean; entries: readonly string[] }> => {
-    if (client == null) return { exists: false, entries: [] };
-    const value = await client.call("herdrBot.listDirectories", { path });
-    return value && typeof value === "object" && Array.isArray((value as { entries?: unknown }).entries)
-      ? (value as { exists: boolean; entries: readonly string[] })
-      : { exists: false, entries: [] };
-  }, [client]);
+  // herdr-bot (Task 5, plan chat-interaction-polish): the header-based "new chat" combobox. `+`, the
+  // global shortcut, and the command palette all funnel into startNewChatDraft -- at most one newChatDraft
+  // exists at a time; pressing `+` again just refocuses it (see NewChatHeader's focusSignal).
+  const [newChatDraft, setNewChatDraft] = useState<NewChatDraft | null>(null);
+  const newChatDraftRef = useRef<NewChatDraft | null>(null);
+  newChatDraftRef.current = newChatDraft;
+  const [newChatPending, setNewChatPending] = useState(false);
+  // A ref alongside the state: two pointerdowns can fire before React commits the setState above, so
+  // the state alone is not enough to stop a double-click from firing the create RPC twice.
+  const newChatPendingRef = useRef(false);
+  const [newChatError, setNewChatError] = useState<string | null>(null);
+  const [newChatFocusSignal, setNewChatFocusSignal] = useState(0);
+
+  const newChatCandidateBots = useMemo<readonly NewChatHeaderBot[]>(() => agents.filter((agent) => !agent.isGroup).map((agent) => ({
+    id: agent.id,
+    name: agent.name,
+    onboardingStage: agent.onboarding?.stage ?? null,
+    avatarDataUrl: agent.avatarDataUrl,
+    avatarShape: agent.avatarShape,
+    avatarColor: agent.avatarColor,
+  })), [agents]);
+
+  const startNewChatDraft = useCallback(() => {
+    if (newChatDraftRef.current != null) { setNewChatFocusSignal((n) => n + 1); return; }
+    setNewChatError(null);
+    setNewChatPending(false);
+    newChatPendingRef.current = false;
+    setNewChatDraft(createNewChatDraft(globalThis.crypto?.randomUUID?.() ?? makeClientNonce()));
+  }, []);
+  const createAgent = async () => { startNewChatDraft(); };
+
+  const discardNewChatDraft = useCallback(() => {
+    setNewChatDraft(null);
+    setNewChatPending(false);
+    newChatPendingRef.current = false;
+    setNewChatError(null);
+  }, []);
+
+  /** herdr-bot: a not-ready/deleted memberId at submit time gets a clear cause the UI shows, both as a
+   * host-revalidation error (RosterError code) and pre-emptively (pruneDraftMembers, before the RPC). */
+  const memberUnavailableMessage = t("That bot is no longer available.", "해당 봇을 더 이상 사용할 수 없습니다.");
+
+  const createBotFromDraft = useCallback(async () => {
+    const activeDraft = newChatDraftRef.current;
+    if (client == null || activeDraft == null || newChatPendingRef.current) return;
+    newChatPendingRef.current = true;
+    setNewChatPending(true);
+    setNewChatError(null);
+    try {
+      const result = await client.call("herdrBot.quickCreateBot", { requestId: activeDraft.requestId, locale });
+      const created = result && typeof result === "object" && "agent" in result ? (result as { agent: unknown }).agent : result;
+      const projected = projectRendererAgent(created);
+      await refreshRoster();
+      // The user may have already cancelled or navigated away while this RPC was in flight -- the
+      // reserved bot is not deleted (it keeps provisioning), but its creation must not now yank the
+      // screen out from under whatever the user is looking at.
+      if (projected != null && newChatDraftRef.current?.requestId === activeDraft.requestId) {
+        setNewChatDraft(null);
+        setNewChatPending(false);
+        newChatPendingRef.current = false;
+        await openAgent(projected.id);
+        return;
+      }
+    } catch (error) {
+      if (newChatDraftRef.current?.requestId === activeDraft.requestId) setNewChatError(error instanceof Error ? error.message : String(error));
+    } finally {
+      if (newChatDraftRef.current?.requestId === activeDraft.requestId) { setNewChatPending(false); newChatPendingRef.current = false; }
+    }
+  }, [client, locale, openAgent, refreshRoster]);
+
+  const createGroupFromDraft = useCallback(async () => {
+    const activeDraft = newChatDraftRef.current;
+    if (client == null || activeDraft == null || newChatPendingRef.current) return;
+    // Revalidate membership against the latest roster before submitting: a member selected earlier may
+    // since have been deleted, or still be provisioning -- prune it here (rather than only relying on
+    // the host's own revalidation) so the surviving chips are what the user actually sees kept.
+    const pruned = pruneDraftMembers(activeDraft, newChatCandidateBots);
+    if (pruned !== activeDraft) {
+      setNewChatDraft(pruned);
+      setNewChatError(memberUnavailableMessage);
+      return;
+    }
+    const members = selectedMembers(activeDraft, newChatCandidateBots);
+    newChatPendingRef.current = true;
+    setNewChatPending(true);
+    setNewChatError(null);
+    try {
+      const result = await client.call("createGroup", { name: defaultGroupName(members), memberIds: activeDraft.memberIds, requestId: activeDraft.requestId });
+      const created = result && typeof result === "object" && "agent" in result ? (result as { agent: unknown }).agent : result;
+      const projected = projectRendererAgent(created);
+      await refreshRoster();
+      // Same late-takeover guard as createBotFromDraft: don't clobber a draft the user started after
+      // cancelling this one while the RPC was still in flight.
+      if (projected != null && newChatDraftRef.current?.requestId === activeDraft.requestId) {
+        setNewChatDraft(null);
+        setNewChatPending(false);
+        newChatPendingRef.current = false;
+        await openAgent(projected.id);
+        return;
+      }
+    } catch (error) {
+      const isMemberRevalidationFailure = error instanceof CoordinatorCallError && (error.code === "unknown_bot" || error.code === "bot_not_ready");
+      if (newChatDraftRef.current?.requestId === activeDraft.requestId) {
+        setNewChatError(isMemberRevalidationFailure ? memberUnavailableMessage : error instanceof Error ? error.message : String(error));
+      }
+    } finally {
+      if (newChatDraftRef.current?.requestId === activeDraft.requestId) { setNewChatPending(false); newChatPendingRef.current = false; }
+    }
+  }, [client, memberUnavailableMessage, newChatCandidateBots, openAgent, refreshRoster]);
+
+  const openBotFromDraft = useCallback((id: string) => {
+    setNewChatDraft(null);
+    setNewChatPending(false);
+    newChatPendingRef.current = false;
+    setNewChatError(null);
+    void openAgent(id);
+  }, [openAgent]);
+
+  const [retryingSetupId, setRetryingSetupId] = useState<string | null>(null);
+  const retryBotSetup = useCallback(async (id: string) => {
+    if (client == null || retryingSetupId === id) return;
+    setRetryingSetupId(id);
+    try {
+      await client.call("herdrBot.retryBotSetup", { id });
+      await refreshRoster();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setRetryingSetupId((current) => current === id ? null : current);
+    }
+  }, [client, refreshRoster, retryingSetupId]);
 
   createAgentRef.current = createAgent;
   openAgentRef.current = openAgent;
@@ -3160,7 +3251,11 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   };
 
   const submit = () => {
-    if (activeAgent == null || client == null) return;
+    // herdr-bot (Task 5, plan §2.6): while a newly created Bot is provisioning, draft typing stays
+    // enabled but sending is blocked until onboarding reaches "ready" -- Enter-to-send goes straight
+    // to this handler (PromptRichTextEditor's onSubmit bypasses the composer's own disabled check),
+    // so this guard is the only thing that actually enforces the gate.
+    if (activeAgent == null || client == null || (activeAgent.onboarding != null && activeAgent.onboarding.stage !== "ready")) return;
     const liveDraftSnapshot = activeDraftSnapshotStore.get();
     const liveBaseDraft = liveDraftSnapshot.draft ?? liveDraftSnapshot.recovery ?? EMPTY_DRAFT;
     const liveDraft = replyThreadController.applyReplyToDraft(liveBaseDraft);
@@ -3542,7 +3637,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       id: "view:org-chart", label: "Org Chart", keywords: ["open", "organization", "network", "graph"], detail: "Views",
       run: () => { setOverlay(null); setWorkspaceRoute("org-chart"); }
     });
-    commands.push({ id: "new:chat", label: "New bot or room", icon: "plus", keywords: ["new", "bot", "room", "group", "create", "spawn", "adopt"], detail: "Sidebar", run: openNewChat });
+    commands.push({ id: "new:chat", label: "New chat", icon: "plus", keywords: ["new", "bot", "room", "group", "create", "chat"], detail: "Sidebar", run: startNewChatDraft });
     if (hiddenAgents.length > 0) commands.push({
       id: "open-hidden-chats", label: "Open Hidden Bots", keywords: ["hidden", "unhide", "hide", "sidebar", "bots"], detail: "Sidebar",
       run: () => setOverlay("hidden-chats")
@@ -3574,7 +3669,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
 
   const showSignIn = bridge != null && account != null && account.kind !== "logged-in";
   const showRootLoading = bridge != null && account?.kind === "logged-in" && activeAgent == null && transport === "connecting" && !onboardingOpen;
-  const showRootEmptyWorkspace = bridge != null && account?.kind === "logged-in" && transport === "connected" && hasLoadedAgents && agents.length === 0 && activeAgent == null && workspaceRoute == null && !onboardingOpen;
+  const showRootEmptyWorkspace = bridge != null && account?.kind === "logged-in" && transport === "connected" && hasLoadedAgents && agents.length === 0 && activeAgent == null && workspaceRoute == null && !onboardingOpen && newChatDraft == null;
   const accessCoverComposition = useMemo(() => projectAccessCoverComposition({
     access: sandAccess,
     roster: accessRosterSnapshot,
@@ -3690,7 +3785,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
                 wired (a view toggle and a reorder-within-an-empty-pinned-group interaction, respectively
                 -- neither is an edit menu, and neither has anything to act on here since orderedPinned is
                 now always empty). */}
-            <ConversationSidebar activeAgentId={activeAgentId} agents={recentOrderAgents} isHostReachable={transport === "connected"} sections={undefined} sidebarLayout={renderedSidebarLayout} onResize={resizeSidebar} onResizeEnd={finishSidebarResize} onToggleSectionCollapsed={(sectionId, collapsed) => sidebarCollapseStore.setSectionCollapsed(sectionId, collapsed)} listStatus={rosterListStatus} pinnedAgentIds={[]} onCopyAgentId={copyAgentId} onHideAgent={(agentId) => void hideAgent(agentId)} onNewChat={() => void createAgent()} onOpenAgent={(agentId) => void openAgent(agentId)} onOpenProfile={sidebarProfileAction.onSelect} onShowAsyncTasks={account?.kind === "logged-in" && account.isAnysphereUser === true ? openAsyncTasks : undefined} onShowFullConversation={openConversationOutline} onRenameAgent={(agentId, name) => void renameAgent(agentId, name)} onReorderPinnedAgents={reorderPinnedAgents} onRequestDeleteAgent={(agent) => setDeleteAgent({ id: agent.id, name: agent.name, isGroup: agent.isGroup })} onSetAgentUnread={(agentId, isUnread) => void setAgentUnread(agentId, isUnread)} />
+            <ConversationSidebar activeAgentId={newChatDraft == null ? activeAgentId : ""} agents={recentOrderAgents} draftRow={newChatDraft == null ? undefined : { id: newChatDraft.requestId, name: t("New chat") }} isHostReachable={transport === "connected"} sections={undefined} sidebarLayout={renderedSidebarLayout} onResize={resizeSidebar} onResizeEnd={finishSidebarResize} onToggleSectionCollapsed={(sectionId, collapsed) => sidebarCollapseStore.setSectionCollapsed(sectionId, collapsed)} listStatus={rosterListStatus} pinnedAgentIds={[]} onCopyAgentId={copyAgentId} onHideAgent={(agentId) => void hideAgent(agentId)} onNewChat={startNewChatDraft} onOpenAgent={(agentId) => newChatDraft == null ? void openAgent(agentId) : openBotFromDraft(agentId)} onOpenProfile={sidebarProfileAction.onSelect} onShowAsyncTasks={account?.kind === "logged-in" && account.isAnysphereUser === true ? openAsyncTasks : undefined} onShowFullConversation={openConversationOutline} onRenameAgent={(agentId, name) => void renameAgent(agentId, name)} onReorderPinnedAgents={reorderPinnedAgents} onRequestDeleteAgent={(agent) => setDeleteAgent({ id: agent.id, name: agent.name, isGroup: agent.isGroup })} onSetAgentUnread={(agentId, isUnread) => void setAgentUnread(agentId, isUnread)} />
           </div>
           {hiddenAgents.length > 0 && visibleAgents.length > 0 ? <SandButton aria-haspopup="dialog" onClick={() => setOverlay("hidden-chats")} size="sm" variant="secondary"><span>{t(UI_TEXT.hiddenBots)}</span><SandBadge aria-label={`${hiddenAgents.length} hidden bots`}>{hiddenAgents.length}</SandBadge></SandButton> : null}
           <div className="hb-settings-footer"><SandButton leadingIcon="settings" onClick={() => setOverlay("settings")} variant="secondary">{t("Settings")}</SandButton></div>
@@ -3700,12 +3795,25 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           onClose={() => setWorkspaceRoute(null)}
           onOpenAgent={(agentId) => void openAgent(agentId)}
           params={{}}
-        /></Suspense></main> : showRootEmptyWorkspace ? <RootShellEmptyWorkspace isVisible /> : activeAgent == null ? null : <div style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, width: "100%" }}>
+        /></Suspense></main> : newChatDraft != null ? <main className="sand-chat-stage"><NewChatHeader
+          candidates={newChatCandidateBots}
+          draft={newChatDraft}
+          error={newChatError}
+          focusSignal={newChatFocusSignal}
+          onCancel={discardNewChatDraft}
+          onChange={setNewChatDraft}
+          onCreateBot={() => void createBotFromDraft()}
+          onCreateGroup={() => void createGroupFromDraft()}
+          onOpenBot={openBotFromDraft}
+          pending={newChatPending}
+        /></main> : showRootEmptyWorkspace ? <RootShellEmptyWorkspace isVisible /> : activeAgent == null ? null : <div style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, width: "100%" }}>
           <main className="sand-chat-stage">
           <ConversationAgentHeader
             agent={activeAgent}
             isComputerActive={computer.isComputerUseActive}
             isInfoOpen={activeAgent.isGroup ? groupInfoPaneOpen : agentSettingsOpen}
+            isRetryingSetup={retryingSetupId === activeAgent.id}
+            onRetrySetup={activeAgent.onboarding?.stage === "failed" ? () => void retryBotSetup(activeAgent.id) : undefined}
             onToggleInfo={() => { setGroupInfoPaneOpen(false); setAgentSettingsOpen(false); setRoutinesInfoPaneOpen(false); setChannelsInfoPaneOpen(false); setManageSharedRoomId(null); setComputerInfoOpen((open) => !open); }}
 
 
@@ -3749,7 +3857,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           </main>
           <div className="sand-chat-input-dock">
             {localToolPermissionDock}
-            <ConversationComposer acceptedSendGeneration={composerClearGeneration} disabled={busy || client == null} draft={draft} editorProviders={editorProviders} notice={notice} onChange={(value) => composerDraftStore.setDraft(activeAgent.id, value)} onClearReplyTarget={clearReplyTarget} onRemoveAttachment={removeAttachment} onStageFiles={stageFiles} onSubmit={submit} placeholder={locale === "ko" ? activeAgent.name + "에 메시지 보내기 · @로 봇 멘션" : "Message " + activeAgent.name + " · @ to mention a bot"} replyTarget={replyTarget} scopeKey={`${transcriptAccountSlot ?? "signed-out"}:${activeAgent.id}`} transcribeAudio={transcribeAudio} />
+            <ConversationComposer acceptedSendGeneration={composerClearGeneration} disabled={busy || client == null} draft={draft} editorProviders={editorProviders} notice={notice ?? (activeAgent.onboarding != null && activeAgent.onboarding.stage !== "ready" && activeAgent.onboarding.stage !== "failed" ? t("Setting up this bot…", "이 봇을 설정하는 중…") : null)} onChange={(value) => composerDraftStore.setDraft(activeAgent.id, value)} onClearReplyTarget={clearReplyTarget} onRemoveAttachment={removeAttachment} onStageFiles={stageFiles} onSubmit={submit} placeholder={locale === "ko" ? activeAgent.name + "에 메시지 보내기 · @로 봇 멘션" : "Message " + activeAgent.name + " · @ to mention a bot"} replyTarget={replyTarget} scopeKey={`${transcriptAccountSlot ?? "signed-out"}:${activeAgent.id}`} sendDisabled={activeAgent.onboarding != null && activeAgent.onboarding.stage !== "ready"} transcribeAudio={transcribeAudio} />
           </div>
         </div>}
       </div>
@@ -3928,7 +4036,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       {/* onOpenRoutine={(agentId) => void openAgent(agentId)} */}
       <CommandPalette
         agents={agents}
-        commands={paletteCommands.filter((command) => command.id === "settings:general" || command.id === "new:chat").map((command) => ({ ...command, label: command.id === "new:chat" ? t("New") : t("Settings") }))}
+        commands={paletteCommands.filter((command) => command.id === "settings:general" || command.id === "new:chat").map((command) => ({ ...command, label: command.id === "new:chat" ? t("New chat") : t("Settings") }))}
         routines={routineSnapshot.value}
         routineStatus={routineSnapshot.status}
         files={fileSnapshot.value}
@@ -3951,7 +4059,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         onSearchQueryChange={updatePaletteSearchQuery}
       />
       <AgentDeleteConfirmation agent={deleteAgent} onClose={() => setDeleteAgent(null)} onConfirm={deleteAgentById} />
-      <NewChatDialog agents={agents} getDefaults={getNewBotDefaults} listAdoptable={listAdoptable} listDirectories={listWorkingDirectories} onClose={() => setNewChatOpen(false)} onCreateBot={createBotFromDialog} onCreateRoom={createRoomFromDialog} open={newChatOpen} />
       <SidebarSectionDeleteConfirmation section={deleteSection} onClose={() => setDeleteSection(null)} onConfirm={deleteSectionById} />
       <Suspense fallback={null}><ComputerOverlayRouteView params={{}} /></Suspense>
     </div>

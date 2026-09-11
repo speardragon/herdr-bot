@@ -10,6 +10,9 @@ export interface RoomConfig {
   readonly isHiddenFromSidebar: boolean;
   readonly createdAt: number;
   readonly updatedAt: number;
+  /** herdr-bot: the requestId the header's group-create submit was made with, if any -- lets the
+   * coordinator return the same room on a retried request instead of creating a duplicate. */
+  readonly creationRequestId?: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -36,6 +39,7 @@ export function projectRoomConfig(value: unknown): RoomConfig | null {
     isHiddenFromSidebar: value.isHiddenFromSidebar === true,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
+    ...(typeof value.creationRequestId === "string" && value.creationRequestId.length > 0 ? { creationRequestId: value.creationRequestId } : {}),
   };
 }
 

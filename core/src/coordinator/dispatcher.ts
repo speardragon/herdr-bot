@@ -99,7 +99,14 @@ function retryBotSetup(host: Host, args: Args): unknown {
 }
 
 function createGroup(host: Host, args: Args): unknown {
-  const room = host.roster.createRoom({ name: str(args, "name"), ...(optStr(args, "description") == null ? {} : { description: optStr(args, "description")! }), memberIds: strArray(args, "memberIds") });
+  const requestId = optStr(args, "requestId");
+  if (requestId != null && !isValidRequestId(requestId)) throw new ArgsError("requestId must be a UUID");
+  const room = host.roster.createRoom({
+    name: str(args, "name"),
+    ...(optStr(args, "description") == null ? {} : { description: optStr(args, "description")! }),
+    memberIds: strArray(args, "memberIds"),
+    ...(requestId == null ? {} : { requestId }),
+  });
   host.chat.emitRoster();
   return { agent: requireSummary(host, room.id), transcript: [] };
 }

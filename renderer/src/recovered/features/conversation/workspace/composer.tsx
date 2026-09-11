@@ -33,6 +33,10 @@ function ComposerGlyph({ name, hidden = false }: { readonly name: "mic" | "arrow
 export interface ConversationComposerProps {
   draft: ComposerDraft;
   disabled?: boolean;
+  /** herdr-bot (Task 5, plan §2.6): blocks only sending (the send button and Enter-to-send), while
+   * typing stays enabled -- distinct from `disabled`, which also greys out the text field itself.
+   * Used while a newly created Bot is still provisioning. */
+  sendDisabled?: boolean;
   notice?: string | null;
   placeholder?: string;
   transcribeAudio: VoiceTranscriber;
@@ -69,7 +73,7 @@ export function selectComposerFiles(files: readonly File[], existingCount: numbe
   return files.slice(0, remaining);
 }
 
-export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabled = false, notice, placeholder = "Ask anything, or drop a file.", transcribeAudio, onChange, onClearReplyTarget, onRemoveAttachment, onStageFiles, onSubmit, replyTarget, editorProviders, scopeKey }: ConversationComposerProps) {
+export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabled = false, sendDisabled = false, notice, placeholder = "Ask anything, or drop a file.", transcribeAudio, onChange, onClearReplyTarget, onRemoveAttachment, onStageFiles, onSubmit, replyTarget, editorProviders, scopeKey }: ConversationComposerProps) {
   const fileInput = useRef<HTMLInputElement>(null);
   const editorControls = useRef<PromptEditorControls | null>(null);
   const dragDepth = useRef(0);
@@ -80,7 +84,7 @@ export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabl
   const voiceOptions = useMemo(() => ({ transcribe: transcribeAudio }), [transcribeAudio]);
   const voice = useVoiceSession(voiceOptions, scopeKey);
   const voiceBusy = voice.isRecording || voice.isProcessing || voice.isActivating;
-  const canSend = hasPayload && !disabled && !voiceBusy;
+  const canSend = hasPayload && !disabled && !sendDisabled && !voiceBusy;
   const atLimit = draft.attachments.length >= COMPOSER_ATTACHMENT_LIMIT;
 
   useEffect(() => voice.controller.onFinal((text) => {

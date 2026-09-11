@@ -44,6 +44,30 @@ test("createAgent / createGroup / listAgents / updateAgent / deleteAgents round-
   }
 });
 
+test("createGroup with a requestId is idempotent on retry and rejects a not-ready member", async () => {
+  const h = await harness();
+  try {
+    await h.call("createAgent", { name: "Reviewer", description: "", herdrBot: { id: "reviewer", kind: "claude", permissionMode: "ask" } });
+    const requestId = "22222222-2222-2222-2222-222222222222";
+    const first = await h.call("createGroup", { name: "Auth", memberIds: ["reviewer"], requestId });
+    const retry = await h.call("createGroup", { name: "Auth", memberIds: ["reviewer"], requestId });
+    assert.equal(retry.agent.id, first.agent.id, "a retried createGroup with the same requestId must return the same room, not a duplicate");
+    assert.equal((await h.call("listAgents")).filter((a: { id: string; isGroup: boolean }) => a.isGroup).length, 1);
+
+    const badRequestId = await h.dispatch("createGroup", { name: "Auth 2", memberIds: ["reviewer"], requestId: "not-a-uuid" });
+    assert.equal(badRequestId.status === "failed" && badRequestId.failure.code, "invalid-args");
+
+    // calls without a requestId keep working (back-compat)
+    const noRequestId = await h.call("createGroup", { name: "No Request Id", memberIds: ["reviewer"] });
+    assert.equal(noRequestId.agent.isGroup, true);
+
+    const rejected = await h.dispatch("createGroup", { name: "Bad", memberIds: ["missing-bot"] });
+    assert.equal(rejected.status === "failed" && rejected.failure.code, "unknown_bot");
+  } finally {
+    await h.cleanup();
+  }
+});
+
 test("sendPrompt appends the user message with clientNonce, triggers a turn, and the bot reply is visible in the tail", async () => {
   const h = await harness();
   try {
