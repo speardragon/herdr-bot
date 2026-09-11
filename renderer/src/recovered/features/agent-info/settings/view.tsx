@@ -1,3 +1,4 @@
+import { t } from "../../../../production/locale";
 import { useEffect, useId, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import type { AgentSettingsController, AgentSettingsProfile } from "./model";
 import "./view.css";
@@ -53,16 +54,16 @@ export function AgentSettingsPanel({ controller }: AgentSettingsPanelProps) {
     const profile: AgentSettingsProfile = { ...profileFor(agent), [field]: value };
     void controller.updateProfile(profile).catch(() => {});
   };
-  return <section aria-label="Agent settings" className="sand-agent-settings" data-agent-id={agent.id} data-pending={pending ?? undefined}>
+  return <section aria-label={t("Agent settings")} className="sand-agent-settings" data-agent-id={agent.id} data-pending={pending ?? undefined}>
     <div className="sand-info-pane__section-content">
-      <div className="sand-info-pane__section-heading">Name</div><EditableField ariaLabel="Agent name" initialValue={agent.name} isRequired onCommit={(value) => commit("name", value)} placeholder="Bob" />
-      {!agent.isGroup && agent.title !== undefined ? <><div className="sand-info-pane__section-heading">Title</div><EditableField ariaLabel="Agent title" initialValue={agent.title} onCommit={(value) => commit("title", value)} placeholder="Describe what your agent does" /></> : null}
-      <div className="sand-info-pane__section-heading">Description</div><EditableField ariaLabel="Agent description" initialValue={agent.description} isMultiline onCommit={(value) => commit("description", value)} placeholder="What this agent is for" />
+      <div className="sand-info-pane__section-heading">{t("Name")}</div><EditableField ariaLabel={t("Agent name")} initialValue={agent.name} isRequired onCommit={(value) => commit("name", value)} placeholder={t("Bob")} />
+
+      <div className="sand-info-pane__section-heading">{t("Description")}</div><EditableField ariaLabel={t("Agent description")} initialValue={agent.description} isMultiline onCommit={(value) => commit("description", value)} placeholder={t("What this agent is for")} />
     </div>
     {agent.isGroup ? null : <div className="sand-agent-settings__card">
       <div className="sand-agent-settings__row">
-        <span className="sand-agent-settings__text"><span id={notificationsLabelId}>Notifications</span><small>Get notified when this agent finishes or needs input</small></span>
-        <span className="sand-agent-settings__control"><button aria-checked={agent.notifyOnUpdatesEnabled} aria-labelledby={notificationsLabelId} disabled={pending != null} onClick={() => void controller.setNotifications(!agent.notifyOnUpdatesEnabled).catch(() => {})} role="switch" type="button">{agent.notifyOnUpdatesEnabled ? "On" : "Off"}</button></span>
+        <span className="sand-agent-settings__text"><span id={notificationsLabelId}>{t("Notifications")}</span><small>{t("Get notified when this agent finishes or needs input")}</small></span>
+        <span className="sand-agent-settings__control"><button aria-checked={agent.notifyOnUpdatesEnabled} aria-labelledby={notificationsLabelId} disabled={pending != null} onClick={() => void controller.setNotifications(!agent.notifyOnUpdatesEnabled).catch(() => {})} role="switch" type="button">{agent.notifyOnUpdatesEnabled ? t("On") : t("Off")}</button></span>
       </div>
     </div>}
     {error == null ? null : <div aria-live="polite" role="status">{error instanceof Error ? error.message : String(error)}</div>}

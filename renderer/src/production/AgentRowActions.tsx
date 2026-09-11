@@ -1,3 +1,4 @@
+import { t } from "./locale";
 import { useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { SandButton } from "../recovered/ui/sand-kit-primitives";
 import { SandContextMenu, SandMenuContent, SandMenuItem, SandMenuRoot, SandMenuTrigger } from "../recovered/ui/sand-floating-primitives";
@@ -54,7 +55,7 @@ function iconForAction(action: AgentRowAction): MenuIcon {
 }
 
 function menuItem(key: string, label: string, icon: MenuIcon, onClick: () => void, sentiment?: "danger"): ReactNode {
-  return <SandButton key={key} leadingIcon={icon} onClick={onClick} role="menuitem" sentiment={sentiment} size="md" variant="secondary">{label}</SandButton>;
+  return <SandButton key={key} leadingIcon={icon} onClick={onClick} role="menuitem" sentiment={sentiment} size="md" variant="secondary">{t(label)}</SandButton>;
 }
 
 /** Drops empty groups and puts a rule between the survivors. */
@@ -104,9 +105,9 @@ export function AgentRowActions({ agentId, agentName, isPinned = false, hasUnrea
   const moveItem = !canMoveToSection ? null : sections != null && sections.length > 0
     ? <SandMenuRoot closeOnSelect={false} key="move" onOpenChange={setMoveMenuOpen} open={moveMenuOpen} placement="right-start">
       <SandMenuTrigger><SandButton aria-expanded={moveMenuOpen} aria-haspopup="menu" leadingIcon="folder-plus" role="menuitem" size="md" variant="secondary">{sectionLabel}</SandButton></SandMenuTrigger>
-      <SandMenuContent ariaLabel="Move to section">
+      <SandMenuContent ariaLabel={t("Move to section")}>
         {onMoveToSection == null ? null : sections.map((section, index) => <SandMenuItem index={index} key={section.id} onSelect={() => { closeMenu(); onMoveToSection(section.id); }}>{section.name}</SandMenuItem>)}
-        {onMoveToNewSection == null ? null : <SandMenuItem index={sections.length} onSelect={() => { closeMenu(); onMoveToNewSection(); }}>New section</SandMenuItem>}
+        {onMoveToNewSection == null ? null : <SandMenuItem index={sections.length} onSelect={() => { closeMenu(); onMoveToNewSection(); }}>{t("New section")}</SandMenuItem>}
       </SandMenuContent>
     </SandMenuRoot>
     : menuItem("move-new-section", "Move to new section", "folder-plus", select(() => onMoveToNewSection?.()));

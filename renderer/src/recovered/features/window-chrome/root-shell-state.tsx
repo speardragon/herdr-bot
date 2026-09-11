@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { t } from "../../../production/locale";
 import { ErrorBoundarySurface } from "../error-boundary/view";
 import "./root-shell-state.css";
 
@@ -10,7 +11,7 @@ import "./root-shell-state.css";
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L132095-L132097
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L131933
 
-const SETUP_LABEL = "Setting up Grok Bot's computer";
+const SETUP_LABEL = "herdr bot";
 const EMPTY_WORKSPACE_LABEL = "New chat";
 const EMPTY_WORKSPACE_COPY = "No chats yet";
 const ROOT_ERROR_TITLE = "Something went wrong";
@@ -122,7 +123,7 @@ export interface RootShellEmptyWorkspaceProps {
 export function RootShellEmptyWorkspace({ isVisible }: RootShellEmptyWorkspaceProps) {
   if (!isVisible) return null;
   return <main aria-label={EMPTY_WORKSPACE_LABEL} className="sand-chat" data-empty="true" style={{ display: "grid", height: "100%", placeItems: "center" }}>
-    <p>{EMPTY_WORKSPACE_COPY}</p>
+    <p>{t(EMPTY_WORKSPACE_COPY)}</p>
   </main>;
 }
 

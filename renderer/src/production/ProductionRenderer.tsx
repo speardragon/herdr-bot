@@ -18,6 +18,7 @@ import { createUiLayoutStateStore, SIDEBAR_LAYOUT_BOUNDS, type SidebarLayoutStat
 import { createSidebarCollapsePersistence, createSidebarCollapseStateStore } from "../recovered/features/conversation/workspace/sidebar-collapse-state";
 import { createEmojiCatalogStore } from "../recovered/features/conversation/cards/transcript-card/emoji-catalog";
 import { createComposerEditorSuggestionAdapter } from "../recovered/features/conversation/workspace/editor-suggestion-production-adapter";
+import { projectMentionMembers } from "../recovered/features/conversation/workspace/editor-suggestion-provider";
 import { createEditorMcpReferenceProvider } from "../recovered/features/conversation/workspace/editor-mcp-reference-provider";
 import { createEditorPrReferenceProvider } from "../recovered/features/conversation/workspace/editor-pr-reference-provider";
 import { TranscriptLoadErrorSurface } from "../recovered/features/conversation/workspace/transcript-load-error";
@@ -109,6 +110,9 @@ import { commandPaletteUpdateCommand } from "./command-palette-update-command";
 import { commandPaletteRootCommands, type CommandPaletteComputerUpdateAction, type CommandPaletteInfoSection } from "./command-palette-root-commands";
 import { CoordinatorCallError, createCoordinatorClient, type ProductionCoordinatorClient } from "./coordinator-client";
 import { UI_TEXT } from "./evidence";
+import { LocalSettings } from "./LocalSettings";
+import { t, useLocale } from "./locale";
+import "./minimal.css";
 import { movePinnedAgent, partitionSidebarAgents } from "./sidebar-model";
 import { SignOutDialog } from "../recovered/features/account/session/sign-out";
 import { FeedbackDialog, type FeedbackCode } from "../recovered/features/feedback/overlay/view";
@@ -197,8 +201,8 @@ class SettingsOverlayErrorBoundary extends Component<SettingsOverlayErrorBoundar
         <p>{this.state.error.message}</p>
       </div>
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-        <SandButton onClick={this.retry} size="sm" variant="secondary">Retry</SandButton>
-        <SandButton onClick={this.props.onClose} size="sm">Close</SandButton>
+        <SandButton onClick={this.retry} size="sm" variant="secondary">{t("Retry")}</SandButton>
+        <SandButton onClick={this.props.onClose} size="sm">{t("Close")}</SandButton>
       </div>
     </OverlayDialog>;
   }
@@ -617,6 +621,8 @@ export interface ProductionRendererProps {
 }
 
 export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRendererProps) {
+  const locale = useLocale();
+  useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   const [client] = useState(() => createCoordinatorClient(coordinatorPort));
   const [groupMembersRoot] = useState(() => createGroupMembersRootScope(client));
   const [sharedRoomProvider] = useState(() => client == null ? null : createSharedRoomProvider(client));
@@ -1422,6 +1428,8 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   useEffect(() => {
     settingsNoticeController.reset();
   }, [settingsNoticeController, settingsNoticeScope]);
+  const mentionScope = useRef({ activeAgent, agents });
+  mentionScope.current = { activeAgent, agents };
   const editorProviders = useMemo(() => {
     const providers = editorSuggestionAdapter == null ? {} : {
       ...editorSuggestionAdapter.providers,
@@ -1429,14 +1437,20 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         ? undefined
         : {
             ...editorSuggestionAdapter.providers.mention,
-            getMcpReferences: () => editorMcpReferenceProvider.getRows()
+            getMembers: (query = "") => {
+              const { activeAgent: chat, agents: roster } = mentionScope.current;
+              const members = roster.filter((bot) => !bot.isGroup && (chat?.isGroup ? chat.memberIds.includes(bot.id) : bot.id === chat?.id));
+              return projectMentionMembers(members, false).filter((member) => (member.label + " " + member.id).toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+            },
+            getWorkflows: () => [],
+            getMcpReferences: () => []
           }
     };
     return {
       ...providers,
-      prReference: { getCandidates: () => editorPrReferenceProvider.getCandidates() }
+      prReference: { getCandidates: () => [] }
     };
-  }, [editorMcpReferenceProvider, editorPrReferenceProvider, editorSuggestionAdapter]);
+  }, [editorSuggestionAdapter]);
   useEffect(() => {
     if (editorSuggestionAdapter == null) return;
     const scopedAgentId = activeAgentId.length > 0 ? activeAgentId : null;
@@ -3486,31 +3500,10 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         <div className="sand-sidebar-column" style={{ display: "grid", gridTemplateRows: "minmax(0, 1fr) auto auto auto", minHeight: 0 }}>
           <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", minHeight: 0 }}>
             {connectionController == null ? null : <CoordinatorConnectionHost controller={connectionController} />}
-            <ConversationSidebar activeAgentId={activeAgentId} agents={visibleAgents} isHostReachable={transport === "connected"} sections={projectedSidebarSections} sidebarLayout={renderedSidebarLayout} onResize={resizeSidebar} onResizeEnd={finishSidebarResize} onToggleSectionCollapsed={(sectionId, collapsed) => sidebarCollapseStore.setSectionCollapsed(sectionId, collapsed)} listStatus={rosterListStatus} pinnedAgentIds={pinnedAgentIds} onCopyAgentId={copyAgentId} onDuplicateAgent={(agentId) => void duplicateAgent(agentId)} onHideAgent={(agentId) => void hideAgent(agentId)} onNewChat={() => void createAgent()} onOpenAgent={(agentId) => void openAgent(agentId)} onOpenNetwork={agentNetworkTrigger} onOpenProfile={sidebarProfileAction.onSelect} onShowAsyncTasks={account?.kind === "logged-in" && account.isAnysphereUser === true ? openAsyncTasks : undefined} onShowFullConversation={openConversationOutline} onOpenSearch={sidebarSearchTrigger} onRenameAgent={(agentId, name) => void renameAgent(agentId, name)} onReorderPinnedAgents={reorderPinnedAgents} onRequestDeleteAgent={(agent) => setDeleteAgent({ id: agent.id, name: agent.name, isGroup: agent.isGroup })} onRenameSection={renameSection} onRequestDeleteSection={requestDeleteSection} onMoveSection={moveSection} onMoveAgentToSection={moveAgentsToSection} onMoveAgentToNewSection={moveAgentsToNewSection} onSetAgentUnread={(agentId, isUnread) => void setAgentUnread(agentId, isUnread)} onTogglePin={toggleAgentPin} />
+            <ConversationSidebar activeAgentId={activeAgentId} agents={visibleAgents} isHostReachable={transport === "connected"} sections={projectedSidebarSections} sidebarLayout={renderedSidebarLayout} onResize={resizeSidebar} onResizeEnd={finishSidebarResize} onToggleSectionCollapsed={(sectionId, collapsed) => sidebarCollapseStore.setSectionCollapsed(sectionId, collapsed)} listStatus={rosterListStatus} pinnedAgentIds={pinnedAgentIds} onCopyAgentId={copyAgentId} onHideAgent={(agentId) => void hideAgent(agentId)} onNewChat={() => void createAgent()} onOpenAgent={(agentId) => void openAgent(agentId)} onOpenProfile={sidebarProfileAction.onSelect} onShowAsyncTasks={account?.kind === "logged-in" && account.isAnysphereUser === true ? openAsyncTasks : undefined} onShowFullConversation={openConversationOutline} onRenameAgent={(agentId, name) => void renameAgent(agentId, name)} onReorderPinnedAgents={reorderPinnedAgents} onRequestDeleteAgent={(agent) => setDeleteAgent({ id: agent.id, name: agent.name, isGroup: agent.isGroup })} onRenameSection={renameSection} onRequestDeleteSection={requestDeleteSection} onMoveSection={moveSection} onMoveAgentToSection={moveAgentsToSection} onMoveAgentToNewSection={moveAgentsToNewSection} onSetAgentUnread={(agentId, isUnread) => void setAgentUnread(agentId, isUnread)} onTogglePin={toggleAgentPin} />
           </div>
-          {hiddenAgents.length > 0 && visibleAgents.length > 0 ? <SandButton aria-haspopup="dialog" onClick={() => setOverlay("hidden-chats")} size="sm" variant="secondary"><span>{UI_TEXT.hiddenBots}</span><SandBadge aria-label={`${hiddenAgents.length} hidden bots`}>{hiddenAgents.length}</SandBadge></SandButton> : null}
-          {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2602084 (s0n Plugins footer button/icon/text composition) */}
-          <div className="sand-agents-sidebar__plugins-entry"><SandButton className="sand-agents-sidebar__plugins" leadingIcon="plug" onClick={() => { setPluginQuery(""); setOverlay("plugins"); }} shape="pill" size="md" variant="secondary">{UI_TEXT.plugins}</SandButton></div>
-          <AccountMenu
-            account={account}
-            accountLabel={UI_TEXT.account}
-            bridge={bridge}
-            displayName={accountName(account)}
-            experimentsSnapshot={bridge.experiments.initialSnapshot}
-            isOpen={accountMenuOpen}
-            labels={{ about: UI_TEXT.about, changeLimit: "Change limit", helpCenter: UI_TEXT.helpCenter, included: "Included", ios: "Get Grok Bot for iOS", logOut: UI_TEXT.logOut, onDemand: "On-demand", sendFeedback: UI_TEXT.sendFeedback, settings: UI_TEXT.settings, signIn: UI_TEXT.signIn, spendThisCycle: "Spend this cycle", weeklyUsage: "Weekly usage" }}
-            onError={setNotice}
-            onOpenAbout={() => setOverlay("about")}
-            onOpenChange={setAccountMenuOpen}
-            onOpenFeedback={() => setOverlay("feedback")}
-            onOpenHelp={() => void bridge.openExternal("https://cursor.com/help")}
-            onOpenIos={() => void bridge.openExternal("https://apps.apple.com/us/app/grok-bot/id6794501026")}
-            onOpenSettings={() => { setSettingsSection("general"); setManageSharedRoomId(null); setOverlay("settings"); }}
-            onOpenUsage={() => void bridge.openExternal("https://cursor.com/dashboard/spending")}
-            onRequestLogout={() => { setOverlay("confirm-logout"); setAccountMenuOpen(false); }}
-            onStatus={setAccount}
-            updatePill={<UpdatePill bridge={bridge} labels={UPDATE_PILL_LABELS} />}
-          />
+          {hiddenAgents.length > 0 && visibleAgents.length > 0 ? <SandButton aria-haspopup="dialog" onClick={() => setOverlay("hidden-chats")} size="sm" variant="secondary"><span>{t(UI_TEXT.hiddenBots)}</span><SandBadge aria-label={`${hiddenAgents.length} hidden bots`}>{hiddenAgents.length}</SandBadge></SandButton> : null}
+          <div className="hb-settings-footer"><SandButton leadingIcon="settings" onClick={() => setOverlay("settings")} variant="secondary">{t("Settings")}</SandButton></div>
         </div>
         {workspaceRoute === "org-chart" ? <main className="sand-chat-stage"><Suspense fallback={null}><OrgChartWorkspaceView
           agents={orgChartAgents}
@@ -3522,14 +3515,14 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           <ConversationAgentHeader
             agent={activeAgent}
             isComputerActive={computer.isComputerUseActive}
-            isInfoOpen={activeAgent.isGroup ? groupInfoPaneOpen : computerInfoOpen}
+            isInfoOpen={activeAgent.isGroup ? groupInfoPaneOpen : agentSettingsOpen}
             onToggleInfo={() => { setGroupInfoPaneOpen(false); setAgentSettingsOpen(false); setRoutinesInfoPaneOpen(false); setChannelsInfoPaneOpen(false); setManageSharedRoomId(null); setComputerInfoOpen((open) => !open); }}
-            onOpenInHerdr={activeAgent != null && !activeAgent.isGroup && client != null ? () => { void client.call("herdrBot.focus", { id: activeAgent.id }).catch((error: unknown) => setNotice(error instanceof Error ? error.message : String(error))); } : undefined}
-            sharedRoomTrigger={sharedRoomTrigger}
+
+
             onToggleSettings={activeAgent.isGroup
               ? groupInfoPaneRoute == null ? undefined : () => { setAgentSettingsOpen(false); setRoutinesInfoPaneOpen(false); setChannelsInfoPaneOpen(false); setComputerInfoOpen(false); setManageSharedRoomId(null); setGroupInfoPaneOpen((open) => !open); }
               : bridge == null ? undefined : () => { setGroupInfoPaneOpen(false); setRoutinesInfoPaneOpen(false); setChannelsInfoPaneOpen(false); setComputerInfoOpen(false); setManageSharedRoomId(null); setAgentSettingsOpen(true); }}
-            trailing={activeAgent.isGroup || bridge == null || agentChannelsController == null ? null : <SandButton aria-controls="sand-conversation-details" aria-expanded={channelsInfoPaneOpen} aria-label="Channels" data-info-row="channels" onClick={() => { setGroupInfoPaneOpen(false); setAgentSettingsOpen(false); setRoutinesInfoPaneOpen(false); setComputerInfoOpen(false); setManageSharedRoomId(null); setChannelsInfoPaneOpen((open) => !open); }} size="sm" variant="secondary"><SandIcon name="chat-bubbles" size="sm" />Channels</SandButton>}
+
           />
           {findInChatOpen ? <FindInChatBar controller={findInChatController} focusNonce={findInChatFocusNonce} onClose={closeFindInChat} transcriptContainer={findTranscriptContainer} transcriptHandleRef={transcriptHandleRef} /> : null}
           {showTranscriptLoadError
@@ -3566,7 +3559,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           </main>
           <div className="sand-chat-input-dock">
             {localToolPermissionDock}
-            <ConversationComposer acceptedSendGeneration={composerClearGeneration} disabled={busy || client == null} draft={draft} editorProviders={editorProviders} notice={notice} onChange={(value) => composerDraftStore.setDraft(activeAgent.id, value)} onClearReplyTarget={clearReplyTarget} onRemoveAttachment={removeAttachment} onStageFiles={stageFiles} onSubmit={submit} placeholder={`Message ${activeAgent.name}`} replyTarget={replyTarget} scopeKey={`${transcriptAccountSlot ?? "signed-out"}:${activeAgent.id}`} transcribeAudio={transcribeAudio} />
+            <ConversationComposer acceptedSendGeneration={composerClearGeneration} disabled={busy || client == null} draft={draft} editorProviders={editorProviders} notice={notice} onChange={(value) => composerDraftStore.setDraft(activeAgent.id, value)} onClearReplyTarget={clearReplyTarget} onRemoveAttachment={removeAttachment} onStageFiles={stageFiles} onSubmit={submit} placeholder={locale === "ko" ? activeAgent.name + "에 메시지 보내기 · @로 봇 멘션" : "Message " + activeAgent.name + " · @ to mention a bot"} replyTarget={replyTarget} scopeKey={`${transcriptAccountSlot ?? "signed-out"}:${activeAgent.id}`} transcribeAudio={transcribeAudio} />
           </div>
         </div>}
       </div>
@@ -3588,7 +3581,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2772350 */}
       {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2727500 */}
       {bridge == null || activeAgent == null || activeAgent.isGroup || !agentSettingsOpen || agentSettingsController == null || agentSettingsSnapshot == null ? null : <aside
-        aria-label="Conversation details"
+        aria-label={t("Conversation details")}
         className="sand-info-pane"
         data-open="true"
       >
@@ -3597,12 +3590,12 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2750022 (Edit agent avatar trigger/editor region) */}
         {avatarEditorReady ? <SandButton
           aria-expanded={avatarEditorOpen}
-          aria-label="Edit agent avatar"
+          aria-label={t("Edit agent avatar")}
           onClick={() => setAvatarEditorOpen((open) => !open)}
           ref={avatarEditorTriggerRef}
           size="sm"
           variant="secondary"
-        >Edit agent avatar</SandButton> : null}
+        >{t("Edit agent avatar")}</SandButton> : null}
         {avatarEditorOpen && avatarEditorSnapshot.status === "ready" && avatarEditorSnapshot.controller != null ? <AvatarEditorView
           agentIsGroup={activeAgent.isGroup}
           controller={avatarEditorSnapshot.controller}
@@ -3614,12 +3607,12 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         /> : null}
       </aside>}
       {groupInfoPaneRoute == null || groupMemberAgent == null || !groupInfoPaneOpen ? null : <aside
-        aria-label={GROUP_INFO_PANE_HEADER.ariaLabel}
+        aria-label={t(GROUP_INFO_PANE_HEADER.ariaLabel)}
         className="sand-info-pane"
         data-open="true"
         id="sand-conversation-details"
       >
-        <RootInfoPaneHeader closeLabel={GROUP_INFO_PANE_HEADER.closeLabel} onClose={() => setGroupInfoPaneOpen(false)} />
+        <RootInfoPaneHeader closeLabel={t(GROUP_INFO_PANE_HEADER.closeLabel)} onClose={() => setGroupInfoPaneOpen(false)} />
         <GroupMembersPane
           alert={groupMembersRoot.alert}
           accountGeneration={groupInfoPaneRoute.accountGeneration}
@@ -3629,7 +3622,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         />
       </aside>}
       {bridge == null || activeAgent == null || activeAgent.isGroup || agentSettingsOpen || !routinesInfoPaneOpen ? null : <aside
-        aria-label="Conversation details"
+        aria-label={t("Conversation details")}
         className="sand-info-pane"
         data-open="true"
       >{mountRoutinesInfoPane({
@@ -3642,7 +3635,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         disposeOnUnmount: false
       })}</aside>}
       {bridge == null || activeAgent == null || activeAgent.isGroup || agentSettingsController == null || agentChannelsController == null || !channelsInfoPaneOpen ? null : <aside
-        aria-label="Conversation details"
+        aria-label={t("Conversation details")}
         className="sand-info-pane"
         data-open="true"
         id="sand-conversation-details"
@@ -3669,8 +3662,8 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       />}
 
       {overlay === "hidden-chats" ? <div style={OVERLAY_FRAME_STYLE}><Suspense fallback={null}><HiddenChatsDialog hiddenAgents={hiddenAgents} isOpen onClose={() => setOverlay(null)} onOpenAgent={(id) => void openAgent(id)} onUnhide={(id) => void unhide(id)} /></Suspense></div> : null}
-      {overlay === "settings" && bridge != null ? <div style={OVERLAY_FRAME_STYLE}><Suspense fallback={overlayFallback(UI_TEXT.settings)}><SettingsOverlayErrorBoundary onClose={() => setOverlay(null)}><SettingsDesktopSurface bridge={bridge} computer={settingsComputerMount} coordinatorClient={client} initialSection={settingsSection} isOpen onClose={() => setOverlay(null)} onNotice={publishSettingsNotice} /></SettingsOverlayErrorBoundary></Suspense></div> : null}
-      {overlay === "plugins" && bridge != null ? <div style={OVERLAY_FRAME_STYLE}><Suspense fallback={overlayFallback(UI_TEXT.plugins)}><PluginsDesktopSurface activeAgentId={activeAgent?.id ?? null} bridge={bridge} githubAuth={pluginAuthBanner} initialQuery={pluginQuery} isOpen key={pluginQuery} onClose={() => setOverlay(null)} onNotice={publishSettingsNotice} privateSkillEnableSource={privateSkillEnableSource} privateSkillSource={pluginPrivateSkillSource} /></Suspense></div> : null}
+      {overlay === "settings" && bridge != null ? <LocalSettings bridge={bridge} onClose={() => setOverlay(null)} /> : null}
+
       {overlay === "about" && bridge != null ? <div style={OVERLAY_FRAME_STYLE}><RecoveredAboutDialog
         bridge={bridge}
         labels={{ copied: UI_TEXT.copied, copyVersionInfo: UI_TEXT.copyVersionInfo, copyright: UI_TEXT.copyright, title: UI_TEXT.title }}
@@ -3745,7 +3738,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       {/* onOpenRoutine={(agentId) => void openAgent(agentId)} */}
       <CommandPalette
         agents={agents}
-        commands={paletteCommands}
+        commands={paletteCommands.filter((command) => command.id === "settings:general" || command.id === "new:chat").map((command) => ({ ...command, label: command.id === "new:chat" ? t("New") : t("Settings") }))}
         routines={routineSnapshot.value}
         routineStatus={routineSnapshot.status}
         files={fileSnapshot.value}

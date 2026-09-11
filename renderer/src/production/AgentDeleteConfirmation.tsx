@@ -1,3 +1,4 @@
+import { t } from "./locale";
 import { useEffect, useRef, useState } from "react";
 import { SandButton } from "../recovered/ui/sand-kit-primitives";
 
@@ -17,8 +18,8 @@ export interface AgentDeleteConfirmationProps {
 }
 
 function deleteDescription(agent: AgentDeleteTarget): string {
-  if (agent.isGroup === true) return "This permanently deletes the group and its chat history. The Bots in it are not deleted and remain available individually. This can't be undone.";
-  return "This permanently deletes the agent and its chat history. This can't be undone.";
+  if (agent.isGroup === true) return t("This permanently deletes the group and its chat history. The Bots in it are not deleted and remain available individually. This can't be undone.");
+  return t("This permanently deletes the agent and its chat history. This can't be undone.");
 }
 
 export function AgentDeleteConfirmation({ agent, onClose, onConfirm }: AgentDeleteConfirmationProps) {
@@ -96,8 +97,8 @@ export function AgentDeleteConfirmation({ agent, onClose, onConfirm }: AgentDele
     <p>{deleteDescription(agent)}</p>
     {failure == null ? null : <p role="alert">{failure}</p>}
     <footer style={{ display: "flex", justifyContent: "flex-end", gap: 8, margin: "18px -20px -20px", padding: "12px 16px", borderTop: "1px solid var(--cursor-border-secondary)" }}>
-      <SandButton disabled={pending} onClick={onClose} size="sm" variant="secondary">Cancel</SandButton>
-      <SandButton disabled={pending} onClick={() => void confirm()} ref={confirmRef} sentiment="danger" size="sm">{pending ? "Deleting..." : "Delete"}</SandButton>
+      <SandButton disabled={pending} onClick={onClose} size="sm" variant="secondary">{t("Cancel")}</SandButton>
+      <SandButton disabled={pending} onClick={() => void confirm()} ref={confirmRef} sentiment="danger" size="sm">{pending ? t("Deleting...") : t("Delete")}</SandButton>
     </footer>
   </div>;
 }

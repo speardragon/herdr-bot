@@ -19,8 +19,10 @@ npm run desktop:package        # .build/desktop/mac-arm64/herdr-bot.app
 
 - `+` → **Bot**: herdr에 새 에이전트를 띄우거나(Start) 이미 떠 있는 에이전트를 채택(Adopt).
 - `+` → **Room**: 봇을 골라 단체방을 만든다. 방에 쓰면 봇들이 라운드로빈으로 답하고, `@id`로 특정 봇만 부를 수 있다.
-- 봇 DM 헤더의 터미널 버튼은 herdr에서 그 봇의 pane으로 이동한다.
-- 봇은 메인 herdr 세션이 아니라 전용 세션 `herdr-bot`에 뜬다(없으면 앱이 헤드리스로 띄운다). 봇 pane을 보려면 터미널에서 `herdr session attach herdr-bot`. 터미널 버튼(Open in herdr)도 그 세션에 붙어 있을 때만 화면이 움직인다. 메인 세션에 두고 싶으면 `HERDR_BOT_SESSION=default`.
+- 봇 이름을 누르면 이름·페르소나를 수정하고, 방 이름을 누르면 멤버를 초대하거나 제외할 수 있다.
+- 설정은 사이드바 하단에서 연다. 한국어가 기본이며 English와 라이트/다크 모드를 선택할 수 있다. 앱 자체 로그인과 Plugin 메뉴는 제공하지 않는다. 외부 도구는 각 에이전트의 기존 CLI/MCP 환경을 사용한다.
+- `@` 목록에는 현재 방의 봇만 표시된다. 방향키와 Enter/Tab으로 선택하고 Escape로 닫는다. 일반 입력에서 Enter는 전송, Shift+Enter는 줄바꿈이다.
+- 봇은 전용 세션 `herdr-bot`에 뜬다(없으면 앱이 헤드리스로 띄운다). 봇 pane을 보려면 터미널에서 `herdr session attach herdr-bot`. 메인 세션에 두고 싶으면 `HERDR_BOT_SESSION=default`.
 
 ### 앱 아이콘
 

@@ -1,3 +1,4 @@
+import { t } from "../../../../production/locale";
 import { createElement, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { ConversationAgentSummary } from "./model";
 import { SIDEBAR_LAYOUT_BOUNDS, type SidebarLayoutState } from "./sidebar-layout-state";
@@ -98,7 +99,7 @@ export interface SidebarSelectionActionsProps {
 
 function relativeTime(updatedAt: number, now: number): string {
   const seconds = Math.max(0, Math.round((now - updatedAt) / 1000));
-  if (seconds < 60) return "now";
+  if (seconds < 60) return t("now");
   const minutes = Math.round(seconds / 60);
   if (minutes < 60) return `${minutes}m`;
   const hours = Math.round(minutes / 60);
@@ -132,11 +133,11 @@ export function AgentSidebarHeader({ onBroadcast, onNewChat, onOpenNetwork, onOp
           </> : null}
           {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js bytes 2358208-2358400 */}
           {/* u0n: exact New chat button aria label, DOM class, native button semantics, and callback seam. */}
-          <SandIconButton aria-label="New" className="sand-agents-sidebar__new" icon="plus" label="New" onClick={onNewChat} size="sm" shape={isCollapsed ? "circle" : "square"} title="New chat" />
+          <SandIconButton aria-label={t("New")} className="sand-agents-sidebar__new" icon="plus" label={t("New")} onClick={onNewChat} size="sm" shape={isCollapsed ? "circle" : "square"} title={t("New chat")} />
         </div>
       </header>
       {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2605212 (a0n search control; sibling of the header) */}
-      {!isCollapsed && onOpenSearch != null ? <SandButton aria-label="Search" className="sand-agents-sidebar__search" onClick={onOpenSearch.onClick} onKeyDown={onOpenSearch.onKeyDown} size="md" variant="secondary"><SandIcon name="search" size="md" />Search</SandButton> : null}
+      {!isCollapsed && onOpenSearch != null ? <SandButton aria-label={t("Search")} className="sand-agents-sidebar__search" onClick={onOpenSearch.onClick} onKeyDown={onOpenSearch.onKeyDown} size="md" variant="secondary"><SandIcon name="search" size="md" />{t("Search")}</SandButton> : null}
     </>
   );
 }
@@ -162,12 +163,12 @@ export function SidebarSelectionActions({ selectedAgentIds, selectedSectionableC
   return <header className="sand-agents-sidebar__header sand-agents-sidebar__selection-actions">
     {canMove ? <SandMenuRoot closeOnSelect={false} onOpenChange={setMoveMenuOpen} open={moveMenuOpen} placement="bottom-start">
       <SandMenuTrigger><SandButton aria-label={moveLabel} size="sm" variant="secondary">Move</SandButton></SandMenuTrigger>
-      <SandMenuContent ariaLabel="Move to section">
+      <SandMenuContent ariaLabel={t("Move to section")}>
         {canMoveToExisting ? sections?.map((section, index) => <SandMenuItem index={index} key={section.id} onSelect={() => { onMoveSelectedAgentsToSection?.(selectedAgentIds, section.id); closeMoveMenu(); }}>{section.name}</SandMenuItem>) : null}
-        {onMoveSelectedAgentsToNewSection == null ? null : <SandMenuItem index={sections?.length ?? 0} onSelect={moveToNewSection}>New section</SandMenuItem>}
+        {onMoveSelectedAgentsToNewSection == null ? null : <SandMenuItem index={sections?.length ?? 0} onSelect={moveToNewSection}>{t("New section")}</SandMenuItem>}
       </SandMenuContent>
     </SandMenuRoot> : null}
-    {onDeleteSelectedAgents == null ? null : <SandButton aria-label={deleteLabel} onClick={onDeleteSelectedAgents} sentiment="danger" size="sm">Delete</SandButton>}
+    {onDeleteSelectedAgents == null ? null : <SandButton aria-label={deleteLabel} onClick={onDeleteSelectedAgents} sentiment="danger" size="sm">{t("Delete")}</SandButton>}
     {onClearAgentSelection == null ? null : <SandButton aria-label="Clear selection" onClick={onClearAgentSelection} size="sm" variant="secondary">Clear</SandButton>}
   </header>;
 }
@@ -377,7 +378,7 @@ function SidebarSectionActions({
   return <SandContextMenu
     children={trigger}
     content={<div aria-label="Section actions">
-      <SandMenuItem disabled={onStartRename == null} index={0} onSelect={onStartRename}>Rename</SandMenuItem>
+      <SandMenuItem disabled={onStartRename == null} index={0} onSelect={onStartRename}>{t("Rename")}</SandMenuItem>
       <SandMenuItem disabled={!actionState.canMoveUp || onMove == null || actionState.moveUpTargetId == null} index={1} onSelect={() => {
         const targetId = actionState.moveUpTargetId;
         if (targetId != null && onMove != null) onMove(targetId, "before");
@@ -386,7 +387,7 @@ function SidebarSectionActions({
         const targetId = actionState.moveDownTargetId;
         if (targetId != null && onMove != null) onMove(targetId, "after");
       }}>Move down</SandMenuItem>
-      <SandMenuItem disabled={onRequestDelete == null} index={3} onSelect={onRequestDelete}>Delete</SandMenuItem>
+      <SandMenuItem disabled={onRequestDelete == null} index={3} onSelect={onRequestDelete}>{t("Delete")}</SandMenuItem>
     </div>}
     onOpenChange={setMenuPoint}
     open={menuPoint}
@@ -453,10 +454,10 @@ export function ConversationSidebar({ agents, sections, pinnedAgentIds = [], act
     return createdSectionId;
   }} onMoveAgentToSection={onMoveAgentToSection} onOpen={() => onOpenAgent(agent.id)} onOpenProfile={onOpenProfile} onShowAsyncTasks={onShowAsyncTasks} onShowFullConversation={onShowFullConversation} onRangeSelect={onRangeSelectAgent} onReorderPinnedAgents={onReorderPinnedAgents} onRequestDelete={onRequestDeleteAgent} onRename={onRenameAgent} onSetAgentUnread={onSetAgentUnread} onTogglePin={onTogglePin} onToggleSelect={onToggleAgentSelection} isSelected={selectedIds.has(agent.id)} selectionEnabled={selectedAgentIds.length > 0 || onToggleAgentSelection != null || onRangeSelectAgent != null} sections={sections} sourceSectionId={sourceSectionId} />;
   return (
-    <aside aria-label="Agents" className="sand-agents-sidebar" data-sidebar-collapsed={isCollapsed || undefined} style={{ width: sidebarWidth }}>
+    <aside aria-label={t("Agents")} className="sand-agents-sidebar" data-sidebar-collapsed={isCollapsed || undefined} style={{ width: sidebarWidth }}>
       {selectedAgentIds.length > 0 ? <SidebarSelectionActions onClearAgentSelection={onClearAgentSelection} onCreatedSection={setRenamingSectionId} onDeleteSelectedAgents={onDeleteSelectedAgents} onMoveSelectedAgentsToNewSection={createSectionForSelection} onMoveSelectedAgentsToSection={onMoveSelectedAgentsToSection} sections={sections} selectedAgentIds={selectedAgentIds} selectedSectionableCount={selectedSectionableCount} /> : <AgentSidebarHeader isCollapsed={isCollapsed} onBroadcast={onBroadcast} onNewChat={onNewChat} onOpenNetwork={onOpenNetwork} onOpenSearch={onOpenSearch} />}
       {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2597261 (Wpn scroll-region carrier) */}
-      <nav aria-label="Agent list" className="sand-agents-list" data-sidebar-collapsed={isCollapsed || undefined} role="region" tabIndex={0}>
+      <nav aria-label={t("Agent list")} className="sand-agents-list" data-sidebar-collapsed={isCollapsed || undefined} role="region" tabIndex={0}>
         {listStatus ?? <>
           {orderedPinned.length > 0 ? <div aria-label="Pinned agents" className="sand-agents-pinned" role="group">{orderedPinned.map((agent) => renderAgent(agent))}</div> : null}
           {sections == null ? <div className="sand-agents-list__rows">{unpinned.map((agent) => renderAgent(agent))}</div> : sections.map((section) => isCollapsed ? section.agents.map((agent) => renderAgent(agent, section.id)) : <div

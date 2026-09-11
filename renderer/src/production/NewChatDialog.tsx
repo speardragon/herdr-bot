@@ -1,3 +1,4 @@
+import { t } from "./locale";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { RendererAgent } from "./model";
 import { OverlayDialog } from "../recovered/ui/overlay-primitives";
@@ -142,7 +143,7 @@ export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom
   const effectiveId = useMemo(() => uniqueBotId(name, takenIds), [name, takenIds]);
   const bots = useMemo(() => agents.filter((agent) => !agent.isGroup), [agents]);
   const sourceOptions = useMemo(() => [
-    { value: SPAWN, label: "Start a new agent in herdr" },
+    { value: SPAWN, label: t("Start a new agent in herdr") },
     ...adoptable.map((agent) => ({ value: agent.pane_id, label: `Adopt ${agent.agent ?? "agent"} at ${agent.pane_id}${agent.cwd ? ` (${agent.cwd})` : ""}` })),
   ], [adoptable]);
   const kindOptions: SandSelectOption<string>[] = useMemo(() => KIND_META.map((meta) => ({
@@ -168,20 +169,20 @@ export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom
     }
   };
 
-  return <OverlayDialog className="sand-new-chat-dialog" label="New" onClose={onClose} open={open} panelStyle={{ width: "min(520px, calc(100% - 32px))", padding: 20 }}>
-    <h2 className="sand-new-chat-dialog__title">New</h2>
-    <SandTabs ariaLabel="What to create" items={TABS.map((item) => ({ id: item.id, label: item.label }))} onValueChange={(value) => setTab(value === "room" ? "room" : "bot")} value={tab} />
+  return <OverlayDialog className="sand-new-chat-dialog" label={t("New")} onClose={onClose} open={open} panelStyle={{ width: "min(520px, calc(100% - 32px))", padding: 20 }}>
+    <h2 className="sand-new-chat-dialog__title">{t("New")}</h2>
+    <SandTabs ariaLabel={t("What to create")} items={TABS.map((item) => ({ id: item.id, label: t(item.label) }))} onValueChange={(value) => setTab(value === "room" ? "room" : "bot")} value={tab} />
     {tab === "bot" ? <div className="sand-new-chat-dialog__form">
-      <SandTextField autoFocus label="Name" onChange={(event) => setName(event.currentTarget.value)} placeholder="Code Reviewer" value={name} />
-      <SandTextarea label="Persona (optional)" minRows={2} onChange={(event) => setDescription(event.currentTarget.value)} placeholder="Reviews diffs for correctness and style." value={description} />
-      {sourceOptions.length > 1 ? <label className="sand-new-chat-dialog__row"><span>Source</span><SandSelect ariaLabel="Source" className="ui-select-trigger" matchAnchorWidth onValueChange={setSource} options={sourceOptions} value={source} /></label> : null}
+      <SandTextField autoFocus label={t("Name")} onChange={(event) => setName(event.currentTarget.value)} placeholder={t("Code Reviewer")} value={name} />
+      <SandTextarea label={t("Persona (optional)")} minRows={2} onChange={(event) => setDescription(event.currentTarget.value)} placeholder={t("Reviews diffs for correctness and style.")} value={description} />
+      {sourceOptions.length > 1 ? <label className="sand-new-chat-dialog__row"><span>{t("Source")}</span><SandSelect ariaLabel={t("Source")} className="ui-select-trigger" matchAnchorWidth onValueChange={setSource} options={sourceOptions} value={source} /></label> : null}
       {source === SPAWN ? <>
-        <label className="sand-new-chat-dialog__row"><span>Agent</span><SandSelect ariaLabel="Agent kind" className="ui-select-trigger" onValueChange={setKind} options={kindOptions} value={kind} /></label>
+        <label className="sand-new-chat-dialog__row"><span>{t("Agent")}</span><SandSelect ariaLabel={t("Agent kind")} className="ui-select-trigger" onValueChange={setKind} options={kindOptions} value={kind} /></label>
         <div className="sand-new-chat-dialog__cwd">
           <SandTextField
             description={cwd.trim().length > 0 && !cwdExists ? undefined : "Where the agent's shell starts"}
             error={cwd.trim().length > 0 && !cwdExists ? "No such directory" : undefined}
-            label="Working directory"
+            label={t("Working directory")}
             mono
             onBlur={() => setTimeout(() => setCwdMenuOpen(false), 120)}
             onChange={(event) => { setCwd(event.currentTarget.value); setCwdMenuOpen(true); }}
@@ -194,20 +195,20 @@ export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom
             </div>
           </div> : null}
         </div>
-        <label className="sand-new-chat-dialog__row"><span>Permissions</span><SandSelect ariaLabel="Permissions" className="ui-select-trigger" onValueChange={setPermissionMode} options={[{ value: "ask" as const, label: "Ask before edits and commands" }, { value: "auto" as const, label: "Full access, no confirmation" }]} value={permissionMode} /></label>
+        <label className="sand-new-chat-dialog__row"><span>{t("Permissions")}</span><SandSelect ariaLabel={t("Permissions")} className="ui-select-trigger" onValueChange={setPermissionMode} options={[{ value: "ask" as const, label: t("Ask before edits and commands") }, { value: "auto" as const, label: t("Agent-specific automation permissions") }]} value={permissionMode} /></label>
       </> : null}
     </div> : <div className="sand-new-chat-dialog__form">
-      <SandTextField autoFocus label="Room name" onChange={(event) => setRoomName(event.currentTarget.value)} placeholder="Auth refactor" value={roomName} />
-      <SandTextarea label="Goal (optional)" minRows={2} onChange={(event) => setRoomGoal(event.currentTarget.value)} placeholder="Ship the login fix with tests and a changelog entry." value={roomGoal} />
+      <SandTextField autoFocus label={t("Room name")} onChange={(event) => setRoomName(event.currentTarget.value)} placeholder={t("Auth refactor")} value={roomName} />
+      <SandTextarea label={t("Goal (optional)")} minRows={2} onChange={(event) => setRoomGoal(event.currentTarget.value)} placeholder={t("Ship the login fix with tests and a changelog entry.")} value={roomGoal} />
       <fieldset className="sand-new-chat-dialog__members">
-        <legend>Members ({members.size}/6)</legend>
-        {bots.length === 0 ? <p>Create a bot first.</p> : bots.map((bot) => <SandCheckbox checked={members.has(bot.id)} key={bot.id} label={`${bot.name} (@${bot.id})`} onCheckedChange={(checked) => setMembers((current) => { const next = new Set(current); if (checked) next.add(bot.id); else next.delete(bot.id); return next; })} />)}
+        <legend>{t("Members")} ({members.size}/6)</legend>
+        {bots.length === 0 ? <p>{t("Create a bot first.")}</p> : bots.map((bot) => <SandCheckbox checked={members.has(bot.id)} key={bot.id} label={`${bot.name} (@${bot.id})`} onCheckedChange={(checked) => setMembers((current) => { const next = new Set(current); if (checked) next.add(bot.id); else next.delete(bot.id); return next; })} />)}
       </fieldset>
     </div>}
     {error == null ? null : <p className="sand-new-chat-dialog__error" role="alert">{error}</p>}
     <footer className="sand-new-chat-dialog__footer">
-      <SandButton disabled={pending} onClick={onClose} size="sm" variant="secondary">Cancel</SandButton>
-      <SandButton disabled={tab === "bot" ? !canCreateBot : !canCreateRoom} onClick={() => void submit()} size="sm">{pending ? "Creating…" : tab === "bot" ? (source === SPAWN ? "Start bot" : "Adopt bot") : "Create room"}</SandButton>
+      <SandButton disabled={pending} onClick={onClose} size="sm" variant="secondary">{t("Cancel")}</SandButton>
+      <SandButton disabled={tab === "bot" ? !canCreateBot : !canCreateRoom} onClick={() => void submit()} size="sm">{pending ? t("Creating…") : tab === "bot" ? (source === SPAWN ? t("Start bot") : t("Adopt bot")) : t("Create room")}</SandButton>
     </footer>
   </OverlayDialog>;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type CSSProperties, type InputEvent, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type TextareaHTMLAttributes } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ChangeEvent, type CSSProperties, type InputEvent, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type TextareaHTMLAttributes } from "react";
 
 import "./sand-form-primitives.css";
 import { SandIcon } from "./sand-kit-primitives";
@@ -59,6 +59,8 @@ export interface SandTextFieldProps extends Omit<InputHTMLAttributes<HTMLInputEl
 }
 
 export function SandTextField({ id, label, description, error, required = false, size = "base", variant = "default", frame = "container", shape = "rounded", mono = false, disabled = false, className, "aria-describedby": ariaDescribedBy, ...inputProps }: SandTextFieldProps): ReactNode {
+  const generatedId = useId();
+  id ??= generatedId;
   const messageId = fieldMessageId(id);
   const describedBy = [ariaDescribedBy, messageId].filter(Boolean).join(" ") || undefined;
   return <SandField disabled={disabled} description={description} error={error} id={id} label={label} required={required}>
@@ -80,6 +82,8 @@ export interface SandTextareaProps extends TextareaHTMLAttributes<HTMLTextAreaEl
 }
 
 export function SandTextarea({ id, label, description, error, required = false, size = "base", minRows = 1, maxRows, autoResize = true, disabled = false, className, "aria-describedby": ariaDescribedBy, onInput, rows, ...textareaProps }: SandTextareaProps): ReactNode {
+  const generatedId = useId();
+  id ??= generatedId;
   const messageId = fieldMessageId(id);
   const describedBy = [ariaDescribedBy, messageId].filter(Boolean).join(" ") || undefined;
   const resolvedRows = rows ?? minRows;

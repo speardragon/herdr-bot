@@ -1,3 +1,4 @@
+import { t } from "../../../../production/locale";
 import { getSchema, type JSONContent } from "@tiptap/core";
 import { normalizeLinkUrl } from "../cards/transcript-card/url-card";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
@@ -71,7 +72,7 @@ const deliveryActionButtonClass = "sand-y5h43f sand-19ji09o";
 function QueuedSendNotice({ entry, isTransportDown, onCancel }: { entry: TranscriptMessage; isTransportDown: boolean; onCancel?: (entry: TranscriptMessage) => void }) {
   return <div className="sand-queued-send-notice sand-pvyfi4 sand-78zum5 sand-6s0dn4 sand-1a02dak sand-13a6bvl sand-11twubx sand-1om1abp" role="status">
     <span>{isTransportDown ? "Will send when reconnected" : "Waiting to send…"}</span>
-    {onCancel == null ? null : <button className={deliveryActionButtonClass} onClick={() => onCancel(entry)} type="button">Cancel</button>}
+    {onCancel == null ? null : <button className={deliveryActionButtonClass} onClick={() => onCancel(entry)} type="button">{t("Cancel")}</button>}
   </div>;
 }
 
@@ -79,14 +80,14 @@ function FailedSendActions({ entry, onDelete, onResend }: { entry: TranscriptMes
   return <div aria-label="Failed message actions" className="sand-failed-send-actions sand-pvyfi4 sand-78zum5 sand-6s0dn4 sand-1a02dak sand-13a6bvl sand-11twubx sand-1om1abp" role="group">
     <span className="sand-6rl5ky sand-y5h43f sand-1rhlpx6 sand-19ji09o" role="status">Failed to send</span>
     {onResend == null ? null : <button className={deliveryActionButtonClass} onClick={() => onResend(entry)} type="button">Resend</button>}
-    {onDelete == null ? null : <button className={deliveryActionButtonClass} onClick={() => onDelete(entry)} type="button">Delete</button>}
+    {onDelete == null ? null : <button className={deliveryActionButtonClass} onClick={() => onDelete(entry)} type="button">{t("Delete")}</button>}
   </div>;
 }
 
 function SentWhileOfflineNotice({ composedAtMs }: { composedAtMs: number }) {
   let label: string;
   try {
-    label = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(composedAtMs));
+    label = new Intl.DateTimeFormat(t("en-US", "ko-KR"), { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(composedAtMs));
   } catch {
     label = new Date(composedAtMs).toISOString();
   }
@@ -213,10 +214,10 @@ function MessageActionAnchor({ entry, isReadOnly, threadRootId, threadSummary, o
           <span aria-hidden="true" data-icon-name="dots-3-horizontal" style={{ fontFamily: "cursor-icons" }}>{String.fromCodePoint(messageActionIconCodePoint("dots-3-horizontal"))}</span>
         </button>
         {menuOpen ? <div aria-label="More message actions" role="menu" style={{ position: "absolute", right: 0, bottom: "34px", display: "grid", minWidth: "150px", padding: "4px", background: "#20231f", border: "1px solid #343832", borderRadius: "8px", boxShadow: "0 12px 28px rgba(0, 0, 0, .35)" }}>
-          {!isReadOnly && isThreadActionVisible && onReply != null ? <button className="sand-message-hover-actions__button" onClick={() => { onReply(entry); closeMenu(true); }} role="menuitem" style={{ width: "100%", border: 0, borderRadius: "5px", textAlign: "left" }} type="button"><span aria-hidden="true" data-icon-name={replyActionIconName(entry)} />Reply</button> : null}
+          {!isReadOnly && isThreadActionVisible && onReply != null ? <button className="sand-message-hover-actions__button" onClick={() => { onReply(entry); closeMenu(true); }} role="menuitem" style={{ width: "100%", border: 0, borderRadius: "5px", textAlign: "left" }} type="button"><span aria-hidden="true" data-icon-name={replyActionIconName(entry)} />{t("Reply")}</button> : null}
           {!isReadOnly && isThreadActionVisible && onStartThread != null ? <button className="sand-message-hover-actions__button" onClick={() => { onStartThread(entry); closeMenu(true); }} role="menuitem" style={{ width: "100%", border: 0, borderRadius: "5px", textAlign: "left" }} type="button"><span aria-hidden="true" data-icon-name="chat-bubbles" />Start a thread</button> : null}
           {/* @evidence recovered/frontend/app/assets/index-UbX-y3il.js#byteOffset=6395536 (immutable Copy item is conditional on injected onCopy; UTF-8; SHA256 80464803b50f478598080bdc1b91da3996c6b74168e2351ea26f620f2ec62ba5) */}
-          {onCopy == null ? null : <button className="sand-message-hover-actions__button" onClick={copy} role="menuitem" style={{ width: "100%", border: 0, borderRadius: "5px", textAlign: "left" }} type="button"><span aria-hidden="true" data-icon-name="copy" style={{ fontFamily: "cursor-icons" }}>{String.fromCodePoint(messageActionIconCodePoint("copy"))}</span>Copy</button>}
+          {onCopy == null ? null : <button className="sand-message-hover-actions__button" onClick={copy} role="menuitem" style={{ width: "100%", border: 0, borderRadius: "5px", textAlign: "left" }} type="button"><span aria-hidden="true" data-icon-name="copy" style={{ fontFamily: "cursor-icons" }}>{String.fromCodePoint(messageActionIconCodePoint("copy"))}</span>{t("Copy")}</button>}
         </div> : null}
       </div>
     </div>
@@ -703,7 +704,7 @@ export function ConversationTranscript({ entries, hasOlder = false, isLoadingOld
       : (entry) => resolveTranscriptCardInteractions.getThreadSummary(entry.id) != null,
   });
   return (
-    <div aria-label="Conversation transcript" aria-live="off" className="sand-virtual-transcript" ref={transcriptRef} role="log" tabIndex={0}>
+    <div aria-label={t("Conversation transcript")} aria-live="off" className="sand-virtual-transcript" ref={transcriptRef} role="log" tabIndex={0}>
       {entries.map((entry, index) => {
         if (entry.kind === "time-separator") return <div className="sand-transcript-time-separator" key={entry.id} role="separator">{entry.label}</div>;
         if (entry.kind === "unread-divider") return <div className="sand-unread-divider" key={entry.id} role="separator"><span className="sand-unread-divider__label">{entry.newMessageCount} new {entry.newMessageCount === 1 ? "message" : "messages"}</span></div>;
@@ -776,8 +777,8 @@ export function ConversationTranscript({ entries, hasOlder = false, isLoadingOld
             key={entry.id}
             role="article"
           >
-            <span hidden id={ids.author}>{entry.author}</span>
-            <time dateTime={new Date(entry.timestampMs).toISOString()} hidden id={ids.timestamp}>{new Date(entry.timestampMs).toLocaleString()}</time>
+            <span hidden id={ids.author}>{entry.role === "user" ? t("You", "나") : entry.author}</span>
+            <time dateTime={new Date(entry.timestampMs).toISOString()} hidden id={ids.timestamp}>{new Date(entry.timestampMs).toLocaleString(t("en-US", "ko-KR"))}</time>
             <MessageActionAnchor entry={entry} isReadOnly={isReadOnly} onCopy={onCopyMessage} onOpenThread={resolveTranscriptCardInteractions?.openThread} onReply={onReply} onStartThread={onStartThread} renderReactionActions={reactionActions} threadRootId={threadRootId} threadSummary={threadSummary}>
               <div aria-label={entry.role === "assistant" ? "Agent message" : undefined} className="sand-message" data-group-start={messageAdjacency.isGroupStart || undefined} data-role={entry.role} role="group">
                 {replyPreview != null && onOpenReply != null ? <ReferencedMessagePreviewTrigger

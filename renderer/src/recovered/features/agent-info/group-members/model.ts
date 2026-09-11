@@ -1,4 +1,5 @@
 import type { AppAlertController, AppAlertRequest } from "../../window-chrome/app-alert/controller";
+import { t } from "../../../../production/locale";
 
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2291345 (non-shared group gate)
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2723358 (F2n removal request)
@@ -89,11 +90,11 @@ function removalRequest(
   removeMember: () => Promise<void>
 ): AppAlertRequest {
   return {
-    title: `Remove ${name} from this conversation?`,
+    title: t(`Remove ${name} from this conversation?`, `이 방에서 ${name} 봇을 제외할까요?`),
     description: "",
-    confirmLabel: "Remove",
-    pendingLabel: "Removing...",
-    cancelLabel: "Cancel",
+    confirmLabel: t("Remove"),
+    pendingLabel: t("Removing...", "제외하는 중…"),
+    cancelLabel: t("Cancel"),
     destructive: true,
     perform: async () => {
       try {

@@ -1,3 +1,4 @@
+import { t } from "../../../../production/locale";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import type { AppAlertController } from "../../window-chrome/app-alert/controller";
 import { GROUP_MAX_MEMBERS, type GroupMemberAgent, type GroupMembersProvider } from "./model";
@@ -66,8 +67,8 @@ export function GroupMembersPane({ provider, alert: _alert, agent, accountGenera
   };
 
   return (
-    <section aria-label="Members" className="sand-group-members-section" data-account-generation={snapshot.accountGeneration} data-pending={snapshot.pending?.kind}>
-      <span className="sand-info-pane__section-heading" id={headingId}>Members</span>
+    <section aria-label={t("Members")} className="sand-group-members-section" data-account-generation={snapshot.accountGeneration} data-pending={snapshot.pending?.kind}>
+      <span className="sand-info-pane__section-heading" id={headingId}>{t("Members")}</span>
       <ul aria-labelledby={headingId} className="sand-group-members-list">
         {snapshot.members.map((member) => {
           const nameId = `${headingId}-${member.id}-name`;
@@ -75,19 +76,20 @@ export function GroupMembersPane({ provider, alert: _alert, agent, accountGenera
             <button aria-label={`Open ${member.name}'s chat`} className="sand-group-member-open" onClick={() => onOpenAgentChat(member.id)} type="button">
               <span className="sand-group-member-name" id={nameId}>{member.name}</span>
             </button>
-            <button aria-label={`Remove ${member.name}`} disabled={!snapshot.canRemove} onClick={() => { void provider.requestRemoveMember(member); }} type="button">Remove</button>
+            <button aria-label={`Remove ${member.name}`} disabled={!snapshot.canRemove} onClick={() => { void provider.requestRemoveMember(member); }} type="button">{t("Remove")}</button>
           </li>;
         })}
         {snapshot.canAdd ? <li className="sand-group-member-add-row">
           <div ref={menuRef}>
-            <button aria-expanded={menuOpen} aria-haspopup="menu" aria-label="Add Member" className="sand-group-member-add" disabled={snapshot.pending != null} onClick={() => setMenuOpen((open) => !open)} ref={triggerRef} type="button">Add Member</button>
-            {menuOpen ? <div aria-label="Add Member" role="menu">
+            <button aria-expanded={menuOpen} aria-haspopup="menu" aria-label={t("Add Member")} className="sand-group-member-add" disabled={snapshot.pending != null} onClick={() => setMenuOpen((open) => !open)} ref={triggerRef} type="button">{t("Add Member")}</button>
+            {menuOpen ? <div aria-label={t("Add Member")} role="menu">
               {snapshot.candidates.map((candidate) => <button key={candidate.id} onClick={() => selectMember(candidate)} role="menuitem" type="button">{candidate.name}</button>)}
             </div> : null}
           </div>
         </li> : null}
       </ul>
-      {snapshot.group.memberIds.length >= GROUP_MAX_MEMBERS ? <div className="sand-group-members-footer">{`Groups can have up to ${GROUP_MAX_MEMBERS} members.`}</div> : snapshot.candidates.length === 0 ? <div className="sand-group-members-footer">Create more Bots to add them here.</div> : null}
+      {snapshot.failure == null ? null : <p role="alert">{t("Could not update members. Please try again.", "멤버를 변경하지 못했습니다. 다시 시도해 주세요.")}</p>}
+      {snapshot.group.memberIds.length >= GROUP_MAX_MEMBERS ? <div className="sand-group-members-footer">{t(`Groups can have up to ${GROUP_MAX_MEMBERS} members.`, `한 방에 최대 ${GROUP_MAX_MEMBERS}명의 봇을 초대할 수 있습니다.`)}</div> : snapshot.candidates.length === 0 ? <div className="sand-group-members-footer">{t("Create more Bots to add them here.")}</div> : null}
     </section>
   );
 }

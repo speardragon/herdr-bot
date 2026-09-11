@@ -1,3 +1,4 @@
+import { t } from "../../../../production/locale";
 import { Extension, Node as TiptapNode, mergeAttributes, type Editor, type NodeViewRenderer } from "@tiptap/core";
 import { Placeholder } from "@tiptap/extension-placeholder";
 import { Link } from "@tiptap/extension-link";
@@ -312,6 +313,18 @@ function createSuggestionRenderer(className: string, optionClassName: string, ar
   let visible = false;
   let escapeDismissed = false;
   let activeEditor: Pick<Editor, "on" | "off"> | null = null;
+  let getAnchorRect: (() => DOMRect | null) | null = null;
+  const position = () => {
+    const rect = getAnchorRect?.();
+    if (wrapper == null || rect == null) return;
+    const margin = 12;
+    const size = wrapper.getBoundingClientRect();
+    const left = Math.max(margin, Math.min(rect.left, window.innerWidth - size.width - margin));
+    const below = rect.bottom + 8;
+    const top = below + size.height <= window.innerHeight - margin ? below : Math.max(margin, rect.top - size.height - 8);
+    wrapper.style.left = `${Math.round(left)}px`;
+    wrapper.style.top = `${Math.round(top)}px`;
+  };
   const onEditorBlur = () => {
     visible = false;
     if (wrapper != null) wrapper.style.display = "none";
@@ -347,7 +360,14 @@ function createSuggestionRenderer(className: string, optionClassName: string, ar
       button.id = `${listboxId}-option-${index}`;
       button.setAttribute("role", "option");
       button.setAttribute("aria-selected", String(index === activeIndex));
-      button.textContent = rowLabel(row);
+      const name = document.createElement("span");
+      name.textContent = row.label;
+      button.append(name);
+      if (row.subtitle) {
+        const subtitle = document.createElement("small");
+        subtitle.textContent = row.subtitle;
+        button.append(subtitle);
+      }
       const activate = (event: MouseEvent) => {
         event.preventDefault();
         select(row.value);
@@ -355,12 +375,14 @@ function createSuggestionRenderer(className: string, optionClassName: string, ar
       };
       button.addEventListener("mousedown", activate);
       button.addEventListener("click", (event) => { if (event.detail === 0) select(row.value); });
-      button.addEventListener("pointermove", () => { activeIndex = index; render(); });
+      button.addEventListener("pointermove", () => { if (activeIndex !== index) { activeIndex = index; render(); } });
       option.append(button);
       element?.append(option);
     });
   };
   const dismiss = () => {
+    window.removeEventListener("resize", position);
+    document.removeEventListener("scroll", position, true);
     setVisible(false);
     wrapper?.remove();
     wrapper = null;
@@ -375,6 +397,9 @@ function createSuggestionRenderer(className: string, optionClassName: string, ar
       activeIndex = 0;
       escapeDismissed = false;
       activeEditor = props.editor ?? null;
+      getAnchorRect = props.clientRect ?? null;
+      window.addEventListener("resize", position);
+      document.addEventListener("scroll", position, true);
       activeEditor?.on("blur", onEditorBlur);
       wrapper = document.createElement("div");
       wrapper.style.position = "fixed";
@@ -389,12 +414,8 @@ function createSuggestionRenderer(className: string, optionClassName: string, ar
       wrapper.append(element);
       document.body.append(wrapper);
       render();
-      const rect = props.clientRect?.();
-      if (rect != null && wrapper != null) {
-        wrapper.style.left = `${Math.round(rect.left)}px`;
-        wrapper.style.top = `${Math.round(rect.bottom)}px`;
-      }
       setVisible(true);
+      position();
       onOpenChange?.(rows.length > 0);
     },
     onUpdate(props: { items: readonly SuggestionRow[]; query?: string; command?: (value: unknown) => void; clientRect?: (() => DOMRect | null) | null; editor?: Pick<Editor, "on" | "off"> }) {
@@ -403,25 +424,24 @@ function createSuggestionRenderer(className: string, optionClassName: string, ar
       select = props.command ?? select;
       activeIndex = Math.min(activeIndex, Math.max(0, rows.length - 1));
       render();
-      const rect = props.clientRect?.();
-      if (rect != null && wrapper != null) {
-        wrapper.style.left = `${Math.round(rect.left)}px`;
-        wrapper.style.top = `${Math.round(rect.bottom)}px`;
-      }
+      getAnchorRect = props.clientRect ?? getAnchorRect;
       if (escapeDismissed) {
         setVisible(false);
         onOpenChange?.(false);
         return;
       }
       setVisible(true);
+      position();
       onOpenChange?.(rows.length > 0);
     },
     onKeyDown(props: { event: KeyboardEvent }) {
+      if (!visible || escapeDismissed) return false;
       if (props.event.key === "ArrowDown" || props.event.key === "ArrowUp") {
         props.event.preventDefault();
         const delta = props.event.key === "ArrowDown" ? 1 : -1;
         activeIndex = rows.length === 0 ? 0 : (activeIndex + delta + rows.length) % rows.length;
         render();
+        element?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
         return true;
       }
       if (props.event.key === "Enter" || props.event.key === "Tab") {
@@ -432,10 +452,11 @@ function createSuggestionRenderer(className: string, optionClassName: string, ar
         return true;
       }
       if (props.event.key === "Escape") {
+        props.event.preventDefault();
         props.event.stopPropagation();
         escapeDismissed = true;
         dismiss();
-        return false;
+        return true;
       }
       return false;
     },
@@ -474,7 +495,7 @@ function mentionSuggestion(providers: PromptEditorProviders["mention"]): Omit<Su
       let renderer: ReturnType<typeof createSuggestionRenderer> | null = null;
       return {
         onStart: (props) => {
-          renderer = createSuggestionRenderer("sand-mention-listbox", "sand-mention-option", "Mention", (value) => props.command(value), providers?.onOpenChange, providers?.onVisibleChange, (query) => query.trim().length > 0 ? `No matches for "${query.trim()}"` : "Nothing to mention yet");
+          renderer = createSuggestionRenderer("sand-mention-listbox", "sand-mention-option", t("Mention"), (value) => props.command(value), providers?.onOpenChange, providers?.onVisibleChange, (query) => query.trim().length > 0 ? `No matches for "${query.trim()}"` : t("Nothing to mention yet"));
           renderer.onStart({ editor: props.editor, query: props.query, command: props.command, clientRect: props.clientRect, items: props.items.map((entry) => ({ id: entry.id, label: entry.label, subtitle: entry.subtitle, value: entry })) });
         },
         onUpdate: (props) => renderer?.onUpdate({ editor: props.editor, query: props.query, command: props.command, clientRect: props.clientRect, items: props.items.map((entry) => ({ id: entry.id, label: entry.label, subtitle: entry.subtitle, value: entry })) }),
@@ -732,12 +753,17 @@ export function PromptRichTextEditor({ prompt, richText, scopeKey = "", clearGen
       attributes: {
         class: "sand-prompt-field",
         spellcheck: "false",
-        "aria-label": "Prompt",
+        "aria-label": t("Prompt"),
         "aria-multiline": "true",
         role: "textbox"
       },
       handleKeyDown: (_view, event) => {
         if (event.isComposing) return false;
+        // Suggestions own selection keys before the editor's submit shortcut.
+        const suggestion = document.querySelector(".sand-mention-listbox, .sand-workflow-listbox, .sand-pr-listbox, .sand-emoji-listbox");
+        if (suggestion != null && suggestion.parentElement?.style.display !== "none"
+          && ["Enter", "Tab", "Escape", "ArrowUp", "ArrowDown"].includes(event.key)
+          && [MENTION_PLUGIN_KEY, WORKFLOW_PLUGIN_KEY, PR_PLUGIN_KEY, EMOJI_PLUGIN_KEY].some((key) => key.getState(_view.state)?.active)) return false;
         if (event.key === "Escape") {
           event.preventDefault();
           callbacks.current.onEscape();
