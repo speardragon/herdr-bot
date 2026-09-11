@@ -111,6 +111,87 @@ test("a poll cannot bypass the reconnect gate; the clock, not the poll, unlocks 
   }
 });
 
+test("a global-only reconnect success does not merge the next same-code transport close into the previous one's dedup state", async () => {
+  const temp = makeTempHome();
+  const socket = await startFakeHerdrSocket(join(temp.home, "h.sock"));
+  socket.holdHandshake = true;
+  const lines: string[] = [];
+  setLogSink((line) => lines.push(line));
+  try {
+    const fake = installFakeHerdr(temp.home, { agents: [], workspaces: [] });
+    let clock = 0;
+    const mirror = new StatusMirror({
+      cli: createHerdrCli(fake.binPath, fake.env),
+      socketPath: socket.path,
+      botIds: () => [],
+      onChange: () => undefined,
+      pollIntervalMs: 60_000,
+      debounceMs: 10,
+      resubscribeMs: 15,
+      handshakeTimeoutMs: 15,
+      now: () => clock,
+    });
+    mirror.start();
+    await mirror.refresh();
+    await settle(50);
+    // First transport failure (handshake timeout): a fresh transition, must warn.
+    assert.equal(lines.filter((l) => l.includes("herdr subscription handshake timed out")).length, 1);
+
+    // The gate opens and this reconnect succeeds without any panes (global-only) -- the steady-state
+    // this task targets. A successful reconnect must reset the "same error" dedup state even though
+    // it never touched the pane-probe path.
+    clock = 30_000;
+    socket.holdHandshake = false;
+    await mirror.refresh();
+    await settle(50);
+
+    // Drop the now-live connection and let the mirror's own backoff bring it back down, hanging again.
+    socket.dropClients();
+    await settle(50);
+    clock = 60_000;
+    socket.holdHandshake = true;
+    await mirror.refresh();
+    await settle(50);
+
+    // Second transport failure carries the SAME code ("handshake_timeout") as the first. Because a
+    // successful connect happened in between, this must be treated as a fresh transition and warn again,
+    // not be silently merged into the first occurrence's repeat count.
+    assert.equal(lines.filter((l) => l.includes("herdr subscription handshake timed out")).length, 2, `expected both handshake-timeout closes to warn independently, got: ${JSON.stringify(lines)}`);
+
+    mirror.stop();
+  } finally {
+    setLogSink((line) => process.stderr.write(`${line}\n`));
+    await socket.close().catch(() => undefined);
+    temp.cleanup();
+  }
+});
+
+test("a second start() call is a no-op: no duplicate poll, resubscribe, or timers", async () => {
+  const temp = makeTempHome();
+  const socket = await startFakeHerdrSocket(join(temp.home, "h.sock"));
+  try {
+    const fake = installFakeHerdr(temp.home, { agents: [], workspaces: [] });
+    const mirror = new StatusMirror({
+      cli: createHerdrCli(fake.binPath, fake.env),
+      socketPath: socket.path,
+      botIds: () => [],
+      onChange: () => undefined,
+      pollIntervalMs: 60_000,
+      debounceMs: 10,
+    });
+    mirror.start();
+    mirror.start();
+    mirror.start();
+    await settle(300);
+    assert.equal(socket.subscriptions.length, 1, "duplicate start() must not trigger extra resubscribe attempts");
+    assert.equal(fake.readLog().length, 1, "duplicate start() must not trigger extra initial refreshes/poll timers");
+    mirror.stop();
+  } finally {
+    await socket.close().catch(() => undefined);
+    temp.cleanup();
+  }
+});
+
 test("pane_not_found falls back to a global-only subscription and gates pane recovery separately from transport backoff", async () => {
   const temp = makeTempHome();
   const socket = await startFakeHerdrSocket(join(temp.home, "h.sock"));
@@ -174,10 +255,11 @@ test("pane_not_found falls back to a global-only subscription and gates pane rec
     assert.ok(socket.subscriptions.length > afterProbe);
     assert.ok(socket.subscriptions.at(-1)?.some((s) => s.pane_id === "w1:p2"));
 
-    // The repeated "pane w1:p2 not found" close (two rejections across the initial attempt and the 30s probe)
-    // must log only once, not once per rejection; recovery logs exactly once too.
+    // The two "pane w1:p2 not found" rejections (initial attempt and the 30s probe) are each a fresh
+    // transition -- a successful global-only reconnect happened in between them, which resets the dedup
+    // state -- so both must warn. Recovery (the pane subscription actually succeeding) logs exactly once.
     const rejectionLines = lines.filter((line) => line.includes("pane w1:p2 not found"));
-    assert.equal(rejectionLines.length, 1, `expected exactly one warn line for the repeated rejection, got: ${JSON.stringify(lines)}`);
+    assert.equal(rejectionLines.length, 2, `expected both rejections to warn independently, got: ${JSON.stringify(lines)}`);
     assert.equal(lines.filter((line) => line.includes("recovered")).length, 1);
 
     mirror.stop();

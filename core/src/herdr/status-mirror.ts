@@ -120,9 +120,9 @@ export class StatusMirror {
           this.#paneProbeRetry.ready();
           if (this.#degraded) log("status-mirror", "herdr pane subscriptions recovered", { repeats: this.#repeatCount });
           this.#degraded = false;
-          this.#lastCloseCode = null;
-          this.#repeatCount = 0;
         }
+        this.#lastCloseCode = null;
+        this.#repeatCount = 0;
       },
       onClose: (error) => {
         if (!current()) return;
