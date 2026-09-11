@@ -121,6 +121,7 @@ const ROSTER_ERROR_CODES: Readonly<Record<RosterErrorCode, ControlErrorCode>> = 
   too_many_members: "invalid_params",
   unsupported_kind: "invalid_params",
   invalid_bot_id: "invalid_params",
+  bot_not_ready: "invalid_params",
 };
 
 function rethrow(error: unknown): never {

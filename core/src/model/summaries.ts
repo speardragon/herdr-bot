@@ -1,3 +1,4 @@
+import type { BotOnboarding } from "../bots/onboarding.ts";
 import type { BotRuntime } from "../herdr/types.ts";
 import type { BotProfile } from "../store/profile-store.ts";
 import type { RoomConfig } from "../store/room-store.ts";
@@ -15,6 +16,8 @@ export interface HerdrBotFacts {
   readonly cwd: string | null;
   readonly adopted: boolean;
   readonly permissionMode: string;
+  /** Present only while/after a quick-created bot is being onboarded; null for every other bot. */
+  readonly onboarding: BotOnboarding | null;
 }
 
 /** Field set read by the grok-bot renderer's projectRendererAgent(). */
@@ -58,7 +61,13 @@ function unread(view: ChatViewState): boolean {
   return hasUnread(view);
 }
 
-function awaiting(runtime: BotRuntime): { reason: AwaitingReason } | null {
+function awaiting(runtime: BotRuntime, onboarding: BotOnboarding | null): { reason: AwaitingReason } | null {
+  if (onboarding != null) {
+    // A failed setup is what needs the user; while it is still spawning/briefing/greeting the bot
+    // is legitimately not online yet, so suppress the "offline" flash the empty runtime would give.
+    if (onboarding.stage === "failed") return { reason: "setup" };
+    if (onboarding.stage !== "ready") return null;
+  }
   if (runtime.status === "blocked") return { reason: "approval" };
   if (runtime.status === "offline") return { reason: "offline" };
   return null;
@@ -101,7 +110,7 @@ export function botSummary(args: {
     lastReadSeq: view.lastReadSeq,
     lastIncomingSeq: view.lastIncomingSeq,
     lastMessageAt: view.lastMessageAt,
-    awaitingUserResponse: awaiting(runtime),
+    awaitingUserResponse: awaiting(runtime, profile.onboarding ?? null),
     notificationsEnabled: false,
     notifyOnUpdatesEnabled: profile.notifyOnUpdatesEnabled,
     isHiddenFromSidebar: profile.isHiddenFromSidebar,
@@ -109,7 +118,7 @@ export function botSummary(args: {
     isGroup: false,
     memberIds: [],
     conversationPartnerIds: [],
-    herdrBot: { kind: profile.kind, status: runtime.status, paneId: runtime.paneId ?? profile.herdr.paneId, cwd: profile.cwd, adopted: profile.adopted, permissionMode: profile.permissionMode },
+    herdrBot: { kind: profile.kind, status: runtime.status, paneId: runtime.paneId ?? profile.herdr.paneId, cwd: profile.cwd, adopted: profile.adopted, permissionMode: profile.permissionMode, onboarding: profile.onboarding ?? null },
   };
 }
 

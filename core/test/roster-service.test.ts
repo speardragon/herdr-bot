@@ -11,6 +11,7 @@ import { RosterError, RosterService } from "../src/services/roster-service.ts";
 import { HerdrError } from "../src/herdr/types.ts";
 import { installFakeHerdr, type FakeHerdrState } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
+import { sampleProfile } from "./helpers/fixtures.ts";
 
 function harness(state: FakeHerdrState = { agents: [], workspaces: [] }) {
   const temp = makeTempHome();
@@ -43,6 +44,37 @@ test("createBot spawns into a new workspace for a new cwd, then a tab for the ne
     const brief = h.fake.readState().prompts?.find((p) => p.target === "code-reviewer");
     assert.match(brief?.text ?? "", /You are "Code Reviewer"/);
     assert.equal(h.mirror.get("fixer").status, "idle");
+  } finally {
+    h.temp.cleanup();
+  }
+});
+
+test("provisionReservedBot spawns a reserved profile, then reuses the named agent on a repeat call", async () => {
+  const h = harness();
+  try {
+    const id = "bot-11111111-1111-1111-1111-111111111111";
+    h.profiles.save(sampleProfile({ id, name: "New bot", cwd: "/tmp/repo", herdr: { paneId: null, workspaceId: null, sessionId: null }, onboarding: { requestId: "11111111-1111-1111-1111-111111111111", locale: "en", stage: "provisioning", error: null } }));
+    const first = await h.service.provisionReservedBot(id);
+    assert.equal(first.status, "started");
+    assert.equal(first.profile.herdr.paneId, "w1:p1");
+    assert.ok(first.profile.herdr.sessionId);
+    assert.equal(first.profile.onboarding?.stage, "provisioning"); // provisioning preserves the onboarding block
+    const startsBefore = h.fake.readLog().filter((argv) => argv.join(" ").startsWith("agent start")).length;
+    const second = await h.service.provisionReservedBot(id);
+    assert.equal(second.status, "started");
+    assert.equal(second.profile.herdr.paneId, "w1:p1");
+    assert.equal(h.fake.readLog().filter((argv) => argv.join(" ").startsWith("agent start")).length, startsBefore);
+  } finally {
+    h.temp.cleanup();
+  }
+});
+
+test("a bot that is still being onboarded cannot be invited into a room", async () => {
+  const h = harness();
+  try {
+    await h.service.createBot({ id: "ready-bot", name: "Ready" });
+    h.profiles.save(sampleProfile({ id: "bot-abc", name: "New bot", onboarding: { requestId: "abc", locale: "en", stage: "provisioning", error: null } }));
+    assert.throws(() => h.service.createRoom({ name: "r", memberIds: ["ready-bot", "bot-abc"] }), (e: unknown) => e instanceof RosterError && e.code === "bot_not_ready");
   } finally {
     h.temp.cleanup();
   }

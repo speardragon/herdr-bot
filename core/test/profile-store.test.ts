@@ -30,3 +30,11 @@ test("projectBotProfile rejects malformed profiles and fills optional booleans",
   assert.equal(projected?.isHiddenFromSidebar, false);
   assert.equal(projectBotProfile({ ...sampleProfile(), permissionMode: "yolo" }), null);
 });
+
+test("projectBotProfile round-trips an onboarding block and drops a malformed one", () => {
+  const withOnboarding = projectBotProfile({ ...sampleProfile(), onboarding: { requestId: "r-1", locale: "ko", stage: "greeting", error: null } });
+  assert.deepEqual(withOnboarding?.onboarding, { requestId: "r-1", locale: "ko", stage: "greeting", error: null });
+  // A bad stage / locale drops the field entirely rather than rejecting the whole profile.
+  assert.equal(projectBotProfile({ ...sampleProfile(), onboarding: { requestId: "r-1", locale: "ko", stage: "nope", error: null } })?.onboarding, undefined);
+  assert.equal(projectBotProfile(sampleProfile())?.onboarding, undefined);
+});

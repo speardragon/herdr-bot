@@ -12,7 +12,14 @@ import type { BotProfile, PermissionMode, ProfileStore } from "../store/profile-
 import type { RoomConfig, RoomStore } from "../store/room-store.ts";
 import { WorkspaceRegistry } from "./workspace-registry.ts";
 
-export type RosterErrorCode = "invalid_bot_id" | "bot_exists" | "unknown_bot" | "unknown_room" | "too_many_members" | "unsupported_kind" | "herdr_error";
+export type RosterErrorCode = "invalid_bot_id" | "bot_exists" | "unknown_bot" | "unknown_room" | "too_many_members" | "unsupported_kind" | "herdr_error" | "bot_not_ready";
+
+/** Outcome of provisioning a reserved (quick-created) bot's herdr agent. `needs_setup` means the pane
+ * exists but its shell needs manual first-run setup in herdr before the agent can be prompted. */
+export interface ReservedProvision {
+  readonly status: "started" | "needs_setup";
+  readonly profile: BotProfile;
+}
 
 export class RosterError extends Error {
   readonly code: RosterErrorCode;
@@ -180,8 +187,88 @@ export class RosterService {
   #validMembers(memberIds: readonly string[]): string[] {
     const unique = [...new Set(memberIds)];
     if (unique.length > GROUP_MAX_MEMBERS) throw new RosterError("too_many_members", `a room holds at most ${GROUP_MAX_MEMBERS} bots`);
-    for (const id of unique) this.#requireBot(id);
+    for (const id of unique) {
+      const bot = this.#requireBot(id);
+      // A bot still being onboarded (or whose onboarding failed) has no confirmed identity/agent yet,
+      // so it may not be invited into a room until it reaches `ready`.
+      if (bot.onboarding != null && bot.onboarding.stage !== "ready") throw new RosterError("bot_not_ready", `"${id}" is still being set up and cannot join a room yet`);
+    }
     return unique;
+  }
+
+  /**
+   * Provisions a reserved (quick-created) bot's herdr agent without the duplicate/id checks `createBot`
+   * runs -- the reserved profile is already saved. Reuses an agent already named for this bot id (a lost
+   * spawn response, or a host restart) instead of starting a second one. Saves the paneId the moment the
+   * pane exists, then the full herdr ref once the agent starts, preserving the profile's onboarding block.
+   */
+  async provisionReservedBot(id: string): Promise<ReservedProvision> {
+    const profile = this.#requireBot(id);
+    const existing = await this.#tryAgentGet(id);
+    if (existing != null) {
+      const merged = this.#mergeHerdrRef(profile, { paneId: existing.pane_id, workspaceId: existing.workspace_id, sessionId: existing.agent_session?.value ?? null }, existing.agent ?? profile.kind);
+      return { status: "started", profile: this.#saveProvisioned(id, merged) };
+    }
+    if (!isSupportedKind(profile.kind)) throw new RosterError("unsupported_kind", `herdr does not support agent kind "${profile.kind}"`);
+    const location = await this.#locationFor(profile.cwd, id);
+    const withPane = this.#saveProvisioned(id, { ...profile, herdr: { paneId: location.paneId, workspaceId: location.workspaceId, sessionId: null }, updatedAt: this.#now() });
+    const result = await this.#startReservedAgent(withPane);
+    const merged = this.#mergeHerdrRef(withPane, result.herdr, result.kind);
+    return { status: result.status, profile: this.#saveProvisioned(id, merged) };
+  }
+
+  /** Sends the identity brief and reports whether herdr confirmed it -- unlike the fire-and-forget
+   * `#sendBrief`, so the onboarding sequence can hold back the greeting when the brief did not land. */
+  async briefReservedBot(profile: BotProfile): Promise<boolean> {
+    return (await this.#promptBrief(profile)).ok;
+  }
+
+  /** Persists a provisioning step's profile, but never resurrects a profile deleted mid-provision. */
+  #saveProvisioned(id: string, profile: BotProfile): BotProfile {
+    if (this.#deps.profiles.get(id) == null) throw new RosterError("unknown_bot", `bot "${id}" was removed during provisioning`);
+    this.#deps.profiles.save(profile);
+    return profile;
+  }
+
+  #mergeHerdrRef(profile: BotProfile, herdr: BotProfile["herdr"], kind: string): BotProfile {
+    return { ...profile, herdr, kind, updatedAt: this.#now() };
+  }
+
+  async #tryAgentGet(id: string): Promise<HerdrAgentInfo | null> {
+    try {
+      const info = await this.#deps.cli.agentGet(id);
+      return info.name === id ? info : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Starts the reserved bot's agent on its already-saved pane. `agent_not_ready` becomes `needs_setup`
+   * (the pane is kept so the user can finish first-run setup in herdr). Any other failure first checks
+   * whether the agent actually came up (a lost response / `agent_name_taken` on retry) and reuses it;
+   * only if nothing is there does it close the pane and surface a herdr error.
+   */
+  async #startReservedAgent(profile: BotProfile): Promise<{ status: "started" | "needs_setup"; herdr: BotProfile["herdr"]; kind: string }> {
+    const paneId = profile.herdr.paneId!;
+    const workspaceId = profile.herdr.workspaceId;
+    const launchArgs = launchArgsFor(profile.kind, profile.permissionMode, this.#deps.config.cliPath);
+    try {
+      const started = await this.#startAgentWithRetry({ name: profile.id, kind: profile.kind, paneId, agentArgs: launchArgs });
+      return { status: "started", herdr: { paneId, workspaceId, sessionId: started.agent_session?.value ?? null }, kind: profile.kind };
+    } catch (error) {
+      if (error instanceof HerdrError && error.code === "agent_not_ready") {
+        return { status: "needs_setup", herdr: { paneId, workspaceId, sessionId: null }, kind: profile.kind };
+      }
+      const recovered = await this.#tryAgentGet(profile.id);
+      if (recovered != null) return { status: "started", herdr: { paneId: recovered.pane_id, workspaceId: recovered.workspace_id, sessionId: recovered.agent_session?.value ?? null }, kind: recovered.agent ?? profile.kind };
+      try {
+        await this.#deps.cli.paneClose(paneId);
+      } catch (closeError) {
+        log("roster", `failed to close pane ${paneId} after a failed reserved agent start for ${profile.id}`, closeError instanceof Error ? closeError.message : String(closeError));
+      }
+      throw new RosterError("herdr_error", error instanceof Error ? error.message : String(error));
+    }
   }
 
   async #spawn(id: string, args: CreateBotArgs): Promise<BotProfile> {
@@ -286,13 +373,19 @@ export class RosterService {
   }
 
   async #sendBrief(profile: BotProfile): Promise<void> {
+    const result = await this.#promptBrief(profile);
+    if (!result.ok) this.#deps.onNotice?.(profile.id, `${profile.id} did not confirm its room briefing yet (${result.detail}). It will still receive turn prompts.`);
+  }
+
+  async #promptBrief(profile: BotProfile): Promise<{ ok: boolean; detail?: string }> {
     const brief = buildIdentityBrief({ bot: toMember(profile), userName: this.#deps.config.userName, cliPath: this.#deps.config.cliPath });
     try {
       await this.#deps.cli.agentPrompt({ target: profile.id, text: brief, wait: true, timeoutMs: this.#deps.config.briefTimeoutMs });
+      return { ok: true };
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       log("roster", `identity brief for ${profile.id} was not confirmed`, detail);
-      this.#deps.onNotice?.(profile.id, `${profile.id} did not confirm its room briefing yet (${detail}). It will still receive turn prompts.`);
+      return { ok: false, detail };
     }
   }
 }

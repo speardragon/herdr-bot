@@ -2,6 +2,7 @@ import { hostPaths, type HostConfig } from "../config.ts";
 import type { GroupMessage } from "../group/group-chat.ts";
 import type { StatusMirror } from "../herdr/status-mirror.ts";
 import type { HostEvents } from "../host-events.ts";
+import { ONBOARDING_ORIGIN } from "../bots/onboarding.ts";
 import { botMessageEntry, noticeEntry, toGroupMessage, toggleReaction, userMessageEntry, type Author } from "../model/entries.ts";
 import { isRoomId } from "../model/ids.ts";
 import { botSummary, roomSummary, type AgentSummary } from "../model/summaries.ts";
@@ -65,6 +66,25 @@ export class ChatService {
   appendNotice(chatId: string, content: string): StoredEntry {
     this.#requireChat(chatId);
     return this.#append(chatId, noticeEntry({ content, timestampMs: this.#now() }), false);
+  }
+
+  /**
+   * Stores the bot's own first greeting (a real `send-message`, not a fabricated user bubble),
+   * tagged with its onboarding origin/key so it can be recognised on restart and never double-added.
+   * Idempotent by key: a repeated say for the same key returns the entry already stored.
+   */
+  appendOnboardingGreeting(chatId: string, author: Author, content: string, onboardingKey: string): StoredEntry {
+    this.#requireChat(chatId);
+    const existing = this.findByOnboardingKey(chatId, onboardingKey);
+    if (existing != null) return existing;
+    const base = botMessageEntry({ content, author, timestampMs: this.#now() });
+    return this.#append(chatId, { ...base, origin: ONBOARDING_ORIGIN, onboardingKey }, false);
+  }
+
+  /** The greeting entry recorded for this onboarding key, if any (the crash-recovery source of truth). */
+  findByOnboardingKey(chatId: string, onboardingKey: string): StoredEntry | null {
+    if (this.chatKind(chatId) == null) return null;
+    return this.transcript(chatId).readAll().find((entry) => entry.origin === ONBOARDING_ORIGIN && entry.onboardingKey === onboardingKey) ?? null;
   }
 
   history(chatId: string): GroupMessage[] {

@@ -1,4 +1,5 @@
 import type { HostConfig } from "../config.ts";
+import { greetingText, type BotOnboarding } from "../bots/onboarding.ts";
 import { buildDmTurnPrompt, buildRoomTurnPrompt } from "../bots/prompts.ts";
 import type { SayInbox } from "../bots/say-inbox.ts";
 import { runBotTurn } from "../bots/turn-runner.ts";
@@ -36,16 +37,49 @@ export function outcomeNotice(member: GroupMember, result: MemberTurnResult, pan
   }
 }
 
+/**
+ * Serialises every herdr `agentPrompt` for one bot, whichever chat drives it. A DM turn, a room turn,
+ * and the onboarding brief/greeting all acquire the same bot's lock so their prompts never overlap in
+ * the single terminal that bot owns. Keyed by bot id, not chat id.
+ */
+export class BotExecutionLock {
+  readonly #chains = new Map<string, Promise<unknown>>();
+
+  run<T>(botId: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.#chains.get(botId) ?? Promise.resolve();
+    const next = prev.then(fn, fn);
+    this.#chains.set(botId, next.catch(() => undefined));
+    return next;
+  }
+}
+
 export class TurnService {
   readonly #deps: TurnServiceDeps;
   readonly #active = new Set<string>();
+  readonly #botLocks: BotExecutionLock;
 
-  constructor(deps: TurnServiceDeps) {
+  constructor(deps: TurnServiceDeps, botLocks: BotExecutionLock = new BotExecutionLock()) {
     this.#deps = deps;
+    this.#botLocks = botLocks;
   }
 
   isTurnActive(chatId: string): boolean {
     return this.#active.has(chatId);
+  }
+
+  /** Runs `fn` while holding a bot's execution lock (see {@link BotExecutionLock}). */
+  withBotLock<T>(botId: string, fn: () => Promise<T>): Promise<T> {
+    return this.#botLocks.run(botId, fn);
+  }
+
+  /**
+   * Runs the onboarding greeting as a real bot turn against its own DM. The caller already holds the
+   * bot lock (the brief and greeting share one acquisition), so this does NOT re-acquire it, and it
+   * refreshes the mirror first so a stale `working` from spawn does not make the turn skip as busy.
+   */
+  async runGreetingTurn(botId: string, prompt: string): Promise<MemberTurnResult> {
+    await this.#deps.mirror.refresh();
+    return runBotTurn({ cli: this.#deps.cli, mirror: this.#deps.mirror, inbox: this.#deps.inbox, turnTimeoutMs: this.#deps.config.turnTimeoutMs }, { chatId: botId, botId, prompt });
   }
 
   schedule(chatId: string): Promise<void> {
@@ -54,11 +88,34 @@ export class TurnService {
   }
 
   handleSay(paneId: string, chatId: string, text: string): { entryId: string; mode: "in-turn" | "late" } {
-    const bot = this.#requireBot(paneId, chatId);
+    const bot = this.#deps.roster.resolveBotByPane(paneId);
+    if (bot == null) throw new ControlError("unknown_pane", `pane ${paneId} is not a herdr-bot bot`);
+    const onboarding = bot.onboarding;
+    // A bot still in setup may only ever message its own DM -- never another bot's DM or a room.
+    if (onboarding != null && onboarding.stage !== "ready" && onboarding.stage !== "failed" && chatId !== bot.id) {
+      throw new ControlError("not_a_member", `${bot.id} is still being set up and can only message its own chat`);
+    }
+    this.#assertMember(bot.id, chatId);
+    if (onboarding != null && onboarding.stage === "greeting" && chatId === bot.id) return this.#handleOnboardingSay(bot, onboarding, text);
     const mode = this.#deps.inbox.accept(chatId, bot.id, text);
     if (mode === "over-cap") throw new ControlError("over_cap", "you already said the maximum number of messages this turn; wait for your next turn");
     const entry = this.#deps.chat.appendBot(chatId, { id: bot.id, name: bot.name }, text);
     return { entryId: entry.id, mode };
+  }
+
+  /**
+   * The say a bot makes during its greeting turn: stored once, verbatim as the canonical greeting,
+   * tagged with the onboarding key. A repeat for the same key returns the existing entry (idempotent);
+   * a say whose text is not the instructed greeting is rejected so the sequence surfaces a setup error.
+   */
+  #handleOnboardingSay(bot: BotProfile, onboarding: BotOnboarding, text: string): { entryId: string; mode: "in-turn" | "late" } {
+    const existing = this.#deps.chat.findByOnboardingKey(bot.id, onboarding.requestId);
+    if (existing != null) return { entryId: existing.id, mode: "late" };
+    const expected = greetingText(onboarding.locale);
+    if (text.trim() !== expected.trim()) throw new ControlError("invalid_params", "onboarding say did not match the expected greeting");
+    const mode = this.#deps.inbox.accept(bot.id, bot.id, text);
+    const entry = this.#deps.chat.appendOnboardingGreeting(bot.id, { id: bot.id, name: bot.name }, expected, onboarding.requestId);
+    return { entryId: entry.id, mode: mode === "in-turn" ? "in-turn" : "late" };
   }
 
   handlePass(paneId: string, chatId: string): void {
@@ -118,7 +175,7 @@ export class TurnService {
     const prompt = kind === "room"
       ? buildRoomTurnPrompt({ room: this.#roomIdentity(chatId), member, peers, newMessages, cliPath })
       : buildDmTurnPrompt({ bot: member, chatId, userName: this.#deps.config.userName, newMessages, cliPath });
-    return runBotTurn({ cli: this.#deps.cli, mirror: this.#deps.mirror, inbox: this.#deps.inbox, turnTimeoutMs: this.#deps.config.turnTimeoutMs }, { chatId, botId: member.id, prompt });
+    return this.#botLocks.run(member.id, () => runBotTurn({ cli: this.#deps.cli, mirror: this.#deps.mirror, inbox: this.#deps.inbox, turnTimeoutMs: this.#deps.config.turnTimeoutMs }, { chatId, botId: member.id, prompt }));
   }
 
   #roomIdentity(chatId: string): { id: string; name: string; description: string } {

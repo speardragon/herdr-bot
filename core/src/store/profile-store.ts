@@ -1,5 +1,6 @@
 import { readdirSync, rmSync } from "node:fs";
 import { hostPaths } from "../config.ts";
+import type { BotOnboarding, OnboardingStage } from "../bots/onboarding.ts";
 import { readJsonFile, writeJsonFileAtomic } from "./json-file.ts";
 
 export type PermissionMode = "ask" | "auto";
@@ -25,6 +26,18 @@ export interface BotProfile {
   readonly isHiddenFromSidebar: boolean;
   readonly createdAt: number;
   readonly updatedAt: number;
+  /** Present only on a "quick create" bot mid- or post-onboarding; existing bots never carry it. */
+  readonly onboarding?: BotOnboarding;
+}
+
+const ONBOARDING_STAGES: ReadonlySet<string> = new Set(["provisioning", "briefing", "greeting", "ready", "failed"]);
+
+function projectOnboarding(value: unknown): BotOnboarding | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.requestId !== "string" || value.requestId.length === 0) return null;
+  if (value.locale !== "ko" && value.locale !== "en") return null;
+  if (typeof value.stage !== "string" || !ONBOARDING_STAGES.has(value.stage)) return null;
+  return { requestId: value.requestId, locale: value.locale, stage: value.stage as OnboardingStage, error: typeof value.error === "string" ? value.error : null };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -60,6 +73,7 @@ export function projectBotProfile(value: unknown): BotProfile | null {
     isHiddenFromSidebar: value.isHiddenFromSidebar === true,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
+    ...(projectOnboarding(value.onboarding) == null ? {} : { onboarding: projectOnboarding(value.onboarding)! }),
   };
 }
 

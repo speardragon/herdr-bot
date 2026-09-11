@@ -61,6 +61,22 @@ export interface RendererAgent extends ConversationAgentSummary {
    * herdrBot.status only -- never derived from isRunning/currentActivity). Drives the independent
    * green working/done activity dot (bot-activity.ts), never the blue unread dot. */
   runtimeStatus: string;
+  /** herdr-bot: a quick-created bot's onboarding stage/error (spawn -> brief -> greeting -> ready),
+   * or null for every ordinary bot and room. Lets the sidebar show "setting up…"/retry affordances. */
+  onboarding: RendererAgentOnboarding | null;
+}
+
+export interface RendererAgentOnboarding {
+  readonly stage: string;
+  readonly error: string | null;
+}
+
+/** Projects the optional onboarding block the host attaches to `herdrBot`; null when absent/malformed. */
+export function projectRendererOnboarding(herdrBot: unknown): RendererAgentOnboarding | null {
+  if (!isRecord(herdrBot) || !isRecord(herdrBot.onboarding)) return null;
+  const onboarding = herdrBot.onboarding;
+  if (typeof onboarding.stage !== "string" || onboarding.stage.length === 0) return null;
+  return { stage: onboarding.stage, error: typeof onboarding.error === "string" ? onboarding.error : null };
 }
 
 /** Mirrors the shipped cct gate: only local, non-shared groups expose members. */
@@ -186,7 +202,8 @@ export function projectRendererAgent(value: unknown, now = Date.now()): Renderer
     raw: value as RendererAgentRaw,
     createdAt: numberValue(value.createdAt, numberValue(value.updatedAt, now)),
     lastMessageAt: numberValue(value.lastMessageAt, 0),
-    runtimeStatus: projectRuntimeStatus(isRecord(value.herdrBot) ? value.herdrBot.status : undefined)
+    runtimeStatus: projectRuntimeStatus(isRecord(value.herdrBot) ? value.herdrBot.status : undefined),
+    onboarding: projectRendererOnboarding(value.herdrBot)
   };
 }
 

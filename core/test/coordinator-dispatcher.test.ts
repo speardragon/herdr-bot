@@ -6,6 +6,7 @@ import { createHerdrCli } from "../src/herdr/cli.ts";
 import { createCoordinatorDispatcher } from "../src/coordinator/dispatcher.ts";
 import { installFakeHerdr } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
+import { greetingText } from "../src/bots/onboarding.ts";
 
 async function harness() {
   const temp = makeTempHome();
@@ -114,6 +115,40 @@ test("openAgentTail no longer marks a chat as read; herdrBot.markChatRead is the
     assert.equal(invalid.status === "failed" && invalid.failure.code, "invalid-args");
   } finally {
     await h.cleanup();
+  }
+});
+
+test("herdrBot.quickCreateBot reserves instantly and herdrBot.retryBotSetup reuses the same profile", async () => {
+  const temp = makeTempHome();
+  const requestId = "33333333-3333-3333-3333-333333333333";
+  const id = `bot-${requestId}`;
+  const fake = installFakeHerdr(temp.home, { agents: [], workspaces: [], onPrompt: { [id]: { say: [greetingText("en")], sayOnce: true } } });
+  const config = resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BIN_PATH: fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" });
+  const host = createHost(config, { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null, ensureSession: null });
+  await host.start();
+  const dispatch = createCoordinatorDispatcher(host);
+  try {
+    const created = await dispatch("herdrBot.quickCreateBot", { requestId, locale: "en" });
+    assert.equal(created.status, "ok");
+    const agent = (created as { status: "ok"; value: { agent: { id: string; herdrBot: { onboarding: { stage: string } } } } }).value.agent;
+    assert.equal(agent.id, id);
+    assert.equal(agent.herdrBot.onboarding.stage, "provisioning");
+
+    const bad = await dispatch("herdrBot.quickCreateBot", { requestId: "not-a-uuid", locale: "en" });
+    assert.equal(bad.status === "failed" && bad.failure.code, "invalid-args");
+
+    await host.onboarding.settled(id);
+    assert.equal(host.chat.summary(id)?.herdrBot?.onboarding?.stage, "ready");
+
+    // retry reuses the existing profile (same id), never a new one.
+    const retried = await dispatch("herdrBot.retryBotSetup", { id });
+    assert.equal(retried.status, "ok");
+    assert.equal((retried as { status: "ok"; value: { agent: { id: string } } }).value.agent.id, id);
+    await host.onboarding.settled(id);
+    assert.equal(host.chat.listSummaries().filter((s) => s.id === id).length, 1);
+  } finally {
+    await host.stop();
+    temp.cleanup();
   }
 });
 

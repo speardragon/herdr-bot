@@ -1,4 +1,5 @@
 import type { Host } from "../host.ts";
+import { isValidRequestId } from "../bots/onboarding.ts";
 import { RosterError } from "../services/roster-service.ts";
 import type { PermissionMode } from "../store/profile-store.ts";
 import type { AgentSummary } from "../model/summaries.ts";
@@ -78,6 +79,23 @@ async function createAgent(host: Host, args: Args): Promise<unknown> {
   });
   host.chat.emitRoster();
   return { agent: requireSummary(host, profile.id), transcript: [] };
+}
+
+/** Saves a reserved profile and responds immediately; spawn/brief/greeting run asynchronously. */
+function quickCreateBot(host: Host, args: Args): unknown {
+  const requestId = str(args, "requestId");
+  if (!isValidRequestId(requestId)) throw new ArgsError("requestId must be a UUID");
+  if (args.locale !== "ko" && args.locale !== "en") throw new ArgsError('locale must be "ko" or "en"');
+  const profile = host.onboarding.create({ requestId, locale: args.locale });
+  host.chat.emitRoster();
+  return { agent: requireSummary(host, profile.id) };
+}
+
+/** Re-runs setup against the existing reserved profile (never creates a new one). */
+function retryBotSetup(host: Host, args: Args): unknown {
+  const profile = host.onboarding.retry(str(args, "id"));
+  host.chat.emitRoster();
+  return { agent: requireSummary(host, profile.id) };
 }
 
 function createGroup(host: Host, args: Args): unknown {
@@ -218,6 +236,8 @@ const METHOD_TABLE: Readonly<Record<string, Handler>> = {
   setAgentUnread,
   setAgentHiddenFromSidebar,
   setAgentNotifyOnUpdates,
+  "herdrBot.quickCreateBot": quickCreateBot,
+  "herdrBot.retryBotSetup": retryBotSetup,
   "herdrBot.markChatRead": markChatRead,
   "herdrBot.listAdoptable": (host) => host.roster.listAdoptable(),
   "herdrBot.focus": herdrBotFocus,

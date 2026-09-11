@@ -7,10 +7,11 @@ import { ensureHerdrSession, spawnHerdrSessionServer } from "./herdr/session.ts"
 import { StatusMirror } from "./herdr/status-mirror.ts";
 import { HostEvents } from "./host-events.ts";
 import { log } from "./log.ts";
+import { BotOnboardingService } from "./services/bot-onboarding-service.ts";
 import { ChatService } from "./services/chat-service.ts";
 import { RosterService } from "./services/roster-service.ts";
 import { RunQueue } from "./services/run-queue.ts";
-import { TurnService } from "./services/turn-service.ts";
+import { BotExecutionLock, TurnService } from "./services/turn-service.ts";
 import { ProfileStore } from "./store/profile-store.ts";
 import { RoomStore } from "./store/room-store.ts";
 import type { StoredEntry } from "./store/transcript-store.ts";
@@ -38,6 +39,7 @@ export interface Host {
   readonly roster: RosterService;
   readonly chat: ChatService;
   readonly turns: TurnService;
+  readonly onboarding: BotOnboardingService;
   readonly mirror: StatusMirror;
   start(): Promise<void>;
   stop(): Promise<void>;
@@ -67,6 +69,7 @@ interface HostServices {
   readonly chat: ChatService;
   readonly roster: RosterService;
   readonly turns: TurnService;
+  readonly onboarding: BotOnboardingService;
 }
 
 /** Constructs the stores plus the mirror/roster/chat/turn wiring, evicting per-chat caches on delete. */
@@ -99,9 +102,11 @@ function buildServices(config: HostConfig, overrides: HostOverrides): HostServic
       runQueue.forget(chatId);
     },
   });
-  const turns = new TurnService({ config, roster, chat, runQueue, cli, mirror, inbox });
+  const botLocks = new BotExecutionLock();
+  const turns = new TurnService({ config, roster, chat, runQueue, cli, mirror, inbox }, botLocks);
   turnsRef = turns;
-  return { cli, profiles, rooms, events, mirror, chat, roster, turns };
+  const onboarding = new BotOnboardingService({ config, profiles, roster, chat, turns, ...(overrides.now == null ? {} : { now: overrides.now }) });
+  return { cli, profiles, rooms, events, mirror, chat, roster, turns, onboarding };
 }
 
 function defaultEnsureSession(config: HostConfig, cli: HerdrCli): () => Promise<string> {
@@ -113,7 +118,7 @@ function defaultEnsureSession(config: HostConfig, cli: HerdrCli): () => Promise<
 }
 
 export function createHost(config: HostConfig, overrides: HostOverrides = {}): Host {
-  const { cli, profiles, rooms, events, mirror, chat, roster, turns: turnService } = buildServices(config, overrides);
+  const { cli, profiles, rooms, events, mirror, chat, roster, turns: turnService, onboarding } = buildServices(config, overrides);
   const ensureSession = overrides.ensureSession === undefined ? defaultEnsureSession(config, cli) : overrides.ensureSession;
 
   let controlServer: ControlServer | null = null;
@@ -123,8 +128,10 @@ export function createHost(config: HostConfig, overrides: HostOverrides = {}): H
     roster,
     chat,
     turns: turnService,
+    onboarding,
     mirror,
     async start() {
+      onboarding.recover();
       controlServer = await startControlServer(config.controlSocketPath, createControlHandler(host));
       if (ensureSession != null) {
         try {
@@ -138,6 +145,7 @@ export function createHost(config: HostConfig, overrides: HostOverrides = {}): H
       log("host", `listening on ${config.controlSocketPath}`);
     },
     async stop() {
+      onboarding.stop();
       mirror.stop();
       // Drain a refresh that was still in flight from start()'s initial mirror.start() call
       // (StatusMirror.refresh() dedupes onto that same in-flight promise), so it settles while
