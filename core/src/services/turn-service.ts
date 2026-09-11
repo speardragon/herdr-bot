@@ -53,6 +53,12 @@ export class BotExecutionLock {
   }
 }
 
+/** Folds curly apostrophes/quotes to ASCII and collapses whitespace so an LLM's normalized echo of the
+ * greeting still matches the spec text. Used ONLY for the onboarding acceptance check, never for storage. */
+function normalizeGreeting(text: string): string {
+  return text.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim();
+}
+
 export class TurnService {
   readonly #deps: TurnServiceDeps;
   readonly #active = new Set<string>();
@@ -112,7 +118,10 @@ export class TurnService {
     const existing = this.#deps.chat.findByOnboardingKey(bot.id, onboarding.requestId);
     if (existing != null) return { entryId: existing.id, mode: "late" };
     const expected = greetingText(onboarding.locale);
-    if (text.trim() !== expected.trim()) throw new ControlError("invalid_params", "onboarding say did not match the expected greeting");
+    // An LLM echoing the JSON-stringified greeting may normalize the spec's curly apostrophe/quotes to
+    // ASCII (and re-wrap whitespace). Compare on a normalized form so that does not fail onboarding --
+    // but keep storing the canonical (spec) greeting text as the saved entry.
+    if (normalizeGreeting(text) !== normalizeGreeting(expected)) throw new ControlError("invalid_params", "onboarding say did not match the expected greeting");
     const mode = this.#deps.inbox.accept(bot.id, bot.id, text);
     const entry = this.#deps.chat.appendOnboardingGreeting(bot.id, { id: bot.id, name: bot.name }, expected, onboarding.requestId);
     return { entryId: entry.id, mode: mode === "in-turn" ? "in-turn" : "late" };

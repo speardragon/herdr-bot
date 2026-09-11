@@ -69,6 +69,41 @@ test("provisionReservedBot spawns a reserved profile, then reuses the named agen
   }
 });
 
+test("a needs_setup retry reuses the kept pane instead of creating a duplicate", async () => {
+  const h = harness();
+  try {
+    setLogSink(() => undefined);
+    const id = "bot-33333333-3333-3333-3333-333333333333";
+    h.profiles.save(sampleProfile({ id, name: "New bot", cwd: "/tmp/repo", herdr: { paneId: null, workspaceId: null, sessionId: null }, onboarding: { requestId: "33333333-3333-3333-3333-333333333333", locale: "en", stage: "provisioning", error: null } }));
+    let starts = 0;
+    const flakyCli: HerdrCli = {
+      ...h.cli,
+      async agentStart(args) {
+        starts += 1;
+        if (starts === 1) throw new HerdrError("agent_not_ready", "finish first-run setup in the pane");
+        return h.cli.agentStart(args);
+      },
+    };
+    const service = new RosterService({ config: h.config, profiles: h.profiles, rooms: h.rooms, cli: flakyCli, mirror: h.mirror, now: () => 1_000, sleep: async () => undefined });
+
+    const first = await service.provisionReservedBot(id);
+    assert.equal(first.status, "needs_setup");
+    assert.equal(first.profile.herdr.paneId, "w1:p1"); // pane kept, not closed
+
+    // The user finishes first-run setup; a retry must start into the SAME pane, not tabCreate a new one.
+    const second = await service.provisionReservedBot(id);
+    assert.equal(second.status, "started");
+    assert.equal(second.profile.herdr.paneId, "w1:p1");
+    assert.equal(starts, 2);
+    const log = h.fake.readLog().map((argv) => argv.join(" "));
+    assert.equal(log.filter((line) => line.startsWith("workspace create")).length, 1, JSON.stringify(log));
+    assert.equal(log.filter((line) => line.startsWith("tab create")).length, 0, JSON.stringify(log));
+  } finally {
+    setLogSink((line) => process.stderr.write(`${line}\n`));
+    h.temp.cleanup();
+  }
+});
+
 test("a bot that is still being onboarded cannot be invited into a room", async () => {
   const h = harness();
   try {

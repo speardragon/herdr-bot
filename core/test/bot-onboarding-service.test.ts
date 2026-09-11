@@ -143,6 +143,33 @@ test("a say that is not the expected greeting is rejected: stage failed, no entr
   }
 });
 
+test("an en greeting normalized to a straight apostrophe is accepted and stored canonically; a different text is rejected", async () => {
+  const ascii = greetingText("en").replace(/’/g, "'");
+  assert.notEqual(ascii, greetingText("en")); // sanity: it really differs only by the apostrophe form
+  const accept = await harness({ state: { agents: [], workspaces: [], onPrompt: { [ID]: { say: [ascii], sayOnce: true } } } });
+  try {
+    accept.host.onboarding.create({ requestId: REQ, locale: "en" });
+    await accept.host.onboarding.settled(ID);
+    assert.equal(accept.stage(), "ready");
+    assert.equal(accept.greetings().length, 1);
+    assert.equal(entryText(accept.greetings()[0]!), greetingText("en")); // the canonical (curly) form is stored
+  } finally {
+    await accept.cleanup();
+  }
+
+  setLogSink(() => undefined);
+  const reject = await harness({ state: { agents: [], workspaces: [], onPrompt: { [ID]: { say: ["Hi there, something else entirely"], sayOnce: true } } } });
+  try {
+    reject.host.onboarding.create({ requestId: REQ, locale: "en" });
+    await reject.host.onboarding.settled(ID);
+    assert.equal(reject.stage(), "failed");
+    assert.equal(reject.greetings().length, 0);
+  } finally {
+    setLogSink((line) => process.stderr.write(`${line}\n`));
+    await reject.cleanup();
+  }
+});
+
 test("a greeting said twice during setup is idempotent (one entry)", async () => {
   const h = await harness({ state: greetingScript([GREETING, GREETING]) });
   try {

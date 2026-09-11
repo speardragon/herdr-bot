@@ -226,8 +226,11 @@ export class RosterService {
       return { status: "started", profile: this.#saveProvisioned(id, merged) };
     }
     if (!isSupportedKind(profile.kind)) throw new RosterError("unsupported_kind", `herdr does not support agent kind "${profile.kind}"`);
-    const location = await this.#locationFor(profile.cwd, id);
-    const withPane = this.#saveProvisioned(id, { ...profile, herdr: { paneId: location.paneId, workspaceId: location.workspaceId, sessionId: null }, updatedAt: this.#now() });
+    // A retry after `needs_setup` keeps the pane it already made (the user may have finished first-run
+    // setup in it); start into that same pane instead of orphaning it with a fresh #locationFor pane.
+    const withPane = profile.herdr.paneId != null
+      ? profile
+      : this.#saveProvisioned(id, { ...profile, herdr: { ...(await this.#locationFor(profile.cwd, id)), sessionId: null }, updatedAt: this.#now() });
     const result = await this.#startReservedAgent(withPane);
     const merged = this.#mergeHerdrRef(withPane, result.herdr, result.kind);
     return { status: result.status, profile: this.#saveProvisioned(id, merged) };
