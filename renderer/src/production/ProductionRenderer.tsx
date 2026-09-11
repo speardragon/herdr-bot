@@ -114,7 +114,7 @@ import { LocalSettings } from "./LocalSettings";
 import { t, useLocale } from "./locale";
 import "./minimal.css";
 import { movePinnedAgent, partitionSidebarAgents, sortRecentChats } from "./sidebar-model";
-import { activityVisible, nextActivityTimeout, reconcileActivityMap, type ActivityMap } from "./bot-activity";
+import { nextActivityTimeout, reconcileActivityMap, resolveActivityStatus, type ActivityMap } from "./bot-activity";
 import { SignOutDialog } from "../recovered/features/account/session/sign-out";
 import { FeedbackDialog, type FeedbackCode } from "../recovered/features/feedback/overlay/view";
 import { UpdateRequired } from "../recovered/features/update/required/view";
@@ -1461,9 +1461,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   // whether because the bot is idle/blocked/offline or because the transport is down.
   const activityNow = Date.now();
   const visibleAgents = agents.filter((agent) => !agent.isHidden).map((agent) => {
-    const activity = activityMap.get(agent.id);
-    const isVisible = transport === "connected" && activity != null && activityVisible(activity, activityNow);
-    const activityStatus: "working" | "done" | null = isVisible && activity != null && activity.status === "working" ? "working" : isVisible ? "done" : null;
+    const activityStatus = resolveActivityStatus(activityMap, agent.id, transport === "connected", activityNow);
     return { ...agent, isPinned: pinnedAgentIds.includes(agent.id), activityStatus };
   });
   const pinnedAccountKey = account?.kind === "logged-in" ? account.authId ?? account.email ?? "account" : account?.kind ?? "unknown";

@@ -24,6 +24,25 @@ export function activityVisible(state: ActivityState, now: number): boolean {
   return state.status === "working" || (state.status === "done" && now < state.visibleUntil);
 }
 
+/** herdr-bot: statuses the host's StatusMirror/BotRuntime can report (see core/src/herdr/types.ts's
+ * BotRuntimeStatus). Anything else collapses to "unknown" so the green working dot never lights up
+ * on an unrecognized value. Exported so RendererAgent's projection (model.ts) and this module agree
+ * on exactly the same validated status domain. */
+export const RUNTIME_STATUSES = new Set(["idle", "working", "blocked", "done", "unknown", "offline"]);
+
+/**
+ * Validates a raw, untyped `herdrBot.status` value (and ONLY that value -- never `isRunning` or
+ * `currentActivity`, which are a separate, older pipeline that drives the avatar persona animation)
+ * into the runtime-status domain the rest of this module understands. Anything not in
+ * `RUNTIME_STATUSES` -- wrong type, unrecognized string, missing field -- collapses to `"unknown"`.
+ *
+ * Lives here (not model.ts, which has extensionless imports `node --test` cannot resolve) so it stays
+ * independently unit-testable.
+ */
+export function projectRuntimeStatus(rawStatus: unknown): string {
+  return typeof rawStatus === "string" && RUNTIME_STATUSES.has(rawStatus) ? rawStatus : "unknown";
+}
+
 export type ActivityMap = ReadonlyMap<string, ActivityState>;
 
 /**
@@ -52,4 +71,19 @@ export function nextActivityTimeout(map: ActivityMap, now: number): number | nul
     if (earliest == null || state.visibleUntil < earliest) earliest = state.visibleUntil;
   }
   return earliest;
+}
+
+/**
+ * The status a sidebar row's green dot should show for `id` -- `"working"` while actively working,
+ * `"done"` during the 5s afterglow, or `null` when the dot must be hidden. `null` covers every
+ * "nothing to show" case uniformly: no entry in the map, an entry whose status is blocked/offline/
+ * idle/unknown, an expired "done" afterglow, AND a disconnected transport (task 3's "on lost
+ * connection, hide the dot and show stale" -- the caller's separate stale-UI path, e.g.
+ * `isHostReachable`, is what actually renders the "stale" indication).
+ */
+export function resolveActivityStatus(map: ActivityMap, id: string, transportConnected: boolean, now: number): "working" | "done" | null {
+  if (!transportConnected) return null;
+  const state = map.get(id);
+  if (state == null || !activityVisible(state, now)) return null;
+  return state.status === "working" ? "working" : "done";
 }

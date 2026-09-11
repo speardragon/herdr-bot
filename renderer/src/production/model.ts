@@ -19,6 +19,7 @@ import { projectTranscriptReactions } from "../recovered/features/conversation/c
 import type { TranscriptThreadSummary } from "../recovered/features/conversation/cards/transcript-card/thread-summary-controller";
 import { previewTextFromLastEntry } from "../recovered/features/conversation/workspace/sidebar-agent-preview-content";
 import { sortRecentChats } from "./sidebar-model";
+import { projectRuntimeStatus } from "./bot-activity";
 
 export type { DeepLinkInfo } from "../recovered/features/deep-links/overlay/model";
 
@@ -31,16 +32,6 @@ export interface RendererAgentRaw extends Record<string, unknown> {
   readonly isSharedRoom?: boolean;
   readonly sharedRoomId?: string | null;
   readonly herdrBot?: { readonly status?: unknown } | null;
-}
-
-/** herdr-bot: statuses the host's StatusMirror/BotRuntime can report (see core/src/herdr/types.ts's
- * BotRuntimeStatus). Anything else collapses to "unknown" so the green working dot (bot-activity.ts)
- * never lights up on an unrecognized value. */
-const RUNTIME_STATUSES = new Set(["idle", "working", "blocked", "done", "unknown", "offline"]);
-
-function projectRuntimeStatus(raw: RendererAgentRaw["herdrBot"]): string {
-  const status = raw?.status;
-  return typeof status === "string" && RUNTIME_STATUSES.has(status) ? status : "unknown";
 }
 
 /** The host session-summary projection used by the sidebar preview content. */
@@ -195,7 +186,7 @@ export function projectRendererAgent(value: unknown, now = Date.now()): Renderer
     raw: value as RendererAgentRaw,
     createdAt: numberValue(value.createdAt, numberValue(value.updatedAt, now)),
     lastMessageAt: numberValue(value.lastMessageAt, 0),
-    runtimeStatus: projectRuntimeStatus(isRecord(value.herdrBot) ? { status: value.herdrBot.status } : null)
+    runtimeStatus: projectRuntimeStatus(isRecord(value.herdrBot) ? value.herdrBot.status : undefined)
   };
 }
 
