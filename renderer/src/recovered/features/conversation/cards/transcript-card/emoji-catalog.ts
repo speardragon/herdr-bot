@@ -5,7 +5,7 @@
 // @evidence src/app/dist/renderer/assets/messages-ByIkiGdI.js#exports=groups,skinTones,subgroups
 // @evidence recovered/frontend/app/assets/messages-ByIkiGdI.js#exports=groups,skinTones,subgroups
 
-import { rendererRuntimeAssetUrl } from "../../../../../production/runtime-assets";
+import { rendererRuntimeAssetUrl } from "../../../../../production/runtime-assets.ts";
 
 // @evidence src/app/dist/renderer/assets/compact-C8-lyxgK.js#bytes=571490#sha256=a163448dab9eeeb2eba2e743625ae925eac5d2d70f919c3396897c5f042ba39c
 // @evidence src/app/dist/renderer/assets/messages-ByIkiGdI.js#bytes=5892#sha256=982d1fb9ed0b0f95155c30c327738f055e2c1a512cef219f7c20d49b978f2628

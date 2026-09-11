@@ -18,7 +18,7 @@ import { createUiLayoutStateStore, SIDEBAR_LAYOUT_BOUNDS, type SidebarLayoutStat
 import { createSidebarCollapsePersistence, createSidebarCollapseStateStore } from "../recovered/features/conversation/workspace/sidebar-collapse-state";
 import { createEmojiCatalogStore } from "../recovered/features/conversation/cards/transcript-card/emoji-catalog";
 import { createComposerEditorSuggestionAdapter } from "../recovered/features/conversation/workspace/editor-suggestion-production-adapter";
-import { projectMentionMembers } from "../recovered/features/conversation/workspace/editor-suggestion-provider";
+import { computeMentionCandidates } from "../recovered/features/conversation/workspace/editor-suggestion-provider";
 import { createEditorMcpReferenceProvider } from "../recovered/features/conversation/workspace/editor-mcp-reference-provider";
 import { createEditorPrReferenceProvider } from "../recovered/features/conversation/workspace/editor-pr-reference-provider";
 import { TranscriptLoadErrorSurface } from "../recovered/features/conversation/workspace/transcript-load-error";
@@ -1501,8 +1501,8 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
             ...editorSuggestionAdapter.providers.mention,
             getMembers: (query = "") => {
               const { activeAgent: chat, agents: roster } = mentionScope.current;
-              const members = roster.filter((bot) => !bot.isGroup && (chat?.isGroup ? chat.memberIds.includes(bot.id) : bot.id === chat?.id));
-              return projectMentionMembers(members, false).filter((member) => (member.label + " " + member.id).toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+              const scope = chat == null ? null : { isGroup: chat.isGroup, id: chat.id, memberIds: chat.memberIds };
+              return computeMentionCandidates(scope, roster, query);
             },
             getWorkflows: () => [],
             getMcpReferences: () => []

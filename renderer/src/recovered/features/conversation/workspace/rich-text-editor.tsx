@@ -8,8 +8,10 @@ import { StarterKit } from "@tiptap/starter-kit";
 import { Suggestion, type SuggestionMatch, type SuggestionOptions } from "@tiptap/suggestion";
 import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import type { EmojiEntry } from "../cards/transcript-card/emoji-catalog";
-import type { EditorMcpSuggestion, EditorMentionSuggestion, EditorSuggestionEntry, EditorWorkflowSuggestion } from "./editor-suggestion-provider";
+import type { EditorMcpSuggestion, EditorMentionSuggestion, EditorSuggestionEntry, EditorSuggestionIcon, EditorWorkflowSuggestion } from "./editor-suggestion-provider";
+import { AgentAvatar, type AgentAvatarProps } from "./agent-avatar";
 
 // Immutable editor closure: e9n/hft in index-UbX-y3il.js. The package graph
 // is intentionally owned by B6; this leaf only imports the released graph.
@@ -303,11 +305,18 @@ function collapseDomSelectionToEnd(): void {
 
 let suggestionListboxId = 0;
 
-function createSuggestionRenderer(className: string, optionClassName: string, ariaLabel: string, onSelect: (value: unknown) => void, onOpenChange?: (open: boolean) => void, onVisibleChange?: (visible: boolean) => void, emptyMessage?: (query: string) => string | null) {
+function createSuggestionRenderer(className: string, optionClassName: string, ariaLabel: string, onSelect: (value: unknown) => void, onOpenChange?: (open: boolean) => void, onVisibleChange?: (visible: boolean) => void, emptyMessage?: (query: string) => string | null, avatarProps?: (row: SuggestionRow) => AgentAvatarProps | null) {
   let wrapper: HTMLDivElement | null = null;
   let element: HTMLUListElement | null = null;
   let rows: SuggestionRow[] = [];
   let activeIndex = 0;
+  // React roots mounted for row avatars. Every root created below MUST be unmounted here before
+  // the rows it belonged to are torn down (re-render, dismiss, or destroy) -- otherwise it leaks.
+  let avatarRoots: Root[] = [];
+  const unmountAvatarRoots = () => {
+    for (const root of avatarRoots) root.unmount();
+    avatarRoots = [];
+  };
   let query = "";
   let select = onSelect;
   let visible = false;
@@ -339,6 +348,7 @@ function createSuggestionRenderer(className: string, optionClassName: string, ar
   const listboxId = `${className}-${++suggestionListboxId}`;
   const render = () => {
     if (element == null) return;
+    unmountAvatarRoots();
     element.replaceChildren();
     element.setAttribute("aria-activedescendant", rows.length === 0 ? "" : `${listboxId}-option-${activeIndex}`);
     const empty = emptyMessage?.(query) ?? null;
@@ -360,6 +370,16 @@ function createSuggestionRenderer(className: string, optionClassName: string, ar
       button.id = `${listboxId}-option-${index}`;
       button.setAttribute("role", "option");
       button.setAttribute("aria-selected", String(index === activeIndex));
+      const avatar = avatarProps?.(row) ?? null;
+      if (avatar != null) {
+        const avatarContainer = document.createElement("span");
+        avatarContainer.className = "herdr-mention-avatar";
+        avatarContainer.setAttribute("aria-hidden", "true");
+        button.append(avatarContainer);
+        const root = createRoot(avatarContainer);
+        root.render(<AgentAvatar {...avatar} isStatic size="sm" />);
+        avatarRoots.push(root);
+      }
       const name = document.createElement("span");
       name.textContent = row.label;
       button.append(name);
@@ -383,6 +403,7 @@ function createSuggestionRenderer(className: string, optionClassName: string, ar
   const dismiss = () => {
     window.removeEventListener("resize", position);
     document.removeEventListener("scroll", position, true);
+    unmountAvatarRoots();
     setVisible(false);
     wrapper?.remove();
     wrapper = null;
@@ -468,6 +489,29 @@ function createSuggestionRenderer(className: string, optionClassName: string, ar
   };
 }
 
+/** Maps a mention suggestion's icon onto AgentAvatar props; the everyone row reuses the existing group avatar. */
+function mentionAvatarProps(row: SuggestionRow): AgentAvatarProps | null {
+  const entry = row.value;
+  if (!isEditorMentionSuggestion(entry)) return null;
+  const icon: EditorSuggestionIcon = entry.icon;
+  if (icon.type === "everyone") return { agentId: entry.id, kind: "group" };
+  if (icon.type === "agent" || icon.type === "group") {
+    return {
+      agentId: icon.agentId ?? entry.id,
+      name: icon.name ?? entry.label,
+      dataUrl: icon.dataUrl ?? null,
+      shape: icon.shape ?? null,
+      color: icon.color ?? null,
+      kind: icon.type === "group" ? "group" : "agent",
+    };
+  }
+  return null;
+}
+
+function isEditorMentionSuggestion(value: unknown): value is EditorMentionSuggestion {
+  return typeof value === "object" && value != null && (value as { category?: unknown }).category === "assistants";
+}
+
 function mentionSuggestion(providers: PromptEditorProviders["mention"]): Omit<SuggestionOptions<EditorSuggestionEntry>, "editor"> {
   return {
     char: "@",
@@ -495,7 +539,7 @@ function mentionSuggestion(providers: PromptEditorProviders["mention"]): Omit<Su
       let renderer: ReturnType<typeof createSuggestionRenderer> | null = null;
       return {
         onStart: (props) => {
-          renderer = createSuggestionRenderer("sand-mention-listbox", "sand-mention-option", t("Mention"), (value) => props.command(value), providers?.onOpenChange, providers?.onVisibleChange, (query) => query.trim().length > 0 ? `No matches for "${query.trim()}"` : t("Nothing to mention yet"));
+          renderer = createSuggestionRenderer("sand-mention-listbox", "sand-mention-option", t("Mention"), (value) => props.command(value), providers?.onOpenChange, providers?.onVisibleChange, (query) => query.trim().length > 0 ? `No matches for "${query.trim()}"` : t("Nothing to mention yet"), mentionAvatarProps);
           renderer.onStart({ editor: props.editor, query: props.query, command: props.command, clientRect: props.clientRect, items: props.items.map((entry) => ({ id: entry.id, label: entry.label, subtitle: entry.subtitle, value: entry })) });
         },
         onUpdate: (props) => renderer?.onUpdate({ editor: props.editor, query: props.query, command: props.command, clientRect: props.clientRect, items: props.items.map((entry) => ({ id: entry.id, label: entry.label, subtitle: entry.subtitle, value: entry })) }),

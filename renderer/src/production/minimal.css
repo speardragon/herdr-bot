@@ -17,14 +17,23 @@
   background: var(--cursor-bg-elevated); color: var(--cursor-text-primary); box-shadow: 0 8px 30px #0003;
   font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
-.sand-mention-listbox button, .sand-workflow-listbox button, .sand-emoji-listbox button, .sand-pr-listbox button {
+.sand-workflow-listbox button, .sand-emoji-listbox button, .sand-pr-listbox button {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 38px;
   padding: 8px 10px; border: 0; border-radius: 7px; background: transparent; color: inherit; text-align: left;
+  white-space: normal; overflow-wrap: anywhere; font: inherit; cursor: pointer;
+}
+.sand-mention-listbox button {
+  width: 100%; border: 0; border-radius: 7px; background: transparent; color: inherit; text-align: left;
   white-space: normal; overflow-wrap: anywhere; font: inherit; cursor: pointer;
 }
 .sand-mention-listbox button[aria-selected="true"], .sand-emoji-listbox button[aria-selected="true"], .sand-workflow-listbox button[aria-selected="true"], .sand-pr-listbox button[aria-selected="true"] { background: var(--cursor-bg-selected); }
 .sand-mention-listbox small { color: var(--cursor-text-secondary); font-size: 11px; }
 .sand-mention-listbox [role="status"] { padding: 10px; color: var(--cursor-text-secondary); }
+.sand-mention-option-button {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 32px; padding: 4px 10px;
+}
+.herdr-mention-avatar { width: 22px; height: 22px; flex: 0 0 22px; }
 .sand-info-pane { position: absolute; z-index: 20; top: 0; right: 0; bottom: 0; width: min(340px, calc(100% - 48px)); box-sizing: border-box; overflow-y: auto; background: var(--cursor-bg-elevated); color: var(--cursor-text-primary); border-left: 1px solid var(--cursor-stroke-secondary); box-shadow: -8px 0 24px #0002; }
 .sand-info-pane .sand-info-pane__top { display: flex; position: sticky; top: 0; align-items: center; justify-content: space-between; min-height: 50px; padding: 0 14px; background: var(--cursor-bg-elevated); border-bottom: 1px solid var(--cursor-stroke-tertiary); }
 .sand-info-pane__section-content { display: flex; flex-direction: column; gap: 8px; }

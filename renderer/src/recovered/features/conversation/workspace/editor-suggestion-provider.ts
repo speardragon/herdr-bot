@@ -3,7 +3,8 @@ import {
   searchEmoji,
   type EmojiCatalog,
   type EmojiEntry,
-} from "../cards/transcript-card/emoji-catalog";
+} from "../cards/transcript-card/emoji-catalog.ts";
+import { t } from "../../../../production/locale.ts";
 
 // Immutable prompt suggestion contracts:
 // Mac index-UbX-y3il.js (SHA-256 ef4e9831b65d39633f09c9ad0c083b98b7ebf52e3bb558182aee5bde31f876fa):
@@ -34,6 +35,12 @@ export interface EditorSuggestionIcon {
   readonly fallback?: "clock" | "plug";
   readonly iconId?: string;
   readonly iconUrl?: string;
+  /** Renderer-safe avatar projection for the manual suggestion list's AgentAvatar mount. */
+  readonly agentId?: string;
+  readonly name?: string;
+  readonly dataUrl?: string | null;
+  readonly shape?: string | null;
+  readonly color?: string | null;
 }
 
 export interface EditorMentionSuggestion {
@@ -176,6 +183,9 @@ export function projectMentionMembers(value: unknown, allowEveryone = true): Edi
     seen.add(id);
     const members = stringArray(candidate.memberIds ?? candidate.members);
     const isGroup = candidate.isGroup === true;
+    const dataUrl = typeof candidate.avatarDataUrl === "string" && candidate.avatarDataUrl.length > 0 ? candidate.avatarDataUrl : null;
+    const shape = typeof candidate.avatarShape === "string" && candidate.avatarShape.length > 0 ? candidate.avatarShape : null;
+    const color = typeof candidate.avatarColor === "string" && candidate.avatarColor.length > 0 ? candidate.avatarColor : null;
     result.push({
       key: `assistants:${id}`,
       id,
@@ -183,24 +193,60 @@ export function projectMentionMembers(value: unknown, allowEveryone = true): Edi
       label,
       ...(isGroup && members.length > 0 ? { subtitle: `${members.length} agents` } : {}),
       keywords: [label, typeof candidate.title === "string" ? candidate.title : ""].filter((entry) => entry.length > 0),
-      icon: isGroup ? { type: "group" } : { type: "agent" },
+      icon: { type: isGroup ? "group" : "agent", agentId: id, name: label, dataUrl, shape, color },
       isGroup,
       insert: { type: "mention", id, label },
     });
   }
-  if (allowEveryone && result.length >= 2) {
+  // Even a single-member scope (a DM) still offers "everyone" -- its actual delivery is just that one bot.
+  if (allowEveryone && result.length >= 1) {
     result.unshift({
       key: `assistants:${EVERYONE_ID}`,
       id: EVERYONE_ID,
       category: "assistants",
-      label: "everyone",
-      keywords: ["everyone", "all"],
+      // Display label follows the active locale (plan section 2.7); the insert label and the
+      // backend plain text always stay the literal "everyone" / "@everyone".
+      label: t("Everyone", "전체"),
+      keywords: ["전체", "everyone", "all"],
       icon: { type: "everyone" },
       isGroup: false,
       insert: { type: "mention", id: EVERYONE_ID, label: "everyone" },
     });
   }
   return result;
+}
+
+/** Applied after filtering + recency ranking so `__everyone__` always leads the final rows. */
+export function prioritizeEveryone<T extends { id: string }>(entries: readonly T[]): T[] {
+  return [...entries.filter(entry => entry.id === "__everyone__"),
+    ...entries.filter(entry => entry.id !== "__everyone__")];
+}
+
+export interface MentionCandidateChatScope {
+  readonly isGroup: boolean;
+  readonly id: string;
+  readonly memberIds: readonly string[];
+}
+
+/**
+ * Pure candidate computation for the @-mention dropdown: a group scope offers its current
+ * members plus everyone; a DM scope offers just the counterpart bot plus everyone (the actual
+ * delivery for @everyone in a DM is that one bot). A non-empty search narrows to matches only,
+ * with prioritizeEveryone keeping everyone on top when it matches.
+ */
+export function computeMentionCandidates(chat: MentionCandidateChatScope | null, roster: readonly unknown[], query: string): EditorMentionSuggestion[] {
+  const members = roster.filter((bot) => {
+    if (!isRecord(bot) || bot.isGroup === true) return false;
+    const id = nonEmptyString(bot.id);
+    if (id == null) return false;
+    return chat?.isGroup === true ? chat.memberIds.includes(id) : id === chat?.id;
+  });
+  const candidates = projectMentionMembers(members, true);
+  const trimmed = query.trim().toLowerCase();
+  const matched = trimmed.length === 0
+    ? candidates
+    : candidates.filter((member) => `${member.label} ${member.id} ${member.keywords.join(" ")}`.toLowerCase().includes(trimmed));
+  return prioritizeEveryone(matched);
 }
 
 export function projectWorkflowSuggestions(value: unknown): EditorWorkflowSuggestion[] {
