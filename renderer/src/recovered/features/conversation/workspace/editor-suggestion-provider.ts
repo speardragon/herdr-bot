@@ -41,6 +41,8 @@ export interface EditorSuggestionIcon {
   readonly dataUrl?: string | null;
   readonly shape?: string | null;
   readonly color?: string | null;
+  /** everyone-only: the scope's actual member ids, so the row can reuse the existing composited group avatar. */
+  readonly memberIds?: readonly string[];
 }
 
 export interface EditorMentionSuggestion {
@@ -208,7 +210,9 @@ export function projectMentionMembers(value: unknown, allowEveryone = true): Edi
       // backend plain text always stay the literal "everyone" / "@everyone".
       label: t("Everyone", "전체"),
       keywords: ["전체", "everyone", "all"],
-      icon: { type: "everyone" },
+      // Reuses the existing group avatar (composited from the scope's actual candidates), not a
+      // fresh single-mark avatar keyed on the synthetic "__everyone__" id.
+      icon: { type: "everyone", memberIds: result.map((entry) => entry.id) },
       isGroup: false,
       insert: { type: "mention", id: EVERYONE_ID, label: "everyone" },
     });
