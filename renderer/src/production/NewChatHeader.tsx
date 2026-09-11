@@ -4,9 +4,11 @@ import { AgentAvatar } from "../recovered/features/conversation/workspace/agent-
 import { SandButton } from "../recovered/ui/sand-kit-primitives";
 import {
   activeOption,
+  addDraftMember,
   buildOptionList,
   canCreateGroup,
   moveActiveIndex,
+  removeDraftMember,
   selectedMembers,
   shouldSelectOnEnter,
   type NewChatCandidateBot,
@@ -55,7 +57,7 @@ export function NewChatHeader({ draft, candidates, pending, error, onChange, onC
   const setQuery = (query: string) => onChange({ ...draft, query });
 
   const removeMember = (id: string) => {
-    onChange({ ...draft, memberIds: draft.memberIds.filter(memberId => memberId !== id) });
+    onChange(removeDraftMember(draft, id));
     inputRef.current?.focus();
   };
 
@@ -69,8 +71,9 @@ export function NewChatHeader({ draft, candidates, pending, error, onChange, onC
     if (option.kind === "create-bot") { if (!pending) onCreateBot(); return; }
     if (option.kind === "create-group") { enterGroupMode(); return; }
     if (draft.mode === "group") {
-      if (draft.memberIds.includes(option.bot.id) || draft.memberIds.length >= 6) return;
-      onChange({ ...draft, memberIds: [...draft.memberIds, option.bot.id], query: "" });
+      const next = addDraftMember(draft, option.bot.id);
+      if (next === draft) return; // already selected, or at the member cap -- addDraftMember is a no-op
+      onChange(next);
       inputRef.current?.focus();
       return;
     }
