@@ -8,6 +8,7 @@ import type { BotRuntime } from "../src/herdr/types.ts";
 import { installFakeHerdr } from "./helpers/fake-herdr-state.ts";
 import { startFakeHerdrSocket } from "./helpers/fake-herdr-socket.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
+import { waitFor } from "./helpers/wait-for.ts";
 
 const agent = (name: string, status: "idle" | "working" | "blocked", pane: string) => ({ name, agent: "claude", agent_status: status, pane_id: pane, tab_id: "w1:t1", workspace_id: "w1", cwd: "/tmp" });
 
@@ -56,16 +57,22 @@ test("socket events trigger a debounced refresh and per-pane subscriptions follo
       debounceMs: 20,
     });
     mirror.start();
-    await settle();
+    // start() subscribes globally-only before the first refresh() resolves; wait past that for the
+    // pane-aware resubscribe the refresh triggers once it has learned reviewer's pane.
+    await waitFor(
+      () => changes.length >= 1 && socket.subscriptions.some((s) => s.some((sub) => sub.pane_id === "w1:p2")),
+      { message: `expected a pane-scoped subscription for w1:p2, got: ${JSON.stringify(socket.subscriptions)}` },
+    );
     assert.deepEqual(changes, ["reviewer:idle"]);
     const subscription = socket.subscriptions.at(-1)!;
     assert.ok(subscription.some((s) => s.type === "pane.updated"));
     assert.ok(subscription.some((s) => s.type === "pane.agent_status_changed" && s.pane_id === "w1:p2"), JSON.stringify(subscription));
     fake.writeState({ ...fake.readState(), agents: [agent("reviewer", "blocked", "w1:p2")] });
     socket.push("pane.agent_status_changed", { pane_id: "w1:p2", agent_status: "blocked" });
-    await settle();
+    await waitFor(() => changes.length >= 2);
     assert.deepEqual(changes, ["reviewer:idle", "reviewer:blocked"]);
     mirror.stop();
+    await mirror.refresh(); // drain any in-flight/orphan `agent list` child before temp.cleanup() removes its state file
   } finally {
     await socket.close().catch(() => undefined);
     temp.cleanup();
@@ -92,7 +99,7 @@ test("a poll cannot bypass the reconnect gate; the clock, not the poll, unlocks 
     });
     mirror.start();
     await mirror.refresh();
-    await settle(50);
+    await waitFor(() => socket.subscriptions.length >= 1);
     assert.equal(socket.subscriptions.length, 1);
     for (const at of [5_000, 10_000, 29_999]) {
       clock = at;
@@ -102,9 +109,10 @@ test("a poll cannot bypass the reconnect gate; the clock, not the poll, unlocks 
     }
     clock = 30_000;
     await mirror.refresh();
-    await settle(80);
+    await waitFor(() => socket.subscriptions.length >= 2);
     assert.equal(socket.subscriptions.length, 2);
     mirror.stop();
+    await mirror.refresh(); // drain any in-flight/orphan `agent list` child before temp.cleanup() removes its state file
   } finally {
     await socket.close().catch(() => undefined);
     temp.cleanup();
@@ -133,8 +141,8 @@ test("a global-only reconnect success does not merge the next same-code transpor
     });
     mirror.start();
     await mirror.refresh();
-    await settle(50);
     // First transport failure (handshake timeout): a fresh transition, must warn.
+    await waitFor(() => lines.filter((l) => l.includes("herdr subscription handshake timed out")).length >= 1);
     assert.equal(lines.filter((l) => l.includes("herdr subscription handshake timed out")).length, 1);
 
     // The gate opens and this reconnect succeeds without any panes (global-only) -- the steady-state
@@ -143,7 +151,8 @@ test("a global-only reconnect success does not merge the next same-code transpor
     clock = 30_000;
     socket.holdHandshake = false;
     await mirror.refresh();
-    await settle(50);
+    await waitFor(() => socket.subscriptions.length >= 2);
+    await settle(50); // let the (already-sent) handshake ack round-trip over the loopback socket
 
     // Drop the now-live connection and let the mirror's own backoff bring it back down, hanging again.
     socket.dropClients();
@@ -151,14 +160,15 @@ test("a global-only reconnect success does not merge the next same-code transpor
     clock = 60_000;
     socket.holdHandshake = true;
     await mirror.refresh();
-    await settle(50);
 
     // Second transport failure carries the SAME code ("handshake_timeout") as the first. Because a
     // successful connect happened in between, this must be treated as a fresh transition and warn again,
     // not be silently merged into the first occurrence's repeat count.
+    await waitFor(() => lines.filter((l) => l.includes("herdr subscription handshake timed out")).length >= 2, { message: `expected both handshake-timeout closes to warn independently, got: ${JSON.stringify(lines)}` });
     assert.equal(lines.filter((l) => l.includes("herdr subscription handshake timed out")).length, 2, `expected both handshake-timeout closes to warn independently, got: ${JSON.stringify(lines)}`);
 
     mirror.stop();
+    await mirror.refresh(); // drain any in-flight/orphan `agent list` child before temp.cleanup() removes its state file
   } finally {
     setLogSink((line) => process.stderr.write(`${line}\n`));
     await socket.close().catch(() => undefined);
@@ -182,10 +192,12 @@ test("a second start() call is a no-op: no duplicate poll, resubscribe, or timer
     mirror.start();
     mirror.start();
     mirror.start();
-    await settle(300);
+    await waitFor(() => socket.subscriptions.length >= 1 && fake.readLog().length >= 1);
+    await settle(300); // give a would-be duplicate resubscribe/refresh a window to show up before asserting its absence
     assert.equal(socket.subscriptions.length, 1, "duplicate start() must not trigger extra resubscribe attempts");
     assert.equal(fake.readLog().length, 1, "duplicate start() must not trigger extra initial refreshes/poll timers");
     mirror.stop();
+    await mirror.refresh(); // drain any in-flight/orphan `agent list` child before temp.cleanup() removes its state file
   } finally {
     await socket.close().catch(() => undefined);
     temp.cleanup();
@@ -214,15 +226,18 @@ test("pane_not_found falls back to a global-only subscription and gates pane rec
     });
     mirror.start();
     await mirror.refresh();
-    await settle(80);
     // A pane-scoped attempt was made and rejected, and the mirror settled on a global-only subscription.
+    await waitFor(
+      () => socket.subscriptions.some((s) => s.some((sub) => sub.pane_id === "w1:p2")) && socket.subscriptions.at(-1)?.every((s) => s.pane_id == null) === true,
+      { message: `expected a rejected pane-scoped attempt followed by a global-only fallback, got: ${JSON.stringify(socket.subscriptions)}` },
+    );
     assert.ok(socket.subscriptions.some((s) => s.some((sub) => sub.pane_id === "w1:p2")), "should have attempted the pane subscription at least once");
     assert.ok(socket.subscriptions.at(-1)?.every((s) => s.pane_id == null), "should have fallen back to global-only");
 
     // The global-only subscription still delivers lifecycle events, so bots are not left stuck polling blind.
     fake.writeState({ ...fake.readState(), agents: [{ name: "reviewer", agent: "claude", agent_status: "working", pane_id: "w1:p2", tab_id: "w1:t1", workspace_id: "w1", cwd: "/tmp" }] });
     socket.push("pane.updated", { pane_id: "w1:p2" });
-    await settle(80);
+    await waitFor(() => changes.includes("reviewer:working"), { message: `expected "reviewer:working" among changes, got: ${JSON.stringify(changes)}` });
     assert.ok(changes.includes("reviewer:working"));
 
     // The pane-recovery probe is on its own 30/60/120s gate; refreshes before it elapses must not retry the pane subscription.
@@ -235,8 +250,11 @@ test("pane_not_found falls back to a global-only subscription and gates pane rec
     }
     clock = 30_000;
     await mirror.refresh();
-    await settle(80);
     // The probe fires (rejected again) and falls back to global-only once more.
+    await waitFor(
+      () => socket.subscriptions.length > afterFallback && socket.subscriptions.at(-1)?.every((s) => s.pane_id == null) === true,
+      { message: "the 30s probe gate should have allowed a new pane attempt, followed by a fallback to global-only" },
+    );
     assert.ok(socket.subscriptions.length > afterFallback, "the 30s probe gate should have allowed a new pane attempt");
     const afterProbe = socket.subscriptions.length;
     assert.ok(socket.subscriptions.at(-1)?.every((s) => s.pane_id == null));
@@ -250,19 +268,21 @@ test("pane_not_found falls back to a global-only subscription and gates pane rec
     clock = 90_000;
     socket.missingPanes.delete("w1:p2");
     await mirror.refresh();
-    await settle(80);
     // The 90s probe now succeeds because the pane is no longer missing.
+    await waitFor(() => socket.subscriptions.length > afterProbe && socket.subscriptions.at(-1)?.some((s) => s.pane_id === "w1:p2") === true);
     assert.ok(socket.subscriptions.length > afterProbe);
     assert.ok(socket.subscriptions.at(-1)?.some((s) => s.pane_id === "w1:p2"));
 
     // The two "pane w1:p2 not found" rejections (initial attempt and the 30s probe) are each a fresh
     // transition -- a successful global-only reconnect happened in between them, which resets the dedup
     // state -- so both must warn. Recovery (the pane subscription actually succeeding) logs exactly once.
+    await waitFor(() => lines.filter((line) => line.includes("recovered")).length >= 1, { message: `expected a "recovered" log line, got: ${JSON.stringify(lines)}` });
     const rejectionLines = lines.filter((line) => line.includes("pane w1:p2 not found"));
     assert.equal(rejectionLines.length, 2, `expected both rejections to warn independently, got: ${JSON.stringify(lines)}`);
     assert.equal(lines.filter((line) => line.includes("recovered")).length, 1);
 
     mirror.stop();
+    await mirror.refresh(); // drain any in-flight/orphan `agent list` child before temp.cleanup() removes its state file
   } finally {
     setLogSink((line) => process.stderr.write(`${line}\n`));
     await socket.close().catch(() => undefined);
@@ -289,7 +309,7 @@ test("a stale connection's close does not clobber a newer one, and stop() silenc
     });
     mirror.start();
     await mirror.refresh();
-    await settle(50);
+    await waitFor(() => socket.subscriptions.length >= 1);
     const initial = socket.subscriptions.length;
     socket.dropClients();
     await settle(50);
@@ -297,8 +317,8 @@ test("a stale connection's close does not clobber a newer one, and stop() silenc
     assert.equal(socket.subscriptions.length, initial, "should not reconnect before the backoff elapses");
     clock = 30_000;
     await mirror.refresh();
-    await settle(80);
     // The mirror reconnects once the gate opens.
+    await waitFor(() => socket.subscriptions.length >= initial + 1);
     assert.equal(socket.subscriptions.length, initial + 1);
     socket.push("pane.updated", { pane_id: "w9:p9" });
     await settle(80);
@@ -306,6 +326,7 @@ test("a stale connection's close does not clobber a newer one, and stop() silenc
     assert.equal(socket.subscriptions.length, initial + 1);
 
     mirror.stop();
+    await mirror.refresh(); // drain any in-flight/orphan `agent list` child before temp.cleanup() removes its state file
     const subscriptionsAtStop = socket.subscriptions.length;
     socket.push("pane.updated", { pane_id: "w9:p9" });
     socket.dropClients();
