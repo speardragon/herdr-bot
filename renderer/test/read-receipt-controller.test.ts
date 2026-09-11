@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { canAcknowledge, createReadReceiptController } from "../src/production/read-receipt-controller.ts";
+import { maxEntrySeq, mergeTranscriptPageById } from "../src/production/transcript-seq.ts";
 import { applyRead, hasUnread } from "../../core/src/model/read-state.ts";
 
 function deferred<T>() {
@@ -160,6 +161,36 @@ test("reset() drops every chat's watermark but leaves the controller usable (e.g
   assert.equal(controller.ackedSeqFor("chat-b"), 0);
   await controller.acknowledge("chat-a", 1);
   assert.equal(controller.ackedSeqFor("chat-a"), 1);
+});
+
+test("regression: composing mergeTranscriptPageById + maxEntrySeq + the controller reproduces 'cache revisit after a missed event clears unread'", async () => {
+  // This composes the pure helpers (transcript-seq.ts) with the controller to reproduce the reported
+  // gap at the logic level. It does NOT exercise ProductionRenderer.tsx's actual resyncCachedChat
+  // wiring (the generation guard, the selectionStore.get() "selected" gate, the setEntriesByAgent
+  // call) -- there is no DOM harness in this repo to drive that, per the task's scope.
+  //
+  // The chat was cached and acked through seq 2 before being backgrounded; a live "send-message"
+  // event for seq 3 was missed entirely (e.g. transport disconnect/reconnect while backgrounded).
+  const controller = createReadReceiptController({
+    markChatRead: async (_id, throughSeq) => ({ lastReadSeq: throughSeq })
+  });
+  await controller.acknowledge("chat-a", 2);
+  assert.equal(controller.ackedSeqFor("chat-a"), 2);
+  const beforeResync = { lastReadSeq: controller.ackedSeqFor("chat-a"), lastIncomingSeq: 3, isManuallyUnread: false };
+  assert.equal(hasUnread(beforeResync), true, "the missed reply must show as unread before any resync happens");
+
+  // Cache revisit triggers resyncCachedChat: refetch, merge by id, then ack the merged max seq.
+  const cachedTranscript = [{ id: "e1" }, { id: "e2" }];
+  const rawFetchedEntries = [{ id: "e1", seq: 1 }, { id: "e2", seq: 2 }, { id: "e3", seq: 3 }];
+  const fetchedProjectedEntries = [{ id: "e1" }, { id: "e2" }, { id: "e3" }];
+  const merged = mergeTranscriptPageById(cachedTranscript, fetchedProjectedEntries);
+  assert.deepEqual(merged, [{ id: "e1" }, { id: "e2" }, { id: "e3" }]);
+  const resyncedMaxSeq = maxEntrySeq(rawFetchedEntries);
+
+  await controller.acknowledge("chat-a", resyncedMaxSeq);
+  assert.equal(controller.ackedSeqFor("chat-a"), 3);
+  const afterResync = applyRead(beforeResync, controller.ackedSeqFor("chat-a"), 3);
+  assert.equal(hasUnread(afterResync), false, "the cache-revisit resync must clear unread once it catches up");
 });
 
 test("dispose() stops further ACKs from taking effect", async () => {

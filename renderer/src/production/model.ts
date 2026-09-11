@@ -521,19 +521,9 @@ export function projectTranscriptPage(value: unknown, agentName: string): Produc
   return projectTranscriptPageResult(value, agentName).entries;
 }
 
-/**
- * The read-receipt controller acks the max seq of a page the renderer actually loaded/rendered --
- * never the summary's latest seq, and never a server request timestamp. Projected transcript entries
- * (see {@link ProductionTranscriptEntry}) drop the host's numeric `seq`, so this reads it straight off
- * the raw coordinator entries before they are projected.
- */
-export function maxEntrySeq(entries: readonly unknown[]): number {
-  let max = 0;
-  for (const entry of entries) {
-    if (isRecord(entry) && typeof entry.seq === "number" && Number.isFinite(entry.seq) && entry.seq > max) max = entry.seq;
-  }
-  return max;
-}
+// herdr-bot: maxEntrySeq/mergeTranscriptPageById live in transcript-seq.ts (see that file's header
+// comment) -- not here -- so they can be unit-tested directly under `node --test` without pulling in
+// model.ts's full "recovered/features/conversation" import graph.
 
 export function parseDesktopIntent(value: unknown, family: "focus" | "deep-link"): DesktopIntent {
   if (!isRecord(value)) return null;

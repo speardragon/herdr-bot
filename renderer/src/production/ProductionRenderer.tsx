@@ -143,7 +143,6 @@ import { LocalToolPermissionDock, type LocalToolPermissionRequest } from "../rec
 import { NewChatDialog, type AdoptableAgent, type CreateBotRequest, type CreateRoomRequest } from "./NewChatDialog";
 import {
   isRecord,
-  maxEntrySeq,
   parseDesktopIntent,
   projectRendererAgent,
   projectRendererAgents,
@@ -153,6 +152,7 @@ import {
   type DeepLinkInfo,
   type RendererAgent
 } from "./model";
+import { maxEntrySeq, mergeTranscriptPageById } from "./transcript-seq";
 import "../recovered/features/conversation/workspace/view.css";
 import "./production.css";
 
@@ -2248,14 +2248,67 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
 
   // herdr-bot: the only place that decides whether the currently-visible chat may ACK what it has
   // loaded. Loading/preloading a page never acknowledges anything by itself -- see read-receipt-controller.ts.
+  //
+  // "selected" reads selectionStore.get() directly, NOT activeAgentIdRef. The ref is only ever
+  // reassigned during a render pass (`activeAgentIdRef.current = activeAgentId` below), which React
+  // schedules asynchronously after selectionStore.select()/settle() -- it is not updated synchronously
+  // within the same call stack. openAgent's cache-revisit branch calls this right after
+  // `selectionStore.select(agentId)`, in the same synchronous turn, so the ref would still read the
+  // *previous* chat there and wrongly block the ACK. selectionStore.get() is the store's own
+  // synchronously-updated state and is therefore always current, in every calling context.
   const ackChatLoadedThrough = useCallback((agentId: string, throughSeq: number) => {
     if (throughSeq <= 0) return;
-    const selected = activeAgentIdRef.current === agentId;
+    const selected = selectionStore.get().currentAgentId === agentId;
     const visible = document.visibilityState === "visible";
     const focused = document.hasFocus();
     if (!canAcknowledge(selected, true, visible, focused)) return;
     void readReceiptController.acknowledge(agentId, throughSeq).catch(() => {});
-  }, [readReceiptController]);
+  }, [readReceiptController, selectionStore]);
+
+  // herdr-bot: cache revisit resync (brief step 4). Reopening an already-loaded chat re-fetches the
+  // latest tail (openAgentTail stays read-only re: read state -- see dispatcher.ts) and merges it into
+  // the cached transcript by entry id, so a live event missed while the chat was backgrounded (e.g.
+  // across a transport disconnect/reconnect) is not permanently missing until a restart. The merge is
+  // purely additive (mergeTranscriptPageById), so a stale/late response can never clobber an entry the
+  // live event stream has since added or changed. This SNAPSHOTS the shared request generation rather
+  // than bumping it: bumping would let a cached-chat revisit invalidate a genuine full load already in
+  // flight for a different (uncached) chat -- e.g. switch to uncached A (load in flight), then to
+  // cached B (resync starts): if the resync bumped the counter, A's real load response would be
+  // discarded as "stale" and returning to A would have to reload instead of hitting cache. A superseded
+  // resync is still safely discarded by a real full load's own bump; two resyncs landing out of order
+  // is harmless since the merge is additive, the watermark is a running max, and the ACK is gated by
+  // `selectionStore.get()` at the time it fires.
+  const resyncCachedChat = useCallback(async (agentId: string) => {
+    if (client == null) return;
+    const accountScopeGeneration = accountScopeGenerationRef.current;
+    const transportScopeGeneration = transportScopeGenerationRef.current;
+    const requestGeneration = openAgentRequestGenerationRef.current;
+    const agentName = agentsRef.current.find((agent) => agent.id === agentId)?.name ?? UI_TEXT.title;
+    const isStale = () => accountScopeGenerationRef.current !== accountScopeGeneration
+      || openAgentRequestGenerationRef.current !== requestGeneration
+      || transportScopeGenerationRef.current !== transportScopeGeneration
+      || accountRef.current?.kind !== "logged-in";
+    try {
+      const page = await client.call("openAgentTail", { id: agentId, limit: 200 });
+      if (isStale()) return;
+      const rawEntries = isRecord(page) && Array.isArray(page.entries) ? page.entries : [];
+      const projectedPage = projectTranscriptPageResult(page, agentName, agentId);
+      setEntriesByAgent((current) => {
+        const existing = current[agentId] ?? [];
+        const merged = mergeTranscriptPageById(existing, projectedPage.entries);
+        return merged === existing ? current : { ...current, [agentId]: merged };
+      });
+      const fetchedMaxSeq = maxEntrySeq(rawEntries);
+      loadedSeqByAgentRef.current[agentId] = Math.max(loadedSeqByAgentRef.current[agentId] ?? 0, fetchedMaxSeq);
+      ackChatLoadedThrough(agentId, loadedSeqByAgentRef.current[agentId]);
+    } catch {
+      if (isStale()) return;
+      // Best-effort background resync: keep showing the cached page on failure, but still ack
+      // whatever was already known-loaded so a transient resync failure alone does not leave the
+      // chat stuck unread (a later revisit, live append, or focus/visibility return will retry).
+      ackChatLoadedThrough(agentId, loadedSeqByAgentRef.current[agentId] ?? 0);
+    }
+  }, [ackChatLoadedThrough, client]);
 
   const openAgent = useCallback(async (agentId: string) => {
     const accountScopeGeneration = accountScopeGenerationRef.current;
@@ -2271,10 +2324,9 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     if (hasLoadedEntries) selectionStore.settle(agentId);
     if (!shouldOpen || hasLoadedEntries || client == null) {
       if (client == null) selectionStore.settle(agentId);
-      // Cache revisit: the transcript is already loaded, so ack whatever we already know was loaded
-      // for this chat. This does not itself re-fetch the tail -- the live "transcript" event stream
-      // (onAppended, below) is what keeps loadedSeqByAgentRef current between visits.
-      if (hasLoadedEntries) ackChatLoadedThrough(agentId, loadedSeqByAgentRef.current[agentId] ?? 0);
+      // Cache revisit: re-sync with the host (resyncCachedChat) instead of only re-acking the
+      // previously-known watermark, so a live event missed while backgrounded is not lost.
+      if (hasLoadedEntries) void resyncCachedChat(agentId);
       return;
     }
     // herdr-bot: bump the request generation only once a fetch is really issued. The auto-open effect
@@ -2310,7 +2362,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       selectionStore.reconcile({ agentIds: completeRosterAgentIdsRef.current, isRosterComplete: hasLoadedAgentsRef.current });
       setTranscriptLoadError({ agentId, accountScopeGeneration });
     }
-  }, [ackChatLoadedThrough, client, selectionStore, transcriptAccountSlot, transcriptPaginationController]);
+  }, [ackChatLoadedThrough, client, resyncCachedChat, selectionStore, transcriptAccountSlot, transcriptPaginationController]);
 
   const openGroupMemberChat = useCallback((agentId: string) => {
     setGroupInfoPaneOpen(false);
