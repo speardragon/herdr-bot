@@ -53,6 +53,7 @@ import { AgentSettingsPanel } from "../recovered/features/agent-info/settings/vi
 import { GroupMembersPane } from "../recovered/features/agent-info/group-members/view";
 import { createAvatarEditorProductionAdapter } from "../recovered/features/agent-info/avatar-editor/production-adapter";
 import { AvatarEditorView } from "../recovered/features/agent-info/avatar-editor/view";
+import { AgentAvatar } from "../recovered/features/conversation/workspace/agent-avatar";
 import { createPluginAuthProductionAdapter } from "../recovered/features/plugins/overlay/production-adapter";
 import { projectGroupMemberAgent } from "../recovered/features/agent-info/group-members/model";
 import { GROUP_INFO_PANE_HEADER, projectGroupInfoPaneRoute } from "../recovered/features/agent-info/group-members/route";
@@ -76,14 +77,13 @@ import { SignedInOnboarding } from "../recovered/features/onboarding/signed-in/v
 import { ORG_CHART_GATE, orgChartAvailability } from "../recovered/features/org-chart/workspace/entrypoint";
 import { createAgentNetworkTrigger } from "../recovered/features/org-chart/workspace/network-trigger";
 import { AccountMenu } from "../recovered/features/account/session/menu";
-import { SandBadge, SandButton, SandIcon, SandIconButton } from "../recovered/ui/sand-kit-primitives";
+import { SandButton, SandIcon, SandIconButton } from "../recovered/ui/sand-kit-primitives";
 import { OverlayDialog } from "../recovered/ui/overlay-primitives";
 import { SignInStatus } from "../recovered/features/account/session/sign-in-status";
 import { isRosterPrivacyBlockFailure, PrivacyBlockedDialog } from "../recovered/features/roster/privacy-blocked";
 import { RosterStatus } from "../recovered/features/roster/status";
 import { projectRosterFailure, selectRosterAccessReadiness } from "../recovered/features/roster/access-readiness";
 import { createRosterSelectionPersistence, createRosterSelectionStore } from "../recovered/features/roster/selection-state";
-import { createHiddenChatsMutationController } from "../recovered/features/hidden-chats/overlay/mutation-controller";
 import { createCoordinatorConnectionController, createCoordinatorConnectionSource } from "../recovered/features/root-resilience/connection-state";
 import { CoordinatorConnectionHost } from "../recovered/features/root-resilience/connection-state";
 import { applyOptimisticReactionUpdate } from "./reaction-root";
@@ -108,13 +108,16 @@ import { createCommandPaletteFileProvider } from "./command-palette-search-provi
 import { commandPaletteLinksFromConversation, createCommandPaletteLinkMetadataProvider } from "./command-palette-link-provider";
 import { commandPaletteUpdateCommand } from "./command-palette-update-command";
 import { commandPaletteRootCommands, type CommandPaletteComputerUpdateAction, type CommandPaletteInfoSection } from "./command-palette-root-commands";
+import { paletteVisibleCommands } from "./command-palette-row-model";
 import { CoordinatorCallError, createCoordinatorClient, type ProductionCoordinatorClient } from "./coordinator-client";
 import { UI_TEXT } from "./evidence";
 import { LocalSettings } from "./LocalSettings";
 import { t, useLocale } from "./locale";
+import { composerPlaceholder } from "./composer-placeholder";
+import { groupInfoPaneChrome, initialGroupInfoPage, type GroupInfoPage } from "./group-info-pane-model";
+import { GroupHeroAvatar } from "../recovered/features/agent-info/settings/group-hero-avatar";
 import "./minimal.css";
-import { movePinnedAgent, projectRecentOrderList, sortRecentChats } from "./sidebar-model";
-import { nextActivityTimeout, reconcileActivityMap, resolveActivityStatus, type ActivityMap } from "./bot-activity";
+import { movePinnedAgent, projectSidebarOrder, sortRecentChats } from "./sidebar-model";
 import { SignOutDialog } from "../recovered/features/account/session/sign-out";
 import { FeedbackDialog, type FeedbackCode } from "../recovered/features/feedback/overlay/view";
 import { UpdateRequired } from "../recovered/features/update/required/view";
@@ -216,14 +219,10 @@ const PluginsDesktopSurface = lazy(async () => {
   const module = await import("../recovered/features/plugins/overlay/desktop-surface");
   return { default: module.PluginsDesktopSurface };
 });
-const HiddenChatsDialog = lazy(async () => {
-  const module = await import("../recovered/features/hidden-chats/overlay/view");
-  return { default: module.HiddenChatsDialog };
-});
 const ComputerOverlayRouteView = lazy(() => computerEntrypoint.loadView());
 const OrgChartWorkspaceView = lazy(() => import("../recovered/features/org-chart/workspace/view"));
 
-type AuxiliaryOverlay = "hidden-chats" | "settings" | "plugins" | "about" | "feedback" | "confirm-logout" | null;
+type AuxiliaryOverlay = "settings" | "plugins" | "about" | "feedback" | "confirm-logout" | null;
 type WorkspaceRoute = "org-chart" | null;
 type TransportState = "browser" | "connecting" | "connected" | "down";
 
@@ -362,10 +361,23 @@ const OVERLAY_FRAME_STYLE = {
 const INFO_PANE_TOP_CLASS = "sand-info-pane__top sand-1n2onr6 sand-78zum5 sand-6s0dn4 sand-1qughib sand-167g77z sand-1c4vz4f sand-2lah0s sand-dl72j9 sand-lvsv26 sand-xlogw sand-14kp3v7 sand-exx8yu sand-j9b1aj sand-18d9i69 sand-f18ygs";
 const INFO_PANE_ACTIONS_CLASS = "sand-info-pane__actions sand-3nfvp2 sand-6s0dn4 sand-195vfkc sand-lvsv26";
 
-function RootInfoPaneHeader({ children, onClose, closeLabel = "Close details" }: { readonly children?: ReactNode; readonly onClose: () => void; readonly closeLabel?: string }) {
+/**
+ * Info-pane header. With `title` (and optionally `onBack`) it renders the reference layout
+ * `[<][  설정  ][>>]` -- equal-width end slots keep the title centered; the back chevron is a
+ * second close affordance since herdr-bot has no parent info view to return to. Without `title`
+ * the recovered `[children][>>]` shape is unchanged for the routines/channels/members panes.
+ */
+/** `actions` renders extra icon buttons immediately left of the `>>` close button -- the group
+ * members page (reference B) puts its ⚙ there, with no title and no back button. */
+function RootInfoPaneHeader({ actions, children, onClose, onBack, title, closeLabel = "Close details" }: { readonly actions?: ReactNode; readonly children?: ReactNode; readonly onClose: () => void; readonly onBack?: () => void; readonly title?: string; readonly closeLabel?: string }) {
+  const leading = onBack != null
+    ? <span className={INFO_PANE_ACTIONS_CLASS}><SandIconButton aria-label={t("Back")} icon="chevron-left" label={t("Back")} onClick={onBack} size="md" title={t("Back")} /></span>
+    : children == null ? <span aria-hidden="true" className={title == null ? undefined : "sand-info-pane__slot"} /> : children;
   return <header className={INFO_PANE_TOP_CLASS}>
-    {children == null ? <span aria-hidden="true" /> : children}
+    {leading}
+    {title == null ? null : <span className="sand-info-pane__title">{title}</span>}
     <span className={INFO_PANE_ACTIONS_CLASS}>
+      {actions}
       <SandIconButton aria-label={closeLabel} icon="chevrons-right" label={closeLabel} onClick={onClose} size="md" title={closeLabel} />
     </span>
   </header>;
@@ -868,35 +880,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   const [agents, setAgents] = useState<RendererAgent[]>([]);
   const [pinnedAgentIds, setPinnedAgentIds] = useState<string[]>([]);
   const [hasLoadedAgents, setHasLoadedAgents] = useState(false);
-  // herdr-bot: the independent green working/done activity map (task 3) lives at this root lifecycle,
-  // not per sidebar row -- rows only ever read `activityVisible` off it. It is reconciled from the
-  // roster's runtimeStatus whenever `agents` changes, and cleared while the transport is down so a
-  // reconnect's fresh snapshot never inherits a stale "was working" memory (which would otherwise wrongly
-  // grant an already-done snapshot a new afterglow).
-  const [activityMap, setActivityMap] = useState<ActivityMap>(() => new Map());
-  useEffect(() => {
-    if (transport !== "connected") {
-      setActivityMap((current) => current.size === 0 ? current : new Map());
-      return;
-    }
-    const statuses = new Map(agents.map((agent) => [agent.id, agent.runtimeStatus] as const));
-    setActivityMap((current) => reconcileActivityMap(current, statuses, Date.now()));
-  }, [agents, transport]);
-  // A single root-owned timer, rescheduled to the earliest pending "done" afterglow expiry so it
-  // disappears on time even without a new host event. Repeated `done` upserts never extend it --
-  // reconcileActivityMap's updateActivity call is a no-op when the status hasn't changed, so
-  // `visibleUntil` is never pushed out.
-  useEffect(() => {
-    const at = nextActivityTimeout(activityMap, Date.now());
-    if (at == null) return;
-    const timer = setTimeout(() => {
-      setActivityMap((current) => {
-        const statuses = new Map(Array.from(current, ([id, state]) => [id, state.status] as const));
-        return reconcileActivityMap(current, statuses, Date.now());
-      });
-    }, Math.max(0, at - Date.now()));
-    return () => clearTimeout(timer);
-  }, [activityMap]);
   const activeAgentId = useSyncExternalStore(
     selectionStore.subscribe,
     () => selectionStore.get().currentAgentId ?? "",
@@ -924,6 +907,8 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   const [agentSettingsOpen, setAgentSettingsOpen] = useState(false);
   const [avatarEditorOpen, setAvatarEditorOpen] = useState(false);
   const [groupInfoPaneOpen, setGroupInfoPaneOpen] = useState(false);
+  // herdr-bot: which of the group pane's two pages is showing -- see group-info-pane-model.ts.
+  const [groupInfoPage, setGroupInfoPage] = useState<GroupInfoPage>("settings");
   const [manageSharedRoomId, setManageSharedRoomId] = useState<string | null>(null);
   const [channelsInfoPaneOpen, setChannelsInfoPaneOpen] = useState(false);
   const [conversationOutlineAgentId, setConversationOutlineAgentId] = useState<string | null>(null);
@@ -1003,24 +988,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   pinnedAgentIdsRef.current = pinnedAgentIds;
   entriesByAgentRef.current = entriesByAgent;
 
-  const [hiddenChatsMutationController] = useState(() => createHiddenChatsMutationController({
-    call: (input) => client == null
-      ? Promise.reject(new Error("coordinator is unavailable for setAgentHiddenFromSidebar"))
-      : client.call("setAgentHiddenFromSidebar", input),
-    readAgent: (agentId) => {
-      const agent = agentsRef.current.find((candidate) => candidate.id === agentId);
-      return agent == null ? null : { id: agent.id, isHidden: agent.isHidden, updatedAt: agent.updatedAt };
-    },
-    onOptimisticChange: (agentId, isHidden) => {
-      setAgents((current) => current.map((agent) => agent.id === agentId ? { ...agent, isHidden } : agent));
-    },
-    onRollback: (agentId, optimisticValue, previousValue) => {
-      setAgents((current) => current.map((agent) => agent.id === agentId && agent.isHidden === optimisticValue
-        ? { ...agent, isHidden: previousValue }
-        : agent));
-    }
-  }));
-
   useLayoutEffect(() => {
     groupMembersRoot.roster.setAgents(agents);
   }, [agents, groupMembersRoot]);
@@ -1038,7 +1005,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   useStrictModeSafeDisposal(avatarEditorAdapter);
   useStrictModeSafeDisposal(pluginAuthAdapter);
   useStrictModeSafeDisposal(replyThreadController);
-  useStrictModeSafeDisposal(hiddenChatsMutationController);
 
   const sendComposerPrompt = async (submission: ComposerSubmission): Promise<void> => {
     if (client == null) throw new Error("coordinator is unavailable for sendPrompt");
@@ -1456,22 +1422,16 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     },
     [client]
   );
-  // herdr-bot: the green working/done dot (task 3) is derived here, once, from the root-owned
-  // activityMap -- never from agent.isRunning/currentActivity (that pipeline still drives the
-  // existing avatar persona animation, which is unrelated). `null` means "not visible right now",
-  // whether because the bot is idle/blocked/offline or because the transport is down.
-  const activityNow = Date.now();
-  const visibleAgents = agents.filter((agent) => !agent.isHidden).map((agent) => {
-    const activityStatus = resolveActivityStatus(activityMap, agent.id, transport === "connected", activityNow);
-    return { ...agent, isPinned: pinnedAgentIds.includes(agent.id), activityStatus };
-  });
-  // herdr-bot (task 3, plan §2.2 "이 화면에서는 정렬 우선권을 적용하지 않고"): the recent-order screen's
-  // rendered list must be one flat sortRecentChats-ordered list, with no pinned group floated above it
-  // -- ConversationSidebar/partitionSidebarAgents groups any `isPinned: true` item regardless of array
-  // order, so `visibleAgents` (which still carries the real isPinned, for consumers like the hover
-  // preview badge) is NOT what gets passed to <ConversationSidebar agents={...}>; this normalized copy
-  // is. It does not touch the stored pin state -- see projectRecentOrderList's own doc comment.
-  const recentOrderAgents = projectRecentOrderList(visibleAgents);
+  // herdr-bot: each row's status dot reads `agent.runtimeStatus` (the validated herdr status carried
+  // on RendererAgent) directly -- never agent.isRunning/currentActivity, which still drive only the
+  // avatar persona animation. The sidebar hides the dot itself while the transport is down.
+  const visibleAgents = agents.map((agent) => ({ ...agent, isPinned: pinnedAgentIds.includes(agent.id) }));
+  // herdr-bot: the sidebar list is recency-ordered (sortRecentChats), and ConversationSidebar/
+  // partitionSidebarAgents then floats the rows the user pinned (row menu "고정") into a group at the
+  // top, in pinnedAgentIds order. `isPinned` on visibleAgents is what drives that grouping, so this is
+  // NOT normalized away (it was, under plan §2.2's original "no position priority" call -- the row-menu
+  // redesign reinstated pinning). projectSidebarOrder (focusAgent below) is the flat twin of this order.
+  const sidebarAgents = sortRecentChats(visibleAgents);
   const pinnedAccountKey = account?.kind === "logged-in" ? account.authId ?? account.email ?? "account" : account?.kind ?? "unknown";
   const settingsNoticeSurface = overlay === "settings" || overlay === "plugins" ? overlay : "none";
   const settingsNoticeScope = `${pinnedAccountKey}:${account?.kind ?? "unknown"}:${settingsNoticeSurface}`;
@@ -1635,16 +1595,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     setAsyncTasksAgentId(null);
     asyncTasksReturnFocusRef.current = null;
   }, [agents, asyncTasksAgentId]);
-  const hiddenChatsAccountSlot = account?.kind === "logged-in" ? pinnedAccountKey : null;
-  useEffect(() => {
-    hiddenChatsMutationController.setScope(hiddenChatsAccountSlot, activeAgentId.length > 0 ? activeAgentId : null);
-  }, [activeAgentId, hiddenChatsAccountSlot, hiddenChatsMutationController]);
-  useEffect(() => {
-    hiddenChatsMutationController.ingestAgents(agents);
-  }, [agents, hiddenChatsMutationController]);
-  useEffect(() => {
-    if (transport === "connected") hiddenChatsMutationController.noteReconnect();
-  }, [hiddenChatsMutationController, transport]);
   const [teachRecordingFeatureEnabled, setTeachRecordingFeatureEnabled] = useState(
     () => teachRecordingFeatureGate(bridge.experiments.initialSnapshot)
   );
@@ -1707,7 +1657,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   useEffect(() => {
     if (sidebarSectionsWriteFailure != null) setNotice(sidebarSectionsWriteFailure.code);
   }, [sidebarSectionsWriteFailure]);
-  const hiddenAgents = agents.filter((agent) => agent.isHidden);
   const orgChartAgents = useMemo(() => agents.map((agent) => ({ ...agent, isRunning: agent.isRunning === true })), [agents]);
   const liveEntries = activeAgent == null ? EMPTY_ENTRIES : entriesByAgent[activeAgent.id] ?? EMPTY_ENTRIES;
   const entries = useMemo(
@@ -2308,6 +2257,12 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     const visible = document.visibilityState === "visible";
     const focused = document.hasFocus();
     if (!canAcknowledge(selected, true, visible, focused)) return;
+    // herdr-bot: the blue unread dot must vanish the moment the user looks at the chat, not a
+    // round-trip later. Clear it locally right away; the host stays the source of truth -- its
+    // markRead upsert confirms this, and if the ACK fails a later upsert simply restores the flag.
+    setAgents((current) => current.some((agent) => agent.id === agentId && agent.hasUnread === true)
+      ? current.map((agent) => agent.id === agentId ? { ...agent, hasUnread: false } : agent)
+      : current);
     void readReceiptController.acknowledge(agentId, throughSeq).catch(() => {});
   }, [readReceiptController, selectionStore]);
 
@@ -2423,21 +2378,27 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   const openSidebarProfile = useCallback((agentId: string) => {
     if (bridge == null || accountRef.current?.kind !== "logged-in") return;
     const target = agentsRef.current.find((agent) => agent.id === agentId);
-    if (target == null || target.isGroup) return;
+    if (target == null) return;
     setOverlay(null);
     setCommandPaletteOpen(false);
     setManageSharedRoomId(null);
     setRoutinesInfoPaneOpen(false);
     setChannelsInfoPaneOpen(false);
     setComputerInfoOpen(false);
+    // herdr-bot: the row menu's "프로필 편집" -- a bot opens its settings pane, a group opens its info
+    // pane on the 설정 page (the same pane the chat header's settings button toggles). Either one must
+    // run AFTER openAgent settles, because openAgent itself closes the group pane on arrival.
+    const openPane = target.isGroup
+      ? () => { setAgentSettingsOpen(false); setGroupInfoPage(initialGroupInfoPage("header")); setGroupInfoPaneOpen(true); }
+      : () => { setGroupInfoPaneOpen(false); setAgentSettingsOpen(true); };
     if (activeAgentIdRef.current === agentId) {
-      setAgentSettingsOpen(true);
+      openPane();
       return;
     }
     const accountAtOpen = accountRef.current;
     void openAgent(agentId).then(() => {
       if (accountRef.current !== accountAtOpen || activeAgentIdRef.current !== agentId) return;
-      setAgentSettingsOpen(true);
+      openPane();
     });
   }, [bridge, openAgent]);
   const sidebarProfileAction = useMemo(() => createSidebarProfileAction({ openProfile: openSidebarProfile }), [openSidebarProfile]);
@@ -3045,14 +3006,17 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
    * host-revalidation error (RosterError code) and pre-emptively (pruneDraftMembers, before the RPC). */
   const memberUnavailableMessage = t("That bot is no longer available.", "해당 봇을 더 이상 사용할 수 없습니다.");
 
-  const createBotFromDraft = useCallback(async () => {
+  const createBotFromDraft = useCallback(async (name?: string) => {
     const activeDraft = newChatDraftRef.current;
     if (client == null || activeDraft == null || newChatPendingRef.current) return;
     newChatPendingRef.current = true;
     setNewChatPending(true);
     setNewChatError(null);
     try {
-      const result = await client.call("herdrBot.quickCreateBot", { requestId: activeDraft.requestId, locale });
+      // herdr-bot: a name typed into the "+" combobox before picking 이름이 "..."인 Bot 만들기; an
+      // untitled create (plain "Create a new Bot") sends none, and the host falls back to "새 Bot"/
+      // "New Bot".
+      const result = await client.call("herdrBot.quickCreateBot", { requestId: activeDraft.requestId, locale, ...(name == null ? {} : { name }) });
       const created = result && typeof result === "object" && "agent" in result ? (result as { agent: unknown }).agent : result;
       const projected = projectRendererAgent(created);
       await refreshRoster();
@@ -3160,17 +3124,17 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     },
     focusPrompt: () => document.querySelector<HTMLElement>(".sand-prompt-form textarea, .sand-prompt-form [contenteditable='true']")?.focus(),
     previousAgent: () => {
-      const agentIds = agentsRef.current.filter((agent) => !agent.isHidden).map((agent) => agent.id);
+      const agentIds = agentsRef.current.map((agent) => agent.id);
       const agentId = resolveAdjacentAgentId(agentIds, activeAgentIdRef.current, "previous");
       if (agentId != null) void openAgentRef.current(agentId);
     },
     nextAgent: () => {
-      const agentIds = agentsRef.current.filter((agent) => !agent.isHidden).map((agent) => agent.id);
+      const agentIds = agentsRef.current.map((agent) => agent.id);
       const agentId = resolveAdjacentAgentId(agentIds, activeAgentIdRef.current, "next");
       if (agentId != null) void openAgentRef.current(agentId);
     },
     navigateBack: () => {
-      const availableAgentIds = new Set(agentsRef.current.filter((agent) => !agent.isHidden).map((agent) => agent.id));
+      const availableAgentIds = new Set(agentsRef.current.map((agent) => agent.id));
       const navigation = resolveRootShellNavigation(navigationHistoryRef.current, availableAgentIds, "back");
       if (navigation != null) {
         navigationHistoryRef.current = navigation.state;
@@ -3178,7 +3142,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       }
     },
     navigateForward: () => {
-      const availableAgentIds = new Set(agentsRef.current.filter((agent) => !agent.isHidden).map((agent) => agent.id));
+      const availableAgentIds = new Set(agentsRef.current.map((agent) => agent.id));
       const navigation = resolveRootShellNavigation(navigationHistoryRef.current, availableAgentIds, "forward");
       if (navigation != null) {
         navigationHistoryRef.current = navigation.state;
@@ -3186,11 +3150,10 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       }
     },
     focusAgent: (index) => {
-      // herdr-bot (task 3): the recent-order screen renders one flat sortRecentChats-ordered list with
-      // no pinned group (see recentOrderAgents/projectRecentOrderList above) -- this Nth-row shortcut
-      // must resolve against that same flat order, not the old pinned/unpinned partition, or Cmd+N
-      // would jump to the wrong chat once the visible order no longer matches this computation.
-      const visibleAgentIds = projectRecentOrderList(agentsRef.current.filter((agent) => !agent.isHidden)).map((agent) => agent.id);
+      // herdr-bot: the sidebar renders the pinned group first (pinnedAgentIds order), then the rest by
+      // recency (see sidebarAgents above) -- this Nth-row shortcut must resolve against that same
+      // flattened order, or Cmd+N would open a different chat than the Nth visible row.
+      const visibleAgentIds = projectSidebarOrder(agentsRef.current, pinnedAgentIdsRef.current).map((agent) => agent.id);
       const agentId = resolveIndexedAgentId(visibleAgentIds, index - 1);
       if (agentId != null) void openAgentRef.current(agentId);
     },
@@ -3369,20 +3332,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     removeTranscriptMessage(entry);
   }, [acknowledgementController, composerDraftStore, composerSubmissionQueue, removeTranscriptMessage]);
 
-  const setAgentHiddenFromSidebar = useCallback((agentId: string, isHidden: boolean) => {
-    void hiddenChatsMutationController.setAgentHiddenFromSidebar(agentId, isHidden).catch((error: unknown) => {
-      setNotice(error instanceof Error ? error.message : String(error));
-    });
-  }, [hiddenChatsMutationController]);
-
-  const unhide = useCallback((agentId: string) => {
-    setAgentHiddenFromSidebar(agentId, false);
-  }, [setAgentHiddenFromSidebar]);
-
-  const hideAgent = useCallback((agentId: string) => {
-    setAgentHiddenFromSidebar(agentId, true);
-  }, [setAgentHiddenFromSidebar]);
-
   const renameAgent = async (agentId: string, name: string) => {
     if (client == null) return;
     const current = agentsRef.current.find((agent) => agent.id === agentId);
@@ -3396,10 +3345,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       setAgents((agents) => agents.map((agent) => agent.id === agentId && agent.name === name ? { ...agent, name: previousName } : agent));
       setNotice(error instanceof Error ? error.message : String(error));
     }
-  };
-
-  const copyAgentId = (agentId: string) => {
-    void navigator.clipboard.writeText(agentId);
   };
 
   const persistPinnedAgentIds = (next: readonly string[]) => {
@@ -3424,14 +3369,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L49795
   const reorderPinnedAgents = (movedId: string, targetId: string, position: "before" | "after") => {
     persistPinnedAgentIds(movePinnedAgent(pinnedAgentIdsRef.current, movedId, targetId, position));
-  };
-
-  const setAgentUnread = async (agentId: string, isUnread: boolean) => {
-    if (client == null) return;
-    try {
-      await client.call("setAgentUnread", { id: agentId, isUnread });
-      setAgents((current) => current.map((agent) => agent.id === agentId ? { ...agent, ...(isUnread ? { hasUnread: true } : { hasUnread: undefined }) } : agent));
-    } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); }
   };
 
   const duplicateAgent = async (agentId: string) => {
@@ -3571,11 +3508,13 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     }
     if (section === "members") {
       if (!activeAgent.isGroup || activeAgent.raw.isSharedRoom === true) return;
+      setGroupInfoPage(initialGroupInfoPage("palette-members"));
       setGroupInfoPaneOpen(true);
       return;
     }
     if (activeAgent.isGroup) {
       if (activeAgent.raw.isSharedRoom === true) return;
+      setGroupInfoPage(initialGroupInfoPage("palette-group"));
       setGroupInfoPaneOpen(true);
       return;
     }
@@ -3638,10 +3577,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       run: () => { setOverlay(null); setWorkspaceRoute("org-chart"); }
     });
     commands.push({ id: "new:chat", label: "New chat", icon: "plus", keywords: ["new", "bot", "room", "group", "create", "chat"], detail: "Sidebar", run: startNewChatDraft });
-    if (hiddenAgents.length > 0) commands.push({
-      id: "open-hidden-chats", label: "Open Hidden Bots", keywords: ["hidden", "unhide", "hide", "sidebar", "bots"], detail: "Sidebar",
-      run: () => setOverlay("hidden-chats")
-    });
     commands.push(...rootCommands.filter((command) => command.id !== "update:computer"));
     if (bridge != null) {
       for (const section of SETTINGS_COMMANDS) commands.push({
@@ -3665,7 +3600,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     if (computerUpdateCommand != null) commands.push(computerUpdateCommand);
     if (updatePaletteCommand != null) commands.push(updatePaletteCommand);
     return commands;
-  }, [activeAgent, agentChannelsController, bridge, computerUpdateAction, hiddenAgents.length, openCommandPaletteInfo, openComputerUpdateConfirm, orgChartIsAvailable, themePreference, updatePaletteCommand]);
+  }, [activeAgent, agentChannelsController, bridge, computerUpdateAction, openCommandPaletteInfo, openComputerUpdateConfirm, orgChartIsAvailable, themePreference, updatePaletteCommand]);
 
   const showSignIn = bridge != null && account != null && account.kind !== "logged-in";
   const showRootLoading = bridge != null && account?.kind === "logged-in" && activeAgent == null && transport === "connecting" && !onboardingOpen;
@@ -3701,9 +3636,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   const rosterListStatus = rosterAccessReadiness.isLoaded
     ? agents.length === 0
       ? <RosterStatus kind="empty" />
-      : visibleAgents.length === 0
-        ? <RosterStatus kind="all-hidden" onShowHiddenBots={() => setOverlay("hidden-chats")} />
-        : null
+      : null
     : null;
   const groupInfoPaneRoute = projectGroupInfoPaneRoute({
     agent: activeAgent ?? null,
@@ -3763,31 +3696,26 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       {account?.kind === "logged-in" && !computerInfoOpen && !computer.isOpen && computerRebuildBannerInput.kind !== "reconnecting" ? <ComputerRebuildProgressBanner input={computerRebuildBannerInput} onRestore={restoreComputerProgress} /> : null}
       {bridge == null ? null : <WindowChrome bridge={bridge} isFullscreen={windowFullscreen} isMaximized={windowMaximized} />}
       <RootShellLoading isVisible={showRootLoading} />
-      <div style={{ display: "grid", gridTemplateColumns: `${Math.round(renderedSidebarLayout.isCollapsed ? SIDEBAR_LAYOUT_BOUNDS.collapsedWidth : renderedSidebarLayout.expandedWidth)}px minmax(0, 1fr)`, height: "100%", minHeight: 0, width: "100%" }}>
-        <div className="sand-sidebar-column" style={{ display: "grid", gridTemplateRows: "minmax(0, 1fr) auto auto auto", minHeight: 0 }}>
+      {/* herdr-bot: was a 2-column grid (sidebar px | chat 1fr). The info-pane asides used to render as
+          position:absolute overlay siblings *after* this row, so opening agent/group settings covered
+          the chat instead of making room for it. Grid-template-columns transitions are not reliably
+          smooth across engines (fr tracks in particular), so this is flex instead: the sidebar gets an
+          explicit pixel width, the chat area is the 1fr-equivalent flex:"1 1 auto" item, and the info
+          pane is a third flex item (.sand-info-pane-slot, moved inside this row below) whose width the
+          CSS animates between 0 and its open width -- see production.css "9b. Info pane push panel". */}
+      <div style={{ display: "flex", height: "100%", minHeight: 0, width: "100%" }}>
+        <div className="sand-sidebar-column" style={{ display: "grid", gridTemplateRows: "minmax(0, 1fr) auto", flex: "0 0 auto", minHeight: 0, width: `${Math.round(renderedSidebarLayout.isCollapsed ? SIDEBAR_LAYOUT_BOUNDS.collapsedWidth : renderedSidebarLayout.expandedWidth)}px` }}>
           <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", minHeight: 0 }}>
             {connectionController == null ? null : <CoordinatorConnectionHost controller={connectionController} />}
-            {/* herdr-bot (task 3, plan §2.2 "정렬 우선권을 적용하지 않고 관련 편집 메뉴를 감춘다"): this
-                is the single recent-order screen, so neither pin nor section POSITION PRIORITY nor
-                their EDIT menus/affordances are wired here:
-                - agents={recentOrderAgents} (not visibleAgents), sections={undefined}, and
-                  pinnedAgentIds={[]} together make ConversationSidebar render ONE flat
-                  sortRecentChats-ordered list -- no "Pinned agents" group, no per-section groups (see
-                  recentOrderAgents/projectRecentOrderList above for why isPinned must be normalized,
-                  not just pinnedAgentIds emptied).
-                - onTogglePin, onMoveAgentToSection, onMoveAgentToNewSection (Pin/Unpin + Move-to-section
-                  on the per-row menu) and onRenameSection/onRequestDeleteSection/onMoveSection (a section
-                  header's own rename/delete/move menu) are not passed, so neither ever offers those
-                  actions on this screen.
-                None of the underlying pin/section data, or the toggleAgentPin/moveAgentsToSection/
-                renameSection/moveSection/requestDeleteSection functions themselves, are removed --
-                only their wiring on this screen. onToggleSectionCollapsed and onReorderPinnedAgents stay
-                wired (a view toggle and a reorder-within-an-empty-pinned-group interaction, respectively
-                -- neither is an edit menu, and neither has anything to act on here since orderedPinned is
-                now always empty). */}
-            <ConversationSidebar activeAgentId={newChatDraft == null ? activeAgentId : ""} agents={recentOrderAgents} draftRow={newChatDraft == null ? undefined : { id: newChatDraft.requestId, name: t("New chat") }} isHostReachable={transport === "connected"} sections={undefined} sidebarLayout={renderedSidebarLayout} onResize={resizeSidebar} onResizeEnd={finishSidebarResize} onToggleSectionCollapsed={(sectionId, collapsed) => sidebarCollapseStore.setSectionCollapsed(sectionId, collapsed)} listStatus={rosterListStatus} pinnedAgentIds={[]} onCopyAgentId={copyAgentId} onHideAgent={(agentId) => void hideAgent(agentId)} onNewChat={startNewChatDraft} onOpenAgent={(agentId) => newChatDraft == null ? void openAgent(agentId) : openBotFromDraft(agentId)} onOpenProfile={sidebarProfileAction.onSelect} onShowAsyncTasks={account?.kind === "logged-in" && account.isAnysphereUser === true ? openAsyncTasks : undefined} onShowFullConversation={openConversationOutline} onRenameAgent={(agentId, name) => void renameAgent(agentId, name)} onReorderPinnedAgents={reorderPinnedAgents} onRequestDeleteAgent={(agent) => setDeleteAgent({ id: agent.id, name: agent.name, isGroup: agent.isGroup })} onSetAgentUnread={(agentId, isUnread) => void setAgentUnread(agentId, isUnread)} />
+            {/* herdr-bot: one recency-ordered list (sidebarAgents) with the user's pinned chats floated
+                to the top -- the row menu is 고정/고정 해제 · Bot 이름 변경 · 프로필 편집 · 삭제, after the
+                Grok Bot reference. Pinning (onTogglePin/pinnedAgentIds) persists through
+                bridge.agent.setPinnedAgents and drag-reorder within the pinned group is
+                onReorderPinnedAgents. Sections stay unwired here (sections={undefined}; no
+                onMoveAgentToSection/onRenameSection/...), so no per-section groups or section menus
+                render -- plan §2.2's "no section priority" call still stands for those. */}
+            <ConversationSidebar activeAgentId={newChatDraft == null ? activeAgentId : ""} agents={sidebarAgents} draftRow={newChatDraft == null ? undefined : { id: newChatDraft.requestId, name: t("New chat") }} isHostReachable={transport === "connected"} isPreviewEnabled={false} sections={undefined} sidebarLayout={renderedSidebarLayout} onResize={resizeSidebar} onResizeEnd={finishSidebarResize} onToggleSectionCollapsed={(sectionId, collapsed) => sidebarCollapseStore.setSectionCollapsed(sectionId, collapsed)} listStatus={rosterListStatus} pinnedAgentIds={pinnedAgentIds} onNewChat={startNewChatDraft} onOpenSearch={sidebarSearchTrigger} onOpenAgent={(agentId) => newChatDraft == null ? void openAgent(agentId) : openBotFromDraft(agentId)} onOpenProfile={sidebarProfileAction.onSelect} onRenameAgent={(agentId, name) => void renameAgent(agentId, name)} onReorderPinnedAgents={reorderPinnedAgents} onRequestDeleteAgent={(agent) => setDeleteAgent({ id: agent.id, name: agent.name, isGroup: agent.isGroup })} onTogglePin={toggleAgentPin} />
           </div>
-          {hiddenAgents.length > 0 && visibleAgents.length > 0 ? <SandButton aria-haspopup="dialog" onClick={() => setOverlay("hidden-chats")} size="sm" variant="secondary"><span>{t(UI_TEXT.hiddenBots)}</span><SandBadge aria-label={`${hiddenAgents.length} hidden bots`}>{hiddenAgents.length}</SandBadge></SandButton> : null}
           <div className="hb-settings-footer"><SandButton leadingIcon="settings" onClick={() => setOverlay("settings")} variant="secondary">{t("Settings")}</SandButton></div>
         </div>
         {workspaceRoute === "org-chart" ? <main className="sand-chat-stage"><Suspense fallback={null}><OrgChartWorkspaceView
@@ -3802,11 +3730,11 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           focusSignal={newChatFocusSignal}
           onCancel={discardNewChatDraft}
           onChange={setNewChatDraft}
-          onCreateBot={() => void createBotFromDraft()}
+          onCreateBot={(name) => void createBotFromDraft(name)}
           onCreateGroup={() => void createGroupFromDraft()}
           onOpenBot={openBotFromDraft}
           pending={newChatPending}
-        /></main> : showRootEmptyWorkspace ? <RootShellEmptyWorkspace isVisible /> : activeAgent == null ? null : <div style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, width: "100%" }}>
+        /></main> : showRootEmptyWorkspace ? <RootShellEmptyWorkspace isVisible /> : activeAgent == null ? null : <div style={{ display: "flex", flex: "1 1 auto", flexDirection: "column", minHeight: 0, minWidth: 0 }}>
           <main className="sand-chat-stage">
           <ConversationAgentHeader
             agent={activeAgent}
@@ -3818,7 +3746,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
 
 
             onToggleSettings={activeAgent.isGroup
-              ? groupInfoPaneRoute == null ? undefined : () => { setAgentSettingsOpen(false); setRoutinesInfoPaneOpen(false); setChannelsInfoPaneOpen(false); setComputerInfoOpen(false); setManageSharedRoomId(null); setGroupInfoPaneOpen((open) => !open); }
+              ? groupInfoPaneRoute == null ? undefined : () => { setAgentSettingsOpen(false); setRoutinesInfoPaneOpen(false); setChannelsInfoPaneOpen(false); setComputerInfoOpen(false); setManageSharedRoomId(null); setGroupInfoPage(initialGroupInfoPage("header")); setGroupInfoPaneOpen((open) => !open); }
               : bridge == null ? undefined : () => { setGroupInfoPaneOpen(false); setRoutinesInfoPaneOpen(false); setChannelsInfoPaneOpen(false); setComputerInfoOpen(false); setManageSharedRoomId(null); setAgentSettingsOpen(true); }}
 
           />
@@ -3857,9 +3785,111 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           </main>
           <div className="sand-chat-input-dock">
             {localToolPermissionDock}
-            <ConversationComposer acceptedSendGeneration={composerClearGeneration} disabled={busy || client == null} draft={draft} editorProviders={editorProviders} notice={notice ?? (activeAgent.onboarding != null && activeAgent.onboarding.stage !== "ready" && activeAgent.onboarding.stage !== "failed" ? t("Setting up this bot…", "이 봇을 설정하는 중…") : null)} onChange={(value) => composerDraftStore.setDraft(activeAgent.id, value)} onClearReplyTarget={clearReplyTarget} onRemoveAttachment={removeAttachment} onStageFiles={stageFiles} onSubmit={submit} placeholder={locale === "ko" ? activeAgent.name + "에 메시지 보내기 · @로 봇 멘션" : "Message " + activeAgent.name + " · @ to mention a bot"} replyTarget={replyTarget} scopeKey={`${transcriptAccountSlot ?? "signed-out"}:${activeAgent.id}`} sendDisabled={activeAgent.onboarding != null && activeAgent.onboarding.stage !== "ready"} transcribeAudio={transcribeAudio} />
+            <ConversationComposer acceptedSendGeneration={composerClearGeneration} disabled={busy || client == null} draft={draft} editorProviders={editorProviders} notice={notice ?? (activeAgent.onboarding != null && activeAgent.onboarding.stage !== "ready" && activeAgent.onboarding.stage !== "failed" ? t("Setting up this bot…", "이 봇을 설정하는 중…") : null)} onChange={(value) => composerDraftStore.setDraft(activeAgent.id, value)} onClearReplyTarget={clearReplyTarget} onRemoveAttachment={removeAttachment} onStageFiles={stageFiles} onSubmit={submit} placeholder={composerPlaceholder(activeAgent.name, locale)} replyTarget={replyTarget} scopeKey={`${transcriptAccountSlot ?? "signed-out"}:${activeAgent.id}`} sendDisabled={activeAgent.onboarding != null && activeAgent.onboarding.stage !== "ready"} transcribeAudio={transcribeAudio} />
           </div>
         </div>}
+        {/* herdr-bot: the 4 asides below used to render as position:absolute overlay siblings *after*
+            this row, so opening agent/group settings covered the chat instead of pushing it over. This
+            slot is a flex item inside the row -- see production.css "9b. Info pane push panel" for the
+            width transition (0 <-> open width) that makes the chat area shrink smoothly as one opens,
+            and grow back smoothly as it closes, instead of jump-cutting or overlapping. */}
+        <div className="sand-info-pane-slot">
+          {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2772350 */}
+          {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2727500 */}
+          {bridge == null || activeAgent == null || activeAgent.isGroup || !agentSettingsOpen || agentSettingsController == null || agentSettingsSnapshot == null ? null : <aside
+            aria-label={t("Conversation details")}
+            className="sand-info-pane"
+            data-open="true"
+          >
+            <RootInfoPaneHeader onBack={() => setAgentSettingsOpen(false)} onClose={() => setAgentSettingsOpen(false)} title={t("Settings")} />
+            {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2750022 (Edit agent avatar trigger/editor region) */}
+            {/* herdr-bot: the reference's centered avatar IS the avatar-editor trigger (replacing the
+                old "봇 아바타 변경" button); the editor opens inline right under it. */}
+            <AgentSettingsPanel
+              avatar={<AgentAvatar agentId={activeAgent.id} name={activeAgent.name} dataUrl={activeAgent.avatarDataUrl} shape={activeAgent.avatarShape} color={activeAgent.avatarColor} size="xl" isStatic />}
+              avatarEditor={avatarEditorSnapshot.status === "ready" && avatarEditorSnapshot.controller != null ? <AvatarEditorView
+                agentIsGroup={activeAgent.isGroup}
+                controller={avatarEditorSnapshot.controller}
+                onClose={() => {
+                  setAvatarEditorOpen(false);
+                  queueMicrotask(() => avatarEditorTriggerRef.current?.focus());
+                }}
+                triggerRef={avatarEditorTriggerRef}
+              /> : null}
+              avatarTriggerRef={avatarEditorTriggerRef}
+              controller={agentSettingsController}
+              isAvatarEditorOpen={avatarEditorOpen}
+              onEditAvatar={avatarEditorReady ? () => setAvatarEditorOpen((open) => !open) : undefined}
+            />
+          </aside>}
+          {groupInfoPaneRoute == null || groupMemberAgent == null || !groupInfoPaneOpen ? null : (() => {
+            // herdr-bot: two pages after the Grok Bot reference (group-info-pane-model.ts). The chat
+            // header opens *settings* (A: `<` 설정 `>>`, "나"+members hero, 이름/설명); `<` goes to
+            // *members* (B: ⚙ `>>`, 멤버 rows, 멤버 추가); ⚙ returns to settings. One <aside> so the
+            // header's aria-controls id and the slot's :has() both keep a single target.
+            const chrome = groupInfoPaneChrome(groupInfoPage);
+            const backPage = chrome.back;
+            const settingsPage = chrome.settings;
+            // `agents` (reactive state) rather than agentsRef.current: this runs during render, and the
+            // full roster -- hidden bots included -- is what a group's members may be drawn from.
+            const findMember = (memberId: string) => agents.find((candidate) => candidate.id === memberId);
+            const resolveMemberAvatar = (memberId: string) => {
+              const member = findMember(memberId);
+              return member == null ? null : { color: member.avatarColor ?? null, dataUrl: member.avatarDataUrl ?? null, shape: member.avatarShape ?? null };
+            };
+            const heroMembers = groupMemberAgent.memberIds.map((memberId) => {
+              const member = findMember(memberId);
+              return { id: memberId, name: member?.name ?? memberId, color: member?.avatarColor ?? null, dataUrl: member?.avatarDataUrl ?? null, shape: member?.avatarShape ?? null };
+            });
+            return <aside
+              aria-label={t(GROUP_INFO_PANE_HEADER.ariaLabel)}
+              className="sand-info-pane"
+              data-open="true"
+              data-page={groupInfoPage}
+              id="sand-conversation-details"
+            >
+              <RootInfoPaneHeader
+                actions={settingsPage == null ? undefined : <SandIconButton aria-label={t("Group settings")} icon="settings-gear" label={t("Group settings")} onClick={() => setGroupInfoPage(settingsPage)} size="md" title={t("Group settings")} />}
+                closeLabel={t(GROUP_INFO_PANE_HEADER.closeLabel)}
+                onBack={backPage == null ? undefined : () => setGroupInfoPage(backPage)}
+                onClose={() => setGroupInfoPaneOpen(false)}
+                title={chrome.title == null ? undefined : t(chrome.title)}
+              />
+              {groupInfoPage === "settings"
+                ? agentSettingsController == null ? null : <AgentSettingsPanel avatar={<GroupHeroAvatar members={heroMembers} />} controller={agentSettingsController} />
+                : <GroupMembersPane
+                  alert={groupMembersRoot.alert}
+                  accountGeneration={groupInfoPaneRoute.accountGeneration}
+                  agent={groupMemberAgent}
+                  onOpenAgentChat={groupInfoPaneRoute.onOpenAgentChat}
+                  provider={groupMembersRoot.provider}
+                  resolveMemberAvatar={resolveMemberAvatar}
+                />}
+            </aside>;
+          })()}
+          {bridge == null || activeAgent == null || activeAgent.isGroup || agentSettingsOpen || !routinesInfoPaneOpen ? null : <aside
+            aria-label={t("Conversation details")}
+            className="sand-info-pane"
+            data-open="true"
+          >{mountRoutinesInfoPane({
+            agentId: activeAgent.id,
+            automationId: routinesAutomationId,
+            controller: routinesController,
+            reconnectKey: `${paletteAccountIdentity}:${transport}`,
+            onBack: () => { setRoutinesAutomationId(null); setRoutinesInfoPaneOpen(false); },
+            onClose: () => { setRoutinesAutomationId(null); setRoutinesInfoPaneOpen(false); },
+            disposeOnUnmount: false
+          })}</aside>}
+          {bridge == null || activeAgent == null || activeAgent.isGroup || agentSettingsController == null || agentChannelsController == null || !channelsInfoPaneOpen ? null : <aside
+            aria-label={t("Conversation details")}
+            className="sand-info-pane"
+            data-open="true"
+            id="sand-conversation-details"
+          >
+            <RootInfoPaneHeader onClose={() => setChannelsInfoPaneOpen(false)}><h2>Channels</h2></RootInfoPaneHeader>
+            {mountAgentInfoChannels({ agentId: activeAgent.id, labelledBy: "sand-conversation-heading", controller: agentChannelsController })}
+          </aside>}
+        </div>
       </div>
 
       {conversationOutlineAgent == null ? null : <ConversationOutlinePanel
@@ -3876,71 +3906,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         provider={asyncTasksProvider}
       />}
 
-      {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2772350 */}
-      {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2727500 */}
-      {bridge == null || activeAgent == null || activeAgent.isGroup || !agentSettingsOpen || agentSettingsController == null || agentSettingsSnapshot == null ? null : <aside
-        aria-label={t("Conversation details")}
-        className="sand-info-pane"
-        data-open="true"
-      >
-        <RootInfoPaneHeader onClose={() => setAgentSettingsOpen(false)} />
-        <AgentSettingsPanel controller={agentSettingsController} />
-        {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2750022 (Edit agent avatar trigger/editor region) */}
-        {avatarEditorReady ? <SandButton
-          aria-expanded={avatarEditorOpen}
-          aria-label={t("Edit agent avatar")}
-          onClick={() => setAvatarEditorOpen((open) => !open)}
-          ref={avatarEditorTriggerRef}
-          size="sm"
-          variant="secondary"
-        >{t("Edit agent avatar")}</SandButton> : null}
-        {avatarEditorOpen && avatarEditorSnapshot.status === "ready" && avatarEditorSnapshot.controller != null ? <AvatarEditorView
-          agentIsGroup={activeAgent.isGroup}
-          controller={avatarEditorSnapshot.controller}
-          onClose={() => {
-            setAvatarEditorOpen(false);
-            queueMicrotask(() => avatarEditorTriggerRef.current?.focus());
-          }}
-          triggerRef={avatarEditorTriggerRef}
-        /> : null}
-      </aside>}
-      {groupInfoPaneRoute == null || groupMemberAgent == null || !groupInfoPaneOpen ? null : <aside
-        aria-label={t(GROUP_INFO_PANE_HEADER.ariaLabel)}
-        className="sand-info-pane"
-        data-open="true"
-        id="sand-conversation-details"
-      >
-        <RootInfoPaneHeader closeLabel={t(GROUP_INFO_PANE_HEADER.closeLabel)} onClose={() => setGroupInfoPaneOpen(false)} />
-        <GroupMembersPane
-          alert={groupMembersRoot.alert}
-          accountGeneration={groupInfoPaneRoute.accountGeneration}
-          agent={groupMemberAgent}
-          onOpenAgentChat={groupInfoPaneRoute.onOpenAgentChat}
-          provider={groupMembersRoot.provider}
-        />
-      </aside>}
-      {bridge == null || activeAgent == null || activeAgent.isGroup || agentSettingsOpen || !routinesInfoPaneOpen ? null : <aside
-        aria-label={t("Conversation details")}
-        className="sand-info-pane"
-        data-open="true"
-      >{mountRoutinesInfoPane({
-        agentId: activeAgent.id,
-        automationId: routinesAutomationId,
-        controller: routinesController,
-        reconnectKey: `${paletteAccountIdentity}:${transport}`,
-        onBack: () => { setRoutinesAutomationId(null); setRoutinesInfoPaneOpen(false); },
-        onClose: () => { setRoutinesAutomationId(null); setRoutinesInfoPaneOpen(false); },
-        disposeOnUnmount: false
-      })}</aside>}
-      {bridge == null || activeAgent == null || activeAgent.isGroup || agentSettingsController == null || agentChannelsController == null || !channelsInfoPaneOpen ? null : <aside
-        aria-label={t("Conversation details")}
-        className="sand-info-pane"
-        data-open="true"
-        id="sand-conversation-details"
-      >
-        <RootInfoPaneHeader onClose={() => setChannelsInfoPaneOpen(false)}><h2>Channels</h2></RootInfoPaneHeader>
-        {mountAgentInfoChannels({ agentId: activeAgent.id, labelledBy: "sand-conversation-heading", controller: agentChannelsController })}
-      </aside>}
       {sharedRoomDialogOpen && sharedRoomProvider != null && sharedRoomContext != null ? <SharedRoomDialog
         accountGeneration={sharedRoomContext.accountGeneration}
         agentId={sharedRoomContext.agentId}
@@ -3959,7 +3924,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         teachRecording={teachRecordingComposition}
       />}
 
-      {overlay === "hidden-chats" ? <div style={OVERLAY_FRAME_STYLE}><Suspense fallback={null}><HiddenChatsDialog hiddenAgents={hiddenAgents} isOpen onClose={() => setOverlay(null)} onOpenAgent={(id) => void openAgent(id)} onUnhide={(id) => void unhide(id)} /></Suspense></div> : null}
       {overlay === "settings" && bridge != null ? <LocalSettings bridge={bridge} onClose={() => setOverlay(null)} /> : null}
 
       {overlay === "about" && bridge != null ? <div style={OVERLAY_FRAME_STYLE}><RecoveredAboutDialog
@@ -4036,7 +4000,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       {/* onOpenRoutine={(agentId) => void openAgent(agentId)} */}
       <CommandPalette
         agents={agents}
-        commands={paletteCommands.filter((command) => command.id === "settings:general" || command.id === "new:chat").map((command) => ({ ...command, label: command.id === "new:chat" ? t("New chat") : t("Settings") }))}
+        commands={paletteVisibleCommands(paletteCommands)}
         routines={routineSnapshot.value}
         routineStatus={routineSnapshot.status}
         files={fileSnapshot.value}

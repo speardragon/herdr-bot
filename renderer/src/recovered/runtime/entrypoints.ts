@@ -22,15 +22,6 @@ export const recoveredEntrypoints = [
     recovery: "exact-placeholder"
   },
   {
-    id: "overlay:hidden-chats",
-    name: "Hidden Chats",
-    surface: "overlay",
-    originalEntrypointPath: "features/hidden-chats/overlay/entrypoint.ts",
-    originalViewPath: "features/hidden-chats/overlay/view.tsx",
-    productionChunk: "view-Cbx1-ckK.js",
-    recovery: "semantic-model"
-  },
-  {
     id: "view:org-chart",
     name: "Org Chart",
     surface: "workspace",

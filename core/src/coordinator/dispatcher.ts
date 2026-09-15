@@ -86,7 +86,10 @@ function quickCreateBot(host: Host, args: Args): unknown {
   const requestId = str(args, "requestId");
   if (!isValidRequestId(requestId)) throw new ArgsError("requestId must be a UUID");
   if (args.locale !== "ko" && args.locale !== "en") throw new ArgsError('locale must be "ko" or "en"');
-  const profile = host.onboarding.create({ requestId, locale: args.locale });
+  // A blank/whitespace-only name (the combobox never sends one, but a stale/hand-rolled call might)
+  // is treated the same as omitting it -- onboarding.create falls back to the plain default name.
+  const name = optStr(args, "name");
+  const profile = host.onboarding.create({ requestId, locale: args.locale, ...(name == null || name.trim().length === 0 ? {} : { name }) });
   host.chat.emitRoster();
   return { agent: requireSummary(host, profile.id) };
 }
@@ -121,7 +124,9 @@ function updateAgent(host: Host, args: Args): unknown {
   const id = str(args, "id");
   const profile = isRecord(args.profile) ? args.profile : {};
   const patch = { ...(optStr(profile, "name") == null ? {} : { name: optStr(profile, "name")! }), ...(typeof profile.description === "string" ? { description: profile.description } : {}) };
-  const updated = host.chat.chatKind(id) === "room" ? host.roster.updateRoom(id, patch) : host.roster.updateProfile(id, patch);
+  // The optional label (`title`) is a bot-only field; rooms have no label in the reference UI.
+  const botPatch = { ...patch, ...(typeof profile.title === "string" ? { title: profile.title } : {}) };
+  const updated = host.chat.chatKind(id) === "room" ? host.roster.updateRoom(id, patch) : host.roster.updateProfile(id, botPatch);
   if (updated != null) host.chat.emitUpsert(id);
   return updated == null ? null : host.chat.summary(id);
 }

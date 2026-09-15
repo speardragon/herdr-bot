@@ -98,13 +98,14 @@ export class RosterService {
     this.#deps.onChatRemoved?.(id);
   }
 
-  updateProfile(id: string, patch: { readonly name?: string; readonly description?: string; readonly notifyOnUpdatesEnabled?: boolean; readonly isHiddenFromSidebar?: boolean }): BotProfile | null {
+  updateProfile(id: string, patch: { readonly name?: string; readonly description?: string; readonly title?: string; readonly notifyOnUpdatesEnabled?: boolean; readonly isHiddenFromSidebar?: boolean }): BotProfile | null {
     const current = this.#deps.profiles.get(id);
     if (current == null) return null;
     const next: BotProfile = {
       ...current,
       ...(patch.name == null || patch.name.trim().length === 0 ? {} : { name: patch.name.trim() }),
       ...(patch.description == null ? {} : { description: patch.description }),
+      ...(patch.title == null ? {} : { title: patch.title.trim() }),
       ...(patch.notifyOnUpdatesEnabled == null ? {} : { notifyOnUpdatesEnabled: patch.notifyOnUpdatesEnabled }),
       ...(patch.isHiddenFromSidebar == null ? {} : { isHiddenFromSidebar: patch.isHiddenFromSidebar }),
       updatedAt: this.#now(),

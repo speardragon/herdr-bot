@@ -23,6 +23,15 @@ test("profile store round-trips, lists sorted by id, and deletes the bot directo
   }
 });
 
+test("projectBotProfile keeps an optional string title and omits the key when it is absent or malformed", () => {
+  const withTitle = projectBotProfile({ ...sampleProfile(), title: "research" });
+  assert.equal(withTitle?.title, "research");
+  const withoutTitle = projectBotProfile(sampleProfile());
+  assert.equal(withoutTitle == null ? "missing" : "title" in withoutTitle, false);
+  const malformed = projectBotProfile({ ...sampleProfile(), title: 42 });
+  assert.equal(malformed == null ? "missing" : "title" in malformed, false);
+});
+
 test("projectBotProfile rejects malformed profiles and fills optional booleans", () => {
   assert.equal(projectBotProfile({ id: "x" }), null);
   const projected = projectBotProfile({ ...sampleProfile(), notifyOnUpdatesEnabled: undefined, isHiddenFromSidebar: undefined });

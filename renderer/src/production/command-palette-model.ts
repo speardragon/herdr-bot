@@ -7,6 +7,7 @@ import type { CommandPaletteFile } from "./command-palette-search-provider";
 import type { CommandPaletteMessage } from "./command-palette-message-provider";
 import type { CommandPaletteLink } from "./command-palette-link-provider";
 import { commandPaletteLinkDisplayUrl } from "./command-palette-link-provider";
+import type { SandIconName } from "../recovered/ui/sand-icon-registry";
 
 export type CommandPaletteTab = "all" | "messages" | "agents" | "groups" | "files" | "links" | "routines" | "actions";
 
@@ -15,13 +16,20 @@ export interface CommandPaletteAgent {
   name: string;
   title?: string;
   isGroup: boolean;
-  isHidden: boolean;
+  /** herdr-bot: row projection inputs (reference layout: avatar + name + description/member line).
+   * All optional so the palette keeps accepting the bare shape older callers/tests pass. */
+  description?: string;
+  memberIds?: readonly string[];
+  isSharedRoom?: boolean;
+  avatarDataUrl?: string | null;
+  avatarShape?: string | null;
+  avatarColor?: string | null;
 }
 
 export interface CommandPaletteCommand {
   id: string;
   label: string;
-  icon?: string;
+  icon?: SandIconName;
   keywords: readonly string[];
   detail?: string;
   isActive?: boolean;
@@ -30,7 +38,7 @@ export interface CommandPaletteCommand {
 }
 
 export type CommandPaletteEntry =
-  | { kind: "agent"; agent: CommandPaletteAgent; isHidden?: boolean }
+  | { kind: "agent"; agent: CommandPaletteAgent }
   | { kind: "command"; command: CommandPaletteCommand }
   | { kind: "message"; message: CommandPaletteMessage }
   | { kind: "file"; file: CommandPaletteFile }
@@ -150,25 +158,22 @@ export function commandPaletteEntries({
   query: string;
   tab: CommandPaletteTab;
 }): CommandPaletteEntry[] {
-  const visibleAgents = agents.filter((agent) => !agent.isHidden).map((agent): CommandPaletteEntry => ({ kind: "agent", agent }));
+  const agentEntries = agents.map((agent): CommandPaletteEntry => ({ kind: "agent", agent }));
   const commandEntries = commands.map((command): CommandPaletteEntry => ({ kind: "command", command }));
   const messageEntries = messages.map((message): CommandPaletteEntry => ({ kind: "message", message }));
   const fileEntries = files.map((file): CommandPaletteEntry => ({ kind: "file", file }));
   const linkEntries = links.map((link): CommandPaletteEntry => ({ kind: "link", link }));
   const routineEntries = routines.map((routine): CommandPaletteEntry => ({ kind: "routine", routine }));
-  const base = [...visibleAgents, ...routineEntries, ...fileEntries, ...linkEntries, ...messageEntries, ...commandEntries].filter((entry) => entryMatchesTab(entry, tab));
+  const base = [...agentEntries, ...routineEntries, ...fileEntries, ...linkEntries, ...messageEntries, ...commandEntries].filter((entry) => entryMatchesTab(entry, tab));
   const tokens = paletteSearchTokens(query);
-  if (tokens.length === 0) return tab === "all" ? [...visibleAgents, ...commandEntries] : base;
-  const hiddenAgents = agents.filter((agent) => agent.isHidden).map((agent): CommandPaletteEntry => ({ kind: "agent", agent, isHidden: true }));
+  if (tokens.length === 0) return tab === "all" ? [...agentEntries, ...commandEntries] : base;
   const normalizedQuery = tokens.join(" ");
   const score = (entries: CommandPaletteEntry[]) => entries
     .map((entry) => ({ entry, score: scoreEntry(entry, tokens, normalizedQuery) }))
     .filter((candidate): candidate is { entry: CommandPaletteEntry; score: number } => candidate.score != null);
   const scored = score(base);
-  const scoredHidden = score(hiddenAgents.filter((entry) => entryMatchesTab(entry, tab)));
   scored.sort((left, right) => right.score - left.score);
-  scoredHidden.sort((left, right) => right.score - left.score);
-  return [...scored, ...scoredHidden].map(({ entry }) => entry);
+  return scored.map(({ entry }) => entry);
 }
 
 export function movePaletteHighlight(current: number, rowCount: number, delta: -1 | 1): number {

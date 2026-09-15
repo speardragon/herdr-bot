@@ -92,7 +92,7 @@ export function botSummary(args: {
     id: profile.id,
     name: profile.name,
     description: profile.description,
-    title: "",
+    title: profile.title ?? "",
     avatarDataUrl: null,
     avatarVersion: null,
     avatarShape: profile.avatarShape,

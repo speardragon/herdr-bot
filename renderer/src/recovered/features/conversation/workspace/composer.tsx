@@ -204,7 +204,13 @@ export function ConversationComposer({ acceptedSendGeneration = 0, draft, disabl
         <div className="sand-prompt-actions-row">
           <SandIconButton aria-label={t("Attach file")} className={PROMPT_ATTACH_CLASS} disabled={disabled || atLimit || voiceBusy} icon="plus" onClick={() => fileInput.current?.click()} shape="circle" size="lg" type="button" variant="default" />
           <span className="sand-prompt-actions-trailing sand-prompt-cta-cluster sand-78zum5 sand-6s0dn4 sand-2lah0s">
-            <button aria-label={t("Send message")} className={PROMPT_SEND_CLASS} disabled={!canSend} type="submit"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5m-6 6 6-6 6 6" /></svg></button>
+            {/* herdr-bot: one trailing slot after the Grok Bot reference -- a black mic circle while the
+             * draft is empty, the send arrow once there is a payload. The desktop bridge has no voice
+             * transcription (bridge-main.ts throws), so the mic is a disabled, tooltipped placeholder
+             * rather than a button that surfaces an error on every click. */}
+            {hasPayload
+              ? <button aria-label={t("Send message")} className={PROMPT_SEND_CLASS} disabled={!canSend} type="submit"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5m-6 6 6-6 6 6" /></svg></button>
+              : <button aria-label={t("Voice input is not available yet", "음성 입력은 아직 지원되지 않습니다")} className="sand-prompt-mic" disabled title={t("Voice input is not available yet", "음성 입력은 아직 지원되지 않습니다")} type="button"><SandIcon name="mic" size="lg" /></button>}
           </span>
         </div>
         {voice.error ? <p aria-live="polite" className="sand-prompt-voice-error" role="status">{voice.error.message}</p> : null}

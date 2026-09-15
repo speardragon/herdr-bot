@@ -63,24 +63,11 @@
 /* @evidence src/app/dist/renderer/assets/index-lCyB53CO.css#byteOffset=422439,423828,526294,490692,378915,407990,408356,406334,407287,406856 (Mac SHA256 5a25f934b7d3b7a55483cb5f2a1a05e21209aad0a09c82d07d2add054a6b7856) */
 /* @evidence recovered/frontend/app/assets/index-lCyB53CO.css#byteOffset=478765,480339,594613,554945,430030,462492,462890,460684,461725,461254 (Windows SHA256 bc44533bcf9109b5596d57dda428370d9bdc4fba8201cd6ed4cb0d4abd795ddc) */
 /* d0e stylex root/state tokens are retained by the immutable renderer CSS. These scoped declarations keep the exact utility behavior when the clean sidebar is mounted without the opaque aggregate stylesheet. */
-.sand-agents-sidebar .sand-agent-item__corner-dot {
-  position: absolute;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  border-radius: var(--cursor-radius-full);
-}
 .sand-agents-sidebar .sand-kit-status-dot.sand-1rm5x0x { background-color: var(--sand-fill-success); }
 .sand-agents-sidebar .sand-kit-status-dot.sand-mab63l { background-color: var(--sand-fill-warning); }
 .sand-agents-sidebar .sand-kit-status-dot.sand-3zn3jg { background-color: var(--sand-fill-neutral); }
 .sand-agents-sidebar .sand-kit-status-dot.sand-18he5m { background-color: var(--sand-fill-danger); }
 .sand-agents-sidebar .sand-kit-status-dot.sand-2uzfp6 { background-color: var(--sand-fill-accent); }
-.sand-agents-sidebar .sand-agent-item__corner-dot.sand-1jq8d06 { animation-duration: .13s; }
-.sand-agents-sidebar .sand-agent-item__corner-dot.sand-1lfcbla { animation-timing-function: cubic-bezier(.22, 1, .36, 1); }
-@media (prefers-reduced-motion: reduce) {
-  .sand-agents-sidebar .sand-agent-item__corner-dot.sand-1aquc0h { animation-name: none; }
-}
 .sand-agents-sidebar .sand-kit-status-dot { position: static; top: auto; left: auto; z-index: auto; width: 8px; height: 8px; border: 0; border-radius: var(--cursor-radius-full); transform: none; }
 .sand-agents-section__reveal { outline: 1px solid var(--cursor-stroke-focused); outline-offset: -1px; background: var(--sand-fill-accent-subtle); }
 

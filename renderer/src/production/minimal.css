@@ -34,51 +34,109 @@
   min-height: 32px; padding: 4px 10px;
 }
 .herdr-mention-avatar { width: 22px; height: 22px; flex: 0 0 22px; }
-.sand-info-pane { position: absolute; z-index: 20; top: 0; right: 0; bottom: 0; width: min(340px, calc(100% - 48px)); box-sizing: border-box; overflow-y: auto; background: var(--cursor-bg-elevated); color: var(--cursor-text-primary); border-left: 1px solid var(--cursor-stroke-secondary); box-shadow: -8px 0 24px #0002; }
-.sand-info-pane .sand-info-pane__top { display: flex; position: sticky; top: 0; align-items: center; justify-content: space-between; min-height: 50px; padding: 0 14px; background: var(--cursor-bg-elevated); border-bottom: 1px solid var(--cursor-stroke-tertiary); }
+/* herdr-bot: this used to be `position: absolute; right: 0` -- an overlay that covered the chat
+ * area instead of making room for it. It's now a normal flex child of `.sand-info-pane-slot`
+ * (production.css "9b"), which owns the width that animates open/closed; the pane itself just
+ * fills that slot and no longer needs its own stacking context, inset, or drop shadow. */
+.sand-info-pane { width: 100%; height: 100%; box-sizing: border-box; overflow-y: auto; background: var(--cursor-bg-elevated); color: var(--cursor-text-primary); border-left: 1px solid var(--cursor-stroke-secondary); }
+/* No hairline under the pane header (reference A/B have none), and 44px to sit level with the chat
+ * header row it now shares the top edge with. */
+.sand-info-pane .sand-info-pane__top { display: flex; position: sticky; top: 0; z-index: 1; align-items: center; justify-content: space-between; width: auto; min-height: 44px; padding: 0 14px; background: var(--cursor-bg-elevated); }
+/* `width: auto` above is load-bearing: the recovered header class string includes the `sand-exx8yu`
+ * atomic (`width: var(--cursor-height-lg)`, which :root sets to 32px -- it is an icon-button size),
+ * so without an owner override the whole header was 32px wide and the flex:1 title collapsed. */
+/* herdr-bot: `[<][ title ][>>]` header -- equal-width end slots (28px icon buttons) keep the title centered. */
+.sand-info-pane__slot { display: inline-block; width: 28px; height: 28px; }
+.sand-info-pane__title { flex: 1 1 auto; min-width: 0; overflow: hidden; color: var(--cursor-text-primary); font-size: 15px; font-weight: 600; line-height: 20px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .sand-info-pane__section-content { display: flex; flex-direction: column; gap: 8px; }
 .sand-info-pane__section-heading { font-size: 12px; font-weight: 600; color: var(--cursor-text-secondary); margin: 8px 0 4px; }
-.sand-group-members-section { padding: 16px; }
-.sand-group-members-list { list-style: none; margin: 12px 0; padding: 0; }
-.sand-group-member-row { display: flex; align-items: center; gap: 8px; min-height: 48px; border-bottom: 1px solid var(--cursor-stroke-tertiary); }
-.sand-group-members-section button { border: 0; border-radius: 8px; padding: 8px 10px; color: var(--cursor-text-primary); background: var(--cursor-bg-hover); font: inherit; cursor: pointer; }
+/* herdr-bot: group members page after the Grok Bot reference (B) -- a plain "멤버" label, 48px rows
+ * of 36px avatar + 15px name with a hover tint and no hairlines, and "+ 멤버 추가" as one more row
+ * with the plus glyph in the avatar column. The per-row remove action is hover/focus-revealed. */
+.sand-group-members-section { padding: 4px 8px 16px; }
+.sand-group-members-section > .sand-info-pane__section-heading { display: block; margin: 0; padding: 6px 8px; color: var(--cursor-text-secondary); font-size: 12px; font-weight: 400; line-height: 16px; }
+.sand-group-members-list { display: flex; flex-direction: column; gap: 2px; list-style: none; margin: 2px 0 0; padding: 0; }
+.sand-group-member-row { position: relative; display: flex; align-items: center; min-height: 44px; border-radius: 10px; }
+.sand-group-member-row:hover,
+.sand-group-member-row:focus-within { background: var(--cursor-bg-hover); }
+.sand-group-members-section button { border: 0; padding: 0; color: var(--cursor-text-primary); background: transparent; font: inherit; cursor: pointer; }
 .sand-group-members-section button:disabled { opacity: .4; cursor: default; }
-.sand-group-member-open { flex: 1; min-width: 0; text-align: left; overflow-wrap: anywhere; }
-.sand-group-member-add-row { position: relative; margin-top: 12px; }
-.sand-group-member-add-row [role="menu"] { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; padding: 6px; border: 1px solid var(--cursor-stroke-secondary); border-radius: 10px; background: var(--cursor-bg-input-surface); }
-.sand-group-member-add-row [role="menuitem"] { text-align: left; }
-.sand-group-members-footer { color: var(--cursor-text-secondary); font-size: 12px; line-height: 1.5; }
-
-/* herdr-bot (task 3): independent green working/done activity dot. `--herdr-surface` resolves to the
- * sidebar row's actual background in both themes -- `--cursor-bg-chrome` is exactly what
- * `.sand-agents-sidebar` (and therefore every unselected row) paints, in both light and dark, via the
- * app's own runtime theme installer -- so the dot's ring always cuts cleanly against the real row
- * behind it instead of a guessed hardcoded color. */
-:root { --herdr-surface: var(--cursor-bg-chrome); }
-/* The active/selected row paints --cursor-bg-secondary (see production.css's
- * `.sand-agent-item[data-active="true"]`), so the dot's ring must match that row's real background too. */
-.sand-agent-item[data-active="true"] .herdr-working-dot { --herdr-surface: var(--cursor-bg-secondary); }
-.herdr-avatar-wrap { position: relative; flex: 0 0 auto; }
-.herdr-working-dot {
-  position: absolute; right: 0; bottom: 0;
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #22c55e; box-shadow: 0 0 0 2px var(--herdr-surface);
+.sand-group-member-open { display: flex; flex: 1 1 auto; align-items: center; gap: 10px; min-width: 0; min-height: 44px; padding: 5px 8px; border-radius: 10px; text-align: left; }
+.sand-group-member-avatar { display: grid; flex: 0 0 auto; place-items: center; width: 32px; height: 32px; }
+.sand-group-member-avatar .sand-agent-avatar { display: block; width: 100%; height: 100%; }
+.sand-group-member-name { flex: 1 1 auto; min-width: 0; overflow: hidden; font-size: 14px; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+/* herdr-bot: the reference's hover-revealed remove pill reads as a destructive action -- danger
+ * text on a matching subtle tint, not the neutral chip this used to be. Both vars are set directly
+ * on :root by runtime-theme-token-installer.ts (not routed through a --cursor-* alias), same as the
+ * --sand-fill-danger the alert-dialog delete button already uses in production.css. */
+/* button.sand-group-member-remove (not just .sand-group-member-remove): the generic
+ * `.sand-group-members-section button` reset above is a class+type selector, one specificity rung
+ * above a bare class, and would otherwise win and flatten this back to text-primary/transparent. */
+button.sand-group-member-remove { position: absolute; right: 8px; padding: 3px 7px; color: var(--sand-text-danger, #c21d2e); font-size: 11px; background: var(--sand-fill-danger-subtle, #ff263c17); border-radius: 6px; opacity: 0; transition: opacity .12s ease; }
+.sand-group-member-row:hover .sand-group-member-remove,
+.sand-group-member-row:focus-within .sand-group-member-remove { opacity: 1; }
+.sand-group-member-remove:disabled { display: none; }
+.sand-group-member-add-row { position: relative; }
+.sand-group-member-add { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 5px 8px; border-radius: 10px; text-align: left; }
+.sand-group-member-add:hover:not(:disabled) { background: var(--cursor-bg-hover); }
+.sand-group-member-add .sand-group-member-name,
+.sand-group-member-add__icon .ui-icon { color: var(--cursor-text-secondary); }
+/* herdr-bot: same recipe as the @-mention listbox (minimal.css's .sand-mention-listbox /
+ * .sand-mention-option-button) -- border/radius/shadow/row padding/22px avatar all match -- except
+ * `width: fit-content` instead of that listbox's `min(320px, ...)`, since this menu sits inline
+ * under the narrow "멤버 추가" row rather than floating over the transcript. */
+.sand-group-member-add-menu {
+  box-sizing: border-box; width: fit-content; max-width: calc(100% - 16px);
+  margin: 4px 8px 0; padding: 6px; list-style: none;
+  border: 1px solid var(--cursor-stroke-secondary); border-radius: 12px;
+  background: var(--cursor-bg-elevated); box-shadow: 0 8px 30px #0003;
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+.sand-group-member-add-menu__option { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 4px 10px; border-radius: 7px; text-align: left; white-space: nowrap; }
+.sand-group-member-add-menu__option:hover { background: var(--cursor-bg-hover); }
+.sand-group-members-footer { padding: 8px; color: var(--cursor-text-secondary); font-size: 11px; line-height: 1.5; }
 
-/* herdr-bot (task 5): the header-based "new chat" combobox -- chips + the real <input> share one
- * bordered flex wrapper (an <input> cannot contain elements), and every interactive child stays
- * no-drag since the header sits inside the app's Electron drag region. */
-.herdr-new-chat-header { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--cursor-stroke-tertiary); }
+/* herdr-bot: the one status dot over a sidebar avatar's bottom-right corner (sidebar-status-dot.ts).
+ * The wrapper (.sand-agent-item__avatar, 44px) centers a 36px row avatar with 4px of slack on each
+ * side, so the dot is inset from the wrapper's corner until its center sits on the avatar's own
+ * 45° edge point -- "closer to the avatar", not floating off the wrapper corner. Total size includes
+ * the 2px white ring (border-box), so the ring never enlarges the layout box. */
+.herdr-avatar-wrap { position: relative; flex: 0 0 auto; }
+.herdr-status-dot {
+  position: absolute; right: 2px; bottom: 2px; box-sizing: border-box;
+  width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff;
+  background: var(--herdr-status-dot-color, var(--sand-fill-neutral, #9a9a9a));
+  pointer-events: none;
+}
+.herdr-status-dot[data-tone="idle"] { --herdr-status-dot-color: var(--sand-fill-neutral, #9a9a9a); }
+.herdr-status-dot[data-tone="working"] { --herdr-status-dot-color: var(--cursor-yellow, #ff9800); }
+.herdr-status-dot[data-tone="done"] { --herdr-status-dot-color: var(--cursor-green, #00c972); }
+.herdr-status-dot[data-tone="blocked"] { --herdr-status-dot-color: var(--cursor-red, #ff263c); }
+.herdr-status-dot[data-tone="unread"] { --herdr-status-dot-color: var(--cursor-blue, #1084fe); }
+/* An expanded row's blue unread dot: far right of the row, in the trailing column under the time. */
+.herdr-unread-dot { display: inline-flex; align-items: center; justify-content: center; }
+
+/* herdr-bot (task 5, restyled after the Grok Bot reference): the header-based "new chat" picker is
+ * a 51px chat-header row -- "받는 사람:" label, borderless inline chips + <input> (an <input> cannot
+ * contain elements, so they share one flex wrapper), and a trailing × -- with a floating card of
+ * icon rows underneath. Every interactive child stays no-drag since the header sits inside the
+ * app's Electron drag region. */
+.herdr-new-chat-header { position: relative; display: flex; flex-direction: column; }
+.herdr-new-chat-row {
+  display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 51px; padding: 0 12px 0 16px;
+  border-bottom: 1px solid var(--cursor-stroke-tertiary);
+}
+.herdr-new-chat-label { flex: 0 0 auto; color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-base); white-space: nowrap; }
 .herdr-new-chat-combobox {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
-  min-height: 36px; padding: 4px 8px; border: 1px solid var(--cursor-stroke-secondary); border-radius: 10px;
-  background: var(--cursor-bg-input-surface);
+  display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; min-height: 32px;
   -webkit-app-region: no-drag; app-region: no-drag;
 }
 .herdr-new-chat-combobox input {
-  flex: 1 1 120px; min-width: 120px; border: 0; background: transparent; color: inherit; font: inherit; outline: none;
+  flex: 1 1 120px; min-width: 120px; padding: 0; border: 0; background: transparent; color: inherit;
+  font: inherit; font-size: var(--cursor-font-size-base); outline: none;
   -webkit-app-region: no-drag; app-region: no-drag;
 }
+.herdr-new-chat-combobox input::placeholder { color: var(--cursor-text-tertiary); }
 .herdr-member-chip {
   display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px 2px 2px;
   border-radius: 999px; background: var(--cursor-bg-hover); font-size: 12px; white-space: nowrap;
@@ -87,19 +145,86 @@
   border: 0; background: transparent; color: var(--cursor-text-secondary); cursor: pointer; line-height: 1;
   -webkit-app-region: no-drag; app-region: no-drag;
 }
+.herdr-new-chat-submit, .herdr-new-chat-close { flex: 0 0 auto; -webkit-app-region: no-drag; app-region: no-drag; }
 .herdr-new-chat-dropdown {
-  position: absolute; z-index: 20; top: calc(100% + 4px); left: 16px; right: 16px;
-  max-height: min(320px, calc(100vh - 160px)); overflow-y: auto;
-  border: 1px solid var(--cursor-stroke-secondary); border-radius: 10px; background: var(--cursor-bg-elevated);
-  box-shadow: 0 8px 24px #0003;
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 24px; width: min(560px, calc(100% - 48px));
+  max-height: min(420px, calc(100vh - 160px)); overflow-y: auto; padding: 8px;
+  border: 1px solid var(--cursor-stroke-tertiary); border-radius: 16px; background: var(--cursor-bg-elevated);
+  box-shadow: 0 12px 32px #0002, 0 2px 8px #0001;
   -webkit-app-region: no-drag; app-region: no-drag;
 }
 .herdr-new-chat-option {
-  display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer;
+  display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 10px;
+  border-radius: 10px; font-size: var(--cursor-font-size-base); cursor: pointer;
   -webkit-app-region: no-drag; app-region: no-drag;
 }
-.herdr-new-chat-option[data-active] { background: var(--cursor-bg-selected); }
-.herdr-new-chat-cancel { align-self: flex-start; border: 0; background: transparent; color: var(--cursor-text-secondary); cursor: pointer; -webkit-app-region: no-drag; app-region: no-drag; }
-.herdr-new-chat-error { color: var(--cursor-text-danger, #e5484d); font-size: 12px; margin: 0; }
-.herdr-new-chat-draft-row { opacity: 0.85; }
+.herdr-new-chat-option:hover, .herdr-new-chat-option[data-active] { background: var(--cursor-bg-hover); }
+.herdr-new-chat-option[aria-disabled="true"] { opacity: 0.6; cursor: progress; }
+.herdr-new-chat-option__icon {
+  display: grid; flex: 0 0 auto; place-items: center; width: 22px; height: 22px; overflow: hidden;
+  border-radius: 999px; color: var(--cursor-text-secondary); background: var(--cursor-bg-secondary);
+}
+.herdr-new-chat-option__icon[data-kind="bot"] { background: transparent; }
+.herdr-new-chat-option__icon .sand-agent-avatar { display: block; width: 100%; height: 100%; object-fit: cover; }
+.herdr-new-chat-option__label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.herdr-new-chat-option__kbd { display: inline-flex; flex: 0 0 auto; gap: 3px; }
+.herdr-new-chat-option__kbd kbd {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 5px; color: var(--cursor-text-tertiary); background: var(--cursor-bg-secondary);
+  font: inherit; font-size: 11px; line-height: 1;
+}
+.herdr-new-chat-error { color: var(--cursor-text-danger, #e5484d); font-size: 12px; margin: 0; padding: 6px 16px; }
+/* herdr-bot: .sand-agents-list's own `gap` (view.css) only separates its direct grid children --
+ * the pinned group and the flat rows block -- not the individual agent rows stacked inside each,
+ * which is why rows previously touched with no breathing room. */
+.sand-agents-pinned, .sand-agents-list__rows { display: flex; flex-direction: column; gap: var(--cursor-spacing-1); }
+/* herdr-bot: .sand-agents-list is a grid whose default `align-content: stretch` shares the leftover
+ * track height between its direct children -- with a pinned group present that put the whole slack
+ * between the pinned rows and the rest. Pack the two blocks at the top with the same 4px rhythm the
+ * rows use inside each block, so pinned and unpinned rows read as one continuous list. */
+.sand-agents-list:has(> .sand-agents-pinned) { align-content: start; grid-auto-rows: max-content; gap: var(--cursor-spacing-1); }
+/* herdr-bot: pinned chats in the expanded sidebar are a grid of TILES (Grok reference: big avatar
+ * over a one-line name) -- 2 columns by default, growing to 3 then 4 as the sidebar widens
+ * (pinnedTileColumns in sidebar-model.ts; sidebar.tsx sets the actual column count inline every
+ * render, so the `repeat(2, ...)` below is a fallback only, for a harness or a render with no
+ * sidebarLayout). Tracks cap at 88px (72px avatar + the tile's own 8px side padding) rather than
+ * stretching, and `justify-content: center` centers whatever width fewer-than-max tiles leave
+ * unfilled -- the avatar itself is one constant size (AgentSidebarItem's "xl") no matter how many
+ * columns are showing. No divider under the grid -- it sits flush above the recency list, same 4px
+ * rhythm as every other row gap. The collapsed sidebar keeps the stacked-rows rule above -- there is
+ * no room for a grid at 88px. Every tile rule carries two classes so it outranks the single-class row
+ * rules (view.css / production.css) regardless of source order. */
+.sand-agents-list:not([data-sidebar-collapsed]) > .sand-agents-pinned {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 88px)); justify-content: center; gap: 8px;
+}
+.sand-agent-item.sand-agent-item--tile {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  /* herdr-bot: this padding is what the hover/active background (sand-agent-item:hover, [data-active])
+   * actually covers -- cut well below the row padding (8px) since a tile has no side text to clear. */
+  min-height: 0; padding: 2px; text-align: center;
+}
+/* herdr-bot regression fix: removing the old size-tier plumbing dropped this override entirely, so
+ * the wrapper fell back to the generic row rule (44px, production.css) while the avatar rendered
+ * inside it at its real 72px ("xl") -- the mismatch overflowed the wrapper's reserved layout box,
+ * which is what pushed the name row out of place and put the status corner dot (positioned relative
+ * to this same wrapper) nowhere near the avatar's actual edge. The wrapper must always match the
+ * avatar's one constant tile size. */
+.sand-agent-item.sand-agent-item--tile .sand-agent-item__avatar { width: 72px; height: 72px; }
+.sand-agent-item.sand-agent-item--tile .sand-agent-item__name {
+  display: block; width: 100%; text-align: center;
+  /* herdr-bot: the row name (var(--cursor-font-size-base), browser-default <strong> bold) reads too
+   * heavy centered under a big tile avatar -- one step down in both size and weight. */
+  font-size: var(--cursor-font-size-sm); font-weight: 400;
+}
+.sand-agent-item.sand-agent-item--tile .sand-agent-item__name-input { width: 100%; text-align: center; }
+/* A 72px tile avatar fills its wrapper exactly, so the same 2px inset already lands the (slightly
+ * larger) dot's center on the avatar's 45° edge point. */
+.sand-agent-item.sand-agent-item--tile .herdr-status-dot { width: 16px; height: 16px; }
+/* The sidebar's in-progress "새 채팅" row: a normal-height list row whose avatar slot is a plain
+ * gray circle with a + mark (reference), rendered inside .sand-agents-list__rows so the grid
+ * carrier never stretches it. */
+.herdr-new-chat-draft-row__icon {
+  display: grid; place-items: center; width: 34px; height: 34px;
+  border-radius: 999px; color: var(--cursor-text-secondary); background: var(--cursor-bg-secondary);
+}
 .herdr-bot-setup-failed { display: flex; align-items: center; gap: 8px; padding: 6px 16px; color: var(--cursor-text-danger, #e5484d); font-size: 12px; }

@@ -11,6 +11,7 @@ import {
   pruneDraftMembers,
   removeDraftMember,
   selectedMembers,
+  shortcutOptionIndex,
   shouldSelectOnEnter,
   startDraft,
   type NewChatCandidateBot,
@@ -29,17 +30,39 @@ const BOTS: readonly NewChatCandidateBot[] = [
   { id: "failed-bot", name: "Broken Bot", onboardingStage: "failed" },
 ];
 
-test("empty query in choose mode surfaces only the two create actions", () => {
+// Reference (Grok Bot): the two create actions always lead, followed by every bot -- an empty
+// query lists the whole roster so ⌘1..⌘N shortcuts map to a stable, fully visible list.
+test("empty query in choose mode lists the two create actions first, then every bot", () => {
   const draft = createNewChatDraft("r1");
   const options = buildOptionList(draft, BOTS);
-  assert.deepEqual(options.map(o => o.kind), ["create-bot", "create-group"]);
+  assert.deepEqual(options.map(o => (o.kind === "bot" ? o.bot.id : o.kind)), ["create-bot", "create-group", "reviewer", "fixer", "researcher", "provisioning-bot", "failed-bot"]);
 });
 
-test("a non-empty query in choose mode surfaces matching bots plus the two create actions", () => {
+test("a non-empty query in choose mode keeps the create actions first and filters the bots", () => {
   const draft: NewChatDraft = { ...createNewChatDraft("r1"), query: "fix" };
   const options = buildOptionList(draft, BOTS);
-  assert.deepEqual(options.map(o => o.kind), ["bot", "create-bot", "create-group"]);
-  assert.equal(options[0].kind === "bot" ? options[0].bot.id : null, "fixer");
+  assert.deepEqual(options.map(o => (o.kind === "bot" ? o.bot.id : o.kind)), ["create-bot", "create-group", "fixer"]);
+});
+
+// herdr-bot: "+" with an empty combobox must offer a plain, untitled create (the host names the
+// reserved bot "새 Bot"/"New Bot"); typing a name before picking "이름이 "…"인 Bot 만들기" must create
+// a bot with exactly that (trimmed) name instead.
+test("the create-bot option carries the trimmed typed name, or null when the query is empty/blank", () => {
+  const empty = buildOptionList(createNewChatDraft("r1"), BOTS);
+  assert.deepEqual(empty[0], { kind: "create-bot", name: null });
+  const blank = buildOptionList({ ...createNewChatDraft("r1"), query: "   " }, BOTS);
+  assert.deepEqual(blank[0], { kind: "create-bot", name: null });
+  const typed = buildOptionList({ ...createNewChatDraft("r1"), query: "  Code Reviewer  " }, BOTS);
+  assert.deepEqual(typed[0], { kind: "create-bot", name: "Code Reviewer" });
+});
+
+test("⌘1..⌘9 resolve to the option index; other chords and digits are ignored", () => {
+  assert.equal(shortcutOptionIndex({ key: "1", metaKey: true, ctrlKey: false, altKey: false, shiftKey: false }), 0);
+  assert.equal(shortcutOptionIndex({ key: "9", metaKey: false, ctrlKey: true, altKey: false, shiftKey: false }), 8);
+  assert.equal(shortcutOptionIndex({ key: "0", metaKey: true, ctrlKey: false, altKey: false, shiftKey: false }), null);
+  assert.equal(shortcutOptionIndex({ key: "3", metaKey: false, ctrlKey: false, altKey: false, shiftKey: false }), null);
+  assert.equal(shortcutOptionIndex({ key: "3", metaKey: true, ctrlKey: false, altKey: false, shiftKey: true }), null);
+  assert.equal(shortcutOptionIndex({ key: "3", metaKey: true, ctrlKey: false, altKey: true, shiftKey: false }), null);
 });
 
 test("group mode searches member candidates only, excluding selected members and not-yet-joinable bots", () => {

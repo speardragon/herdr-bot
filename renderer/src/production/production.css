@@ -246,9 +246,25 @@ button, textarea, input { font: inherit; }
 .sand-feedback-dialog > div p { margin: 0; color: var(--cursor-text-secondary); }
 .sand-feedback-dialog textarea { min-height: 140px; padding: 10px; resize: vertical; color: var(--cursor-text-primary); background: var(--cursor-bg-input); border: 1px solid var(--cursor-stroke-secondary); border-radius: 8px; }
 .sand-feedback-dialog label { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-.sand-alert-dialog h2, .sand-alert-dialog p { margin: 0 0 12px; }
+.sand-alert-dialog h2, .sand-alert-dialog h3, .sand-alert-dialog p { margin: 0 0 12px; }
 .sand-alert-dialog p { color: var(--cursor-text-secondary); }
-.sand-alert-dialog footer { margin: 20px -20px -20px; }
+/* herdr-bot: neither the heading nor footer-button text had an owner font-size, so both fell back to
+ * the browser's un-reset defaults (a ~24px bold <h2>, a ~16px <button>) -- oversized next to the rest
+ * of the app's 13-15px UI text. Confirm/cancel also go from content-width to equal-width fills (the
+ * Grok Bot reference: 취소/제거 the same size, split the footer). Only .sand-alert-dialog is touched
+ * here -- .sand-about-dialog/.sand-feedback-dialog share the base footer/button rules above and keep
+ * their own (unrelated) layout. Both `h2` (AppAlertHost, the shared confirm/delete-room dialog) and
+ * `h3` (AgentDeleteConfirmation, the sidebar right-click "삭제" dialog) render inside the same
+ * `.sand-alert-dialog` shell, so this covers both call sites. */
+.sand-alert-dialog h2, .sand-alert-dialog h3 { font-size: 15px; font-weight: 600; line-height: 20px; }
+.sand-alert-dialog p { font-size: 13px; line-height: 18px; }
+.sand-alert-dialog footer { margin: 20px -20px -20px; justify-content: stretch; }
+/* Both dialogs render footer buttons as `<SandButton size="sm">`, whose KIT_BUTTON_SM atomics
+ * (`sand-fifm61` font-size, `sand-1kogg8i` radius, `sand-1iorvi4`/`sand-1ug7bdz`/`sand-jkvuk6`/
+ * `sand-11iknt3` padding) carry up to four `:not(#\#)` boosts -- an unboosted class selector here
+ * loses to every one of them. Match the boost count (same pattern as the `:last-child` fill rule
+ * above) so this actually reaches the rendered button instead of only the harness's plain <button>. */
+.sand-alert-dialog footer button:not(#\#):not(#\#):not(#\#):not(#\#) { flex: 1 1 0; padding: 11px 16px; font-size: 14px; font-weight: 500; line-height: 18px; border-radius: 12px; text-align: center; }
 .sand-deep-link-info header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px 0; }
 .sand-deep-link-info header h2, .sand-deep-link-info header p { margin: 0; }
 .sand-deep-link-info header p, .sand-deep-link-info > div p { color: var(--cursor-text-secondary); }
@@ -280,49 +296,147 @@ button, textarea, input { font: inherit; }
   box-shadow: var(--cursor-box-shadow-lg);
   transform: translate(-50%, -50%);
 }
+/* herdr-bot: restyled after the Grok Bot reference -- a 48px search row with a leading magnifier,
+ * a pill tab strip, and 49px result rows of [28px avatar / gray icon circle][title + subtitle][⌘N].
+ * The 49px row + 2px gap pitch is shared with CommandPalette.tsx's PALETTE_ROW_* constants and the
+ * commandPaletteVirtualWindow / commandPaletteScrollTopForRow geometry; keep them in lockstep. */
 .sand-command-palette > input {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
-  padding: var(--cursor-spacing-3-5) var(--cursor-spacing-2-5) var(--cursor-spacing-3-5) var(--cursor-spacing-3-5);
+  height: 48px;
+  padding: 0 var(--cursor-spacing-3) 0 40px;
   color: var(--cursor-text-primary);
+  font: inherit;
+  font-size: 14px;
   background: transparent;
   border: 0;
   border-bottom: .5px solid var(--cursor-stroke-tertiary);
   outline: none;
 }
+.sand-command-palette > input::placeholder { color: var(--cursor-text-tertiary); }
+.sand-command-palette__search-icon,
+.sand-command-palette__back {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: var(--cursor-text-tertiary);
+}
+/* The back button keeps a 32px hit target (the recovered one was 36px); the glyph stays centered. */
+.sand-command-palette__back { top: 8px; left: 8px; width: 32px; height: 32px; padding: 0; color: var(--cursor-text-secondary); background: transparent; border: 0; border-radius: 8px; cursor: pointer; }
+.sand-command-palette__back:hover { background: var(--cursor-bg-secondary); }
+.sand-command-palette__status { padding: var(--cursor-spacing-1) var(--cursor-spacing-3) 0; color: var(--cursor-text-tertiary); font-size: 12px; }
 .sand-command-palette > [role="tablist"] {
   position: relative;
   z-index: 1;
   display: flex;
+  flex: 0 0 auto;
   gap: var(--cursor-spacing-0-5);
-  padding: var(--cursor-spacing-2) var(--cursor-spacing-2) calc(var(--cursor-spacing-2) + 1px);
-  margin-bottom: -1px;
-  background-color: var(--sand-bg-elevated);
+  padding: var(--cursor-spacing-2);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.sand-command-palette > [role="tablist"]::-webkit-scrollbar { display: none; }
 .sand-command-palette [role="tab"],
-.sand-command-palette [role="option"] {
+.sand-command-palette__row {
   color: inherit;
+  font: inherit;
   background: transparent;
   border: 0;
+  cursor: pointer;
 }
+.sand-command-palette [role="tab"] {
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 var(--cursor-spacing-2);
+  color: var(--cursor-text-secondary);
+  font-size: 13px;
+  line-height: 28px;
+  white-space: nowrap;
+  border-radius: 8px;
+}
+.sand-command-palette [role="tab"]:hover { color: var(--cursor-text-primary); }
+.sand-command-palette [role="tab"][aria-selected="true"] { color: var(--cursor-text-primary); background: var(--cursor-bg-secondary); }
 .sand-command-palette > [role="listbox"] {
   display: flex;
   flex-direction: column;
-  row-gap: var(--cursor-spacing-0-5);
+  row-gap: 2px;
   height: 360px;
   padding: var(--cursor-spacing-2);
   overflow: auto;
 }
-.sand-command-palette [role="option"] {
+.sand-command-palette__row {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: var(--cursor-spacing-2);
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
   height: 49px;
-  padding: var(--cursor-spacing-2);
+  padding: 0 var(--cursor-spacing-2);
   text-align: left;
+  border-radius: 10px;
 }
-.sand-command-palette [role="option"] > small:first-of-type { margin-left: auto; }
-.sand-command-palette [aria-selected="true"] { background: var(--cursor-bg-secondary); }
+.sand-command-palette__row:hover,
+.sand-command-palette__row[aria-selected="true"] { background: var(--cursor-bg-secondary); }
+.sand-command-palette__leading {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  color: var(--cursor-text-secondary);
+  border-radius: 999px;
+}
+.sand-command-palette__leading[data-leading="icon"] { background: var(--cursor-bg-secondary); }
+.sand-command-palette__leading img { width: 16px; height: 16px; }
+.sand-command-palette__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.sand-command-palette__title,
+.sand-command-palette__subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sand-command-palette__title { color: var(--cursor-text-primary); font-size: 13px; line-height: 18px; }
+.sand-command-palette__subtitle { color: var(--cursor-text-tertiary); font-size: 12px; line-height: 16px; }
+.sand-command-palette__check,
+.sand-command-palette__chevron { flex: 0 0 auto; color: var(--cursor-text-tertiary); font-size: 12px; }
+.sand-command-palette__kbd {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 5px;
+  color: var(--cursor-text-secondary);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  background: var(--cursor-bg-secondary);
+  border-radius: 5px;
+}
+.sand-command-palette__row[aria-selected="true"] .sand-command-palette__kbd { background: var(--cursor-bg-elevated); }
+.sand-command-palette__empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 120px;
+  margin: 0;
+  padding: var(--cursor-spacing-6) var(--cursor-spacing-3);
+  color: var(--cursor-text-secondary);
+  font-size: 13px;
+  text-align: center;
+}
+.sand-command-palette__empty small { color: var(--cursor-text-tertiary); font-size: 12px; }
 
 /*
  * @evidence src/app/dist/renderer/assets/index-lCyB53CO.css#byteOffset=539920
@@ -421,9 +535,42 @@ button, textarea, input { font: inherit; }
 .sand-agents-sidebar__search,
 .sand-agents-sidebar__search > span { justify-content: flex-start; }
 
+/* Bigger row avatar (34px -> 44px, sidebar.tsx's AgentAvatar bumped size="md" -> "lg" alongside it):
+ * 44px is also GroupHeroAvatar's own size="sm" box (group-hero-avatar.tsx/view.css), so a group row's
+ * "나"+member cluster fills the slot exactly, with no extra centering math needed. */
+.sand-agent-item { grid-template-columns: 44px minmax(0, 1fr) auto; }
+.sand-agent-item__avatar { width: 44px; height: 44px; }
+@container sand-sidebar (max-width: 130px) {
+  .sand-agent-item { grid-template-columns: 44px; }
+}
+/* herdr-bot: tighten a non-pinned row's own hit area -- less horizontal breathing room around the
+ * whole clickable button, and less gap between the avatar and the name+preview column next to it.
+ * Only the row's own left/right inset changes (top/bottom stay 8px); pinned tiles set their own
+ * padding/gap (sand-agent-item--tile, higher specificity) and are unaffected. */
+.sand-agent-item { gap: 6px; padding: 2px; }
+
+/* herdr-bot: `.sand-agents-list` (view.css) is `overflow: auto` with NO `scrollbar-gutter`, so once
+ * the roster overflows, a classic (non-overlay) scrollbar reserves ~15px of layout width right where
+ * that container's own 12px right padding lives -- the scrollbar track visually sits on top of the
+ * whole intended right-side gap, so a row's trailing content ends up flush against the scrollbar
+ * while its left side keeps the full padding, reading as "no padding on the right" (only true once
+ * the list has actually scrolled/overflowed; a short roster shows the padding fine). A thin styled
+ * scrollbar reserves far less of that space, so most of the 12px gap stays visible either way. */
+.sand-agents-list::-webkit-scrollbar { width: 6px; }
+.sand-agents-list::-webkit-scrollbar-track { background: transparent; }
+.sand-agents-list::-webkit-scrollbar-thumb { background: var(--cursor-stroke-secondary); border-radius: var(--cursor-radius-full); }
+.sand-agents-list::-webkit-scrollbar-thumb:hover { background: var(--cursor-text-tertiary); }
+
+
+/* Both header rows sat at the recovered 51px, taller than the reference. Only the chat header keeps
+ * its hairline -- the sidebar header's is a leftover from the column divider having briefly lived on
+ * both sides; drop it so the sidebar reads as one continuous surface down to the agent list. */
+.sand-agents-sidebar__header { height: 44px; border-bottom: 0; }
+.sand-chat-header { min-height: 44px; }
+
 /* 9. Composer: one pill row [attach | editor | mic/send]. Attachments, notices and voice status
  *    take full-width rows above it. The tiptap placeholder had no rule at all. */
-.sand-prompt-shell { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; column-gap: 6px; padding: 6px 8px; border-radius: 28px; }
+.sand-prompt-shell { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; column-gap: 8px; padding: 7px; background: var(--cursor-bg-elevated); border-radius: 26px; }
 .sand-prompt-shell > div:not([class]) { grid-column: 2; grid-row: 2; min-width: 0; }
 .sand-prompt-shell > .sand-prompt-attachments,
 .sand-prompt-shell > .sand-prompt-attachment-notice,
@@ -434,7 +581,14 @@ button, textarea, input { font: inherit; }
 .sand-prompt-actions-row { display: contents; }
 .sand-prompt-actions-row > .sand-kit-icon-button.sand-prompt-attach { grid-column: 1; grid-row: 2; width: 34px; height: 34px; }
 .sand-prompt-actions-trailing { grid-column: 3; grid-row: 2; align-items: center; }
-.sand-prompt-actions-trailing > .sand-kit-icon-button.sand-prompt-mic { width: 34px; height: 34px; color: var(--cursor-bg-editor); background: var(--cursor-text-primary); border-radius: 50%; }
+/* The mic is a plain button, not a SandIconButton: the kit's `sand-jbqb8w` atomic pins
+ * `background-color: transparent` at :not(#\#)x3 specificity, which no owner rule can beat, and the
+ * recovered PROMPT_MIC_* atomics are Cursor's *ghost* mic (transparent, secondary-coloured). The
+ * reference wants the same solid black circle as the send button. It is also a disabled placeholder
+ * (no transcription bridge yet), so view.css's `button:disabled { opacity: .4 }` must not grey it. */
+.sand-prompt-actions-trailing > .sand-prompt-mic { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; color: var(--cursor-bg-editor); background: var(--cursor-text-primary); border: 0; border-radius: 50%; }
+.sand-prompt-actions-trailing > .sand-prompt-mic:disabled { cursor: default; opacity: 1; }
+.sand-prompt-actions-trailing > .sand-prompt-mic > .ui-icon { line-height: 1; }
 /* The send button lives inside .sand-prompt-actions-trailing (a sibling of the mic button, not a
  * direct child of .sand-prompt-actions-row), so the original selector here never matched and it
  * fell back to its recovered atomic classes' own (unreliable) sizing -- a square button instead of
@@ -454,6 +608,19 @@ button, textarea, input { font: inherit; }
  * margin (1em), which showed up as extra empty space above the typed text. */
 .sand-prompt-field p { margin: 0; }
 .sand-prompt-field p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; color: var(--cursor-input-placeholder-foreground, var(--cursor-text-tertiary)); pointer-events: none; }
+
+/* 9b. Info pane push panel: the 4 sand-info-pane variants (agent settings, group settings, routines,
+ * channels) live inside this flex-row slot instead of overlaying the chat as position:absolute. The
+ * slot has no width of its own until a pane mounts -- `:has()` (supported since Electron 42/Chromium
+ * 142) grows it to the pane's width the moment one does, and the `width` transition on both rules
+ * (not just one) is what makes both the pane appearing/growing AND the chat area it pushes shrink in
+ * lock-step, smoothly, in either direction, instead of jump-cutting the layout. overflow: hidden
+ * keeps the pane's content clipped rather than reflowing the row while it's mid-animation. */
+.sand-info-pane-slot { flex: 0 0 auto; overflow: hidden; min-height: 0; width: 0; transition: width .22s cubic-bezier(0.4, 0, 0.2, 1); }
+.sand-info-pane-slot:has(> .sand-info-pane) { width: min(340px, calc(100% - 48px)); }
+@media (prefers-reduced-motion: reduce) {
+  .sand-info-pane-slot { transition: none; }
+}
 
 /* 10. The connection host above the agent list renders nothing while connected, so the aside fell
  *     into the `auto` row and stopped at its content height. Pin it to the 1fr row. */
@@ -545,10 +712,12 @@ button, textarea, input { font: inherit; }
  * deliberately opt out (icons, drag handles) keep their own `user-select: none` untouched. */
 :root { -webkit-user-select: text; user-select: text; }
 
-/* 21. Sidebar Search / Plugins buttons: the shared "md" button size class carries a
- * padding-top-only nudge (a pixel-exact quirk from elsewhere in the recovered kit) that isn't
- * balanced by any padding-bottom here, pushing these two buttons' labels a few px below centre. */
-.sand-agents-sidebar__search:not(#\#):not(#\#):not(#\#):not(#\#) { padding-top: 0; }
+/* 21. Sidebar Plugins button: zeroes both the shared "md" button size class's padding-top AND
+ * padding-bottom, so it centres regardless of that class's own vertical padding. (The matching
+ * Search-button `padding-top: 0` workaround that used to sit here is gone -- it was compensating
+ * for BUTTON_SIZE_CLASSES.md missing its padding-bottom atomic (sand-kit-primitives.tsx), which is
+ * now fixed at the source; with that fixed, forcing padding-top to 0 here made the Search button's
+ * padding asymmetric the OTHER way (0 top / 6 bottom) and pushed its icon+label above centre.) */
 .sand-agents-sidebar__plugins:not(#\#):not(#\#):not(#\#):not(#\#) { padding: 0 8px; }
 
 /* 22. Agent-kind icon (New Bot dialog): a real brand mark, masked in white over the kind's colour
@@ -565,8 +734,8 @@ button, textarea, input { font: inherit; }
 .sand-agent-item__activity {
   overflow: hidden;
   color: var(--sand-fill-accent);
-  font-size: var(--cursor-font-size-xs);
-  line-height: 15px;
+  font-size: var(--cursor-font-size-sm);
+  line-height: 16px;
   font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -584,16 +753,18 @@ button, textarea, input { font: inherit; }
 /* 25. Pixel alignment pass. Each rule below names the reference it is being lined up with; none of
  * them change a colour, a size that already agreed with its neighbour, or any deliberate spacing.
  *
- * a. The two header hairlines met at the column divider 1px apart: the recovered sidebar header is
- *    50px tall, the recovered chat header 51px. Match the chat header. */
-.sand-agents-sidebar__header { height: 51px; }
+ * a. (superseded by section 8's 44px pass, which also dropped the sidebar hairline -- kept the
+ *    letter for history: the recovered sidebar header was 50px, the recovered chat header 51px.) */
 
 /* b. Sidebar rows had no line-height on the name or the preview, so a Hangul name (17px line box)
  *    sat 1px higher than a Latin one (15px) and its preview 1px lower -- neighbouring rows in the
  *    same list did not share a baseline. Fix both line boxes so every row is identical; the values
  *    clear the taller Hangul glyphs, which `overflow: hidden` would otherwise clip. */
-.sand-agent-item__name { line-height: 17px; }
-.sand-agent-item__preview { line-height: 15px; }
+/* herdr-bot: the name a step bigger and a step lighter than the recovered default bold, the preview
+ * (last-message summary) a step bigger and a step darker -- both keep matched line boxes with
+ * .sand-agent-item__activity above, so a row's height doesn't shift between "Working" and idle. */
+.sand-agent-item__name { font-size: var(--cursor-font-size-lg); font-weight: 600; line-height: 18px; }
+.sand-agent-item__preview { font-size: var(--cursor-font-size-sm); color: var(--cursor-text-secondary); line-height: 16px; }
 
 /* c. The Channels button puts its icon inside the label span, so the button's own `gap` never
  *    applied and the glyph touched the "C". The Plugins button (icon as a direct child) shows the

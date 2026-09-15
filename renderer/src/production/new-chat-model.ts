@@ -46,7 +46,10 @@ export interface NewChatCandidateBot {
 
 export type NewChatOption<TBot extends NewChatCandidateBot = NewChatCandidateBot> =
   | { readonly kind: "bot"; readonly bot: TBot }
-  | { readonly kind: "create-bot" }
+  /** `name`: the trimmed query at the moment this option was built, or `null` for an empty combobox
+   * -- the row reads "Create a new Bot" when null, "이름이 "…"인 Bot 만들기" when a name is typed, and
+   * selecting it creates a bot with that name (see NewChatHeader.optionLabel/selectOption). */
+  | { readonly kind: "create-bot"; readonly name: string | null }
   | { readonly kind: "create-group" };
 
 function isJoinable(bot: NewChatCandidateBot): boolean {
@@ -71,8 +74,11 @@ export function buildOptionList<TBot extends NewChatCandidateBot>(draft: NewChat
       .filter(bot => !selected.has(bot.id) && isJoinable(bot) && matchesQuery(bot.name, draft.query))
       .map(bot => ({ kind: "bot" as const, bot }));
   }
-  const matches = draft.query.trim().length === 0 ? [] : candidates.filter(bot => matchesQuery(bot.name, draft.query));
-  return [...matches.map(bot => ({ kind: "bot" as const, bot })), { kind: "create-bot" as const }, { kind: "create-group" as const }];
+  // Reference (Grok Bot): the two create actions always lead and every bot follows -- an empty
+  // query lists the whole roster, so the ⌘1..⌘9 badges map onto a stable, fully visible list.
+  const matches = candidates.filter(bot => matchesQuery(bot.name, draft.query));
+  const typedName = draft.query.trim().length > 0 ? draft.query.trim() : null;
+  return [{ kind: "create-bot" as const, name: typedName }, { kind: "create-group" as const }, ...matches.map(bot => ({ kind: "bot" as const, bot }))];
 }
 
 /** `selectedBots`, in `draft.memberIds` order, for rendering chips ahead of the input. */
@@ -121,4 +127,25 @@ export function activeOption<T>(options: readonly T[], activeIndex: number | nul
  * so committing a composed syllable does not also submit the combobox. */
 export function shouldSelectOnEnter(event: { readonly isComposing?: boolean; readonly keyCode?: number }): boolean {
   return event.isComposing !== true && event.keyCode !== 229;
+}
+
+export interface ShortcutKeyEvent {
+  readonly key: string;
+  readonly metaKey: boolean;
+  readonly ctrlKey: boolean;
+  readonly altKey: boolean;
+  readonly shiftKey: boolean;
+}
+
+/**
+ * ⌘1..⌘9 (Ctrl on non-mac) → zero-based option index, matching the badge shown on each dropdown
+ * row; `null` for every other chord. The root shell's global Cmd+N "focus Nth chat" action stays
+ * enabled inside text inputs (global-keyboard-shortcuts.ts, isEnabledInContentEditable) but bails
+ * on `event.defaultPrevented`, so the combobox must preventDefault every chord it claims -- see
+ * NewChatHeader.onKeyDown.
+ */
+export function shortcutOptionIndex(event: ShortcutKeyEvent): number | null {
+  if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return null;
+  if (!/^[1-9]$/.test(event.key)) return null;
+  return Number(event.key) - 1;
 }

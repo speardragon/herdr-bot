@@ -1,6 +1,8 @@
 import { useMemo, type CSSProperties } from "react";
 import { OnboardingCharacter, resolvePersonaColor, resolvePersonaShape } from "../../onboarding/signed-in/character";
 import type { OnboardingCharacterState } from "../../onboarding/signed-in/scene";
+import { personaAvatarImageSrc, type PersonaAvatarImageMap } from "../../../../production/persona-avatar-images";
+import greenBotAvatarImage from "../../../../assets/persona-avatars/green-bot.png";
 
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2302348 (Iee avatar dispatcher; Mac SHA256 ef4e9831b65d39633f09c9ad0c083b98b7ebf52e3bb558182a3dcd717...)
 // @evidence recovered/frontend/app/assets/index-UbX-y3il.js#byteOffset=2925837 (Iee avatar dispatcher; Windows SHA256 80464803b50f478598080bdc1b91da3996c6b74168e2351ea26f620f2ec62ba5)
@@ -81,7 +83,15 @@ function avatarStyle(sizePx: number): CSSProperties {
 // herdr-bot: bots without an explicit avatar shape render as clouds, matching the shipped Grok Bot look.
 const HERDR_BOT_DEFAULT_SHAPE = "cloud";
 
+// herdr-bot: color -> custom avatar image (persona-avatar-images.ts). Only "green" has one so far;
+// every other resolved color keeps the drawn PersonaMark below unchanged.
+const PERSONA_AVATAR_IMAGES: PersonaAvatarImageMap = { green: greenBotAvatarImage };
+
 function PersonaMark({ agentId, color, shape, size, sizePx, state, isStatic, paused, isFollowingPointer, followTarget, emphasis, spinSignal }: { agentId: string; color: string; shape: string; state: PersonaState; size?: AgentAvatarSize } & Pick<AgentAvatarProps, "isStatic" | "paused" | "isFollowingPointer" | "followTarget" | "emphasis" | "spinSignal"> & { sizePx: number }) {
+  const imageSrc = personaAvatarImageSrc(PERSONA_AVATAR_IMAGES, color);
+  if (imageSrc != null) {
+    return <img alt="" aria-hidden="true" className="sand-agent-avatar" data-avatar-color={color} data-avatar-kind="persona-image" data-size={typeof size === "string" ? size : undefined} draggable={false} height={sizePx} src={imageSrc} style={avatarStyle(sizePx)} width={sizePx} />;
+  }
   return <span aria-hidden="true" className="sand-agent-avatar sand-grok-bot-mark" data-avatar-color={color} data-avatar-shape={shape} data-size={typeof size === "string" ? size : undefined} data-emphasis={emphasis || undefined} style={{ ...avatarStyle(sizePx), filter: emphasis ? "drop-shadow(0 0 3px color-mix(in srgb, currentColor 32%, transparent))" : undefined }}>
     <OnboardingCharacter
       color={color}

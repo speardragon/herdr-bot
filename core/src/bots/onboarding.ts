@@ -17,6 +17,9 @@ export interface BotOnboarding {
 export interface QuickCreateRequest {
   readonly requestId: string;
   readonly locale: "ko" | "en";
+  /** Trimmed, non-empty name typed into the "+" combobox before an untitled create; omitted (or
+   * blank) falls back to a plain "새 Bot"/"New Bot" the user renames later. */
+  readonly name?: string;
 }
 
 /** Marks the transcript entry that stores the agent's own first greeting (see chat-service). */

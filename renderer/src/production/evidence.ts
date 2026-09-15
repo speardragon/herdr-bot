@@ -16,11 +16,6 @@ export const PRODUCTION_UI_EVIDENCE = {
     location: "index-UbX-y3il.js:50437,56290",
     anchors: ["New chat", "Plugins", "sand-agents-sidebar__plugins-entry"]
   },
-  hiddenBots: {
-    artifact: "index-UbX-y3il.js",
-    location: "index-UbX-y3il.js:56224",
-    anchors: ["Hidden Bots", '"aria-haspopup": "dialog"']
-  },
   accountMenu: {
     artifact: "index-UbX-y3il.js",
     location: "index-UbX-y3il.js:499,50091",
@@ -134,11 +129,6 @@ export const PRODUCTION_UI_EVIDENCE = {
     location: "view-B5Ug8wEm.js:508,1777",
     anchors: ["Plugins", "Marketplace", "Yours", "Filter plugins", "All types", "Connectors", "Skills", "Ownership", "Team", "Public", "Search plugins", "Add", "Uninstall"]
   },
-  hiddenChatsDialog: {
-    artifact: "view-Cbx1-ckK.js",
-    location: "view-Cbx1-ckK.js:12",
-    anchors: ["Hidden Bots", "Hidden Bots stay active and keep their history, they just don't show in the sidebar.", "No hidden bots", "Unhide"]
-  },
   commandPalette: {
     artifact: "index-UbX-y3il.js",
     location: "index-UbX-y3il.js:47165,112032,131537,132072,132717",
@@ -173,7 +163,6 @@ export const UI_TEXT = {
   feedbackIntroduction: "herdr-bot is a personal build. Describe what happened and file it in the project repository.",
   feedbackPlaceholder: "What happened? What did you expect?",
   helpCenter: "Help Center",
-  hiddenBots: "Hidden Bots",
   includeConversationId: "Include current conversation ID",
   logOut: "Log out",
   noChatsYet: "No chats yet",

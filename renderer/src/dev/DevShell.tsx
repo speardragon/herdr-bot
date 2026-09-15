@@ -3,8 +3,6 @@ import { createPortal } from "react-dom";
 import { attachDomInspector, type InspectedElement } from "./dom-inspector";
 import { matchRecoveredBoundaries } from "../recovered/catalog";
 import { recoveredEntrypoints } from "../recovered/runtime/entrypoints";
-import { HiddenChatsDialog } from "../recovered/features/hidden-chats/overlay/view";
-import type { HiddenAgentSummary } from "../recovered/features/hidden-chats/overlay/model";
 import { SettingsModalShell, type SettingsSectionId } from "../recovered/features/settings/overlay/view";
 import { GeneralSettingsPanel, UpdatesSettingsPanel, UsageSettingsPanel } from "../recovered/features/settings/overlay/panels";
 import type { UpdateTrack } from "../recovered/features/settings/overlay/updates";
@@ -35,13 +33,9 @@ export function DevShell({ upstreamBoot }: DevShellProps) {
   const [inspecting, setInspecting] = useState(false);
   const [picked, setPicked] = useState<InspectedElement | null>(null);
   const [controlStatus, setControlStatus] = useState("checking");
-  const [sourcePreview, setSourcePreview] = useState<"hidden-chats" | "settings" | "org-chart" | "plugins" | "conversation" | null>(null);
+  const [sourcePreview, setSourcePreview] = useState<"settings" | "org-chart" | "plugins" | "conversation" | null>(null);
   const [previewDataMode, setPreviewDataMode] = useState<"fixtures" | "desktop">("fixtures");
   const [previewStatus, setPreviewStatus] = useState("ready");
-  const [previewAgents, setPreviewAgents] = useState<HiddenAgentSummary[]>([
-    { id: "research", name: "Research Bot" },
-    { id: "release", name: "Release Investigator" }
-  ]);
   const [previewTheme, setPreviewTheme] = useState<"system" | "light" | "dark">("system");
   const [previewTrack, setPreviewTrack] = useState<UpdateTrack>("nightly");
   const [previewAutoUpdate, setPreviewAutoUpdate] = useState(true);
@@ -160,28 +154,11 @@ export function DevShell({ upstreamBoot }: DevShellProps) {
         <button onClick={() => void control("/reload", { method: "POST" })}>Reload app</button>
         <button onClick={() => void setOffline(true)}>Gateway offline</button>
         <button onClick={() => void setOffline(false)}>Gateway online</button>
-        <button onClick={() => setSourcePreview("hidden-chats")}>Preview Hidden Chats</button>
         <button onClick={() => setSourcePreview("settings")}>Preview Settings</button>
         <button onClick={() => setSourcePreview("org-chart")}>Preview Org Chart</button>
         <button onClick={() => setSourcePreview("plugins")}>Preview Plugins</button>
         <button onClick={() => setSourcePreview("conversation")}>Preview Conversation</button>
       </div>
-
-      {sourcePreview === "hidden-chats" ? createPortal(
-        <div className="recovered-source-preview-backdrop" data-recovered-source-preview="hidden-chats">
-          <HiddenChatsDialog
-            hiddenAgents={previewAgents}
-            isOpen
-            onClose={() => setSourcePreview(null)}
-            onOpenAgent={(agentId) => setPreviewStatus(`open ${agentId}`)}
-            onUnhide={(agentId) => {
-              setPreviewAgents((agents) => agents.filter((agent) => agent.id !== agentId));
-              setPreviewStatus(`unhidden ${agentId}`);
-            }}
-          />
-        </div>,
-        document.body
-      ) : null}
 
       {sourcePreview === "settings" ? createPortal(
         <div className="recovered-settings-preview-backdrop" data-recovered-source-preview="settings">

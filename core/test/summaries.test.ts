@@ -10,6 +10,13 @@ const RUNTIME: BotRuntime = { status: "idle", paneId: "w1:p2", workspaceId: "w1"
 const VIEW = { lastViewedAt: 10, lastActivityAt: 20, isManuallyUnread: false, lastReadSeq: 0, lastIncomingSeq: 3, lastMessageAt: 20 };
 const LAST: StoredEntry = { ...botMessageEntry({ content: "hello there", author: { id: "reviewer", name: "Reviewer" }, timestampMs: 20 }), seq: 3, id: "e3" } as StoredEntry;
 
+test("bot summary passes the optional profile label through as title, defaulting to an empty string", () => {
+  const unlabeled = botSummary({ profile: sampleProfile(), runtime: RUNTIME, last: null, view: VIEW, isTurnActive: false });
+  assert.equal(unlabeled.title, "");
+  const labeled = botSummary({ profile: { ...sampleProfile(), title: "research, marketing" }, runtime: RUNTIME, last: null, view: VIEW, isTurnActive: false });
+  assert.equal(labeled.title, "research, marketing");
+});
+
 test("bot summary mirrors runtime status into isRunning / awaitingUserResponse", () => {
   const idle = botSummary({ profile: sampleProfile(), runtime: RUNTIME, last: LAST, view: VIEW, isTurnActive: false });
   assert.equal(idle.id, "reviewer");

@@ -187,6 +187,8 @@ export interface ConversationAgentSummary {
   id: string;
   name: string;
   updatedAt: number;
+  /** herdr-bot: host-bumped time of the last message (0 when none) -- preferred for the row stamp. */
+  lastMessageAt?: number;
   isPinned?: boolean;
   isRunning?: boolean;
   isComposingMessage?: boolean;

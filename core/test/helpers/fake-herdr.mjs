@@ -85,13 +85,23 @@ async function agentPrompt() {
   if (!agent) fail("agent_not_running", `no agent ${target}`);
   if (agent.agent_status === "blocked") fail("agent_blocked", "agent is blocked");
   state.prompts.push({ target, text });
-  const script = state.onPrompt[agent.name] ?? null;
   // Only turn prompts carry a room/DM tag at the very start; the identity brief opens with the
   // bare "[herdr-bot]" tag but also *mentions* "[herdr-bot room ...]"/"[herdr-bot DM]" further down
   // as documentation, so this must anchor to the start of the text or the brief would falsely match.
   const isTurnPrompt = /^\[herdr-bot (room |DM\])/.test(text);
   const roomMatch = /\bsay (\S+) "/.exec(text);
   const chatId = roomMatch ? roomMatch[1] : null;
+  const exactScript = state.onPrompt[agent.name] ?? null;
+  // A real onboarding-greeting turn (see bots/onboarding.ts#buildGreetingPrompt) always embeds its
+  // own exact required text, so this can auto-answer it correctly for ANY bot name/locale -- but
+  // only when the caller has not scripted this exact bot id. bot-onboarding-service.test.ts covers
+  // "a wrong greeting is rejected" by scripting the bot's exact id with a deliberately wrong `say`,
+  // so `exactScript` still wins there and this fallback never overrides it.
+  const greetingMatch = exactScript == null && /\[herdr-bot onboarding\]/.test(text) ? /The exact message is: (".*")/.exec(text) : null;
+  // "*" is a dev-only convenience: scripts/dev-fake-herdr.mjs seeds it so an ordinary (non-greeting)
+  // turn from a generated bot name still gets a canned reply. Test suites built via
+  // fake-herdr-state.ts never set either key, so their exact-name-only expectations are unaffected.
+  const script = exactScript ?? (greetingMatch == null ? state.onPrompt["*"] ?? null : { say: [JSON.parse(greetingMatch[1])], finalStatus: "idle" });
   if (script && chatId && isTurnPrompt) {
     for (const say of script.say ?? []) {
       try { await controlRequest("say", { chatId, text: say, paneId: agent.pane_id }); } catch (error) { state.sayErrors = [...(state.sayErrors ?? []), String(error.message)]; }

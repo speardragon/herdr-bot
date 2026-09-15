@@ -48,7 +48,6 @@ export interface RendererAgent extends ConversationAgentSummary {
   lastMessageId?: string | null;
   lastMessagePreview?: string | null;
   isGroup: boolean;
-  isHidden: boolean;
   memberIds: string[];
   conversationPartnerIds: string[];
   awaitingUserResponse: unknown | null;
@@ -84,7 +83,7 @@ export function isLocalGroupAgent(agent: Pick<RendererAgent, "isGroup" | "raw">)
   return agent.isGroup && agent.raw.isSharedRoom !== true;
 }
 
-export type RendererOverlay = "hidden-chats" | "settings" | "plugins" | "network" | "computer" | null;
+export type RendererOverlay = "settings" | "plugins" | "network" | "computer" | null;
 
 export type DesktopIntent =
   | { kind: "focus-agent"; agentId: string }
@@ -195,7 +194,6 @@ export function projectRendererAgent(value: unknown, now = Date.now()): Renderer
     lastMessagePreview,
     ...(lastMessage == null ? {} : { lastMessage }),
     isGroup: value.isGroup === true,
-    isHidden: value.isHiddenFromSidebar === true || value.hiddenFromSidebar === true,
     memberIds: stringArray(value.memberIds ?? value.members),
     conversationPartnerIds: stringArray(value.conversationPartnerIds),
     awaitingUserResponse,

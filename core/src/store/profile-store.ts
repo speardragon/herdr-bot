@@ -15,6 +15,9 @@ export interface BotProfile {
   readonly id: string;
   readonly name: string;
   readonly description: string;
+  /** herdr-bot: the optional free-text label under the name in Agent Settings ("리서치, 마케팅, 관리");
+   * surfaced to the renderer as the summary's `title`. Absent (not "") on profiles that never set one. */
+  readonly title?: string;
   readonly kind: string;
   readonly cwd: string;
   readonly permissionMode: PermissionMode;
@@ -62,6 +65,7 @@ export function projectBotProfile(value: unknown): BotProfile | null {
     id: value.id,
     name: value.name,
     description: typeof value.description === "string" ? value.description : "",
+    ...(typeof value.title === "string" ? { title: value.title } : {}),
     kind: value.kind,
     cwd: value.cwd,
     permissionMode: value.permissionMode,

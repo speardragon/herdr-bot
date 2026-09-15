@@ -177,6 +177,43 @@ test("herdrBot.quickCreateBot reserves instantly and herdrBot.retryBotSetup reus
   }
 });
 
+test("herdrBot.quickCreateBot names the reserved bot from `name` when given, else a plain locale default", async () => {
+  const temp = makeTempHome();
+  const untitledId = "44444444-4444-4444-4444-444444444444";
+  const namedId = "55555555-5555-5555-5555-555555555555";
+  const untitledBotId = `bot-${untitledId}`;
+  const namedBotId = `bot-${namedId}`;
+  const fake = installFakeHerdr(temp.home, {
+    agents: [],
+    workspaces: [],
+    onPrompt: { [untitledBotId]: { say: [greetingText("ko")], sayOnce: true }, [namedBotId]: { say: [greetingText("ko")], sayOnce: true } },
+  });
+  const config = resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BIN_PATH: fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" });
+  const host = createHost(config, { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null, ensureSession: null });
+  await host.start();
+  const dispatch = createCoordinatorDispatcher(host);
+  try {
+    // No name (the "+" combobox's plain "Create a new Bot" row) -> the untitled locale default,
+    // with no id-derived suffix.
+    const untitled = await dispatch("herdrBot.quickCreateBot", { requestId: untitledId, locale: "ko" });
+    assert.equal(untitled.status, "ok");
+    assert.equal((untitled as { status: "ok"; value: { agent: { name: string } } }).value.agent.name, "새 Bot");
+
+    // A name typed before picking `이름이 "..."인 Bot 만들기` -> that exact name.
+    const named = await dispatch("herdrBot.quickCreateBot", { requestId: namedId, locale: "ko", name: "코드 리뷰어" });
+    assert.equal(named.status, "ok");
+    assert.equal((named as { status: "ok"; value: { agent: { name: string } } }).value.agent.name, "코드 리뷰어");
+
+    // Let both reservations finish provisioning before the harness tears down its temp home --
+    // otherwise the background provision outlives cleanup and logs a spurious ENOENT.
+    await host.onboarding.settled(untitledBotId);
+    await host.onboarding.settled(namedBotId);
+  } finally {
+    await host.stop();
+    temp.cleanup();
+  }
+});
+
 test("herdrBot.defaults surfaces the host's default cwd/kind for the New Bot dialog", async () => {
   const h = await harness();
   try {

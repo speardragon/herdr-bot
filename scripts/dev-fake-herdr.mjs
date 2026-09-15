@@ -16,6 +16,10 @@ writeFileSync(statePath, JSON.stringify({
   onPrompt: {
     reviewer: { say: ["Reviewed. Two nits: naming in auth.ts and a missing test."], finalStatus: "idle" },
     writer: { say: ["Draft ready in docs/auth.md — want a shorter version?"], finalStatus: "idle" },
+    // Fallback for every other bot name -- in particular the generated "새 Bot <suffix>" name from
+    // "Create a new Bot", which otherwise gets no scripted reply and fails onboarding with
+    // "the bot did not send its first greeting" (see core/test/helpers/fake-herdr.mjs).
+    "*": { say: ["Hi! I'm ready to help — what would you like to work on?"], finalStatus: "idle" },
   },
 }, null, 2));
 

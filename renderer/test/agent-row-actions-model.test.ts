@@ -1,20 +1,25 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { agentRowActions, isTogglePinAction } from "../src/production/agent-row-actions-model.ts";
+import { agentRowActions, isDeleteAgentAction, isTogglePinAction } from "../src/production/agent-row-actions-model.ts";
 
-// herdr-bot (task 3, plan §2.2 "정렬 우선권을 적용하지 않고 관련 편집 메뉴를 감춘다"): the recent-order
-// screen stops passing onTogglePin to ConversationSidebar, which AgentRowActions.tsx turns into
-// `includePin: onTogglePin != null`. This locks the gate that fix depends on at the model level --
-// full per-row DOM menu rendering (including the "Move to section" submenu, which is gated in
-// AgentRowActions.tsx itself rather than this model) is deferred to Task 8.
-test("agentRowActions: includePin false (as when onTogglePin is unwired) never yields a pin/unpin action", () => {
-  const actions = agentRowActions({ isHidden: false, isPinned: false, includePin: false });
+// herdr-bot: the sidebar row menu is 고정/고정 해제 · Bot 이름 변경 · 프로필 편집 · 삭제. Only the two
+// toggles (pin, delete) live in this model; AgentRowActions.tsx turns `onTogglePin != null` into
+// `includePin` and `onRequestDelete != null` into `includeDelete`, so these lock that gating.
+test("agentRowActions: includePin false never yields a pin/unpin action", () => {
+  const actions = agentRowActions({ isPinned: false, includePin: false });
   assert.equal(actions.some(isTogglePinAction), false);
 });
 
 test("agentRowActions: includePin true yields Pin when unpinned, Unpin when pinned", () => {
-  const unpinned = agentRowActions({ isHidden: false, isPinned: false, includePin: true });
+  const unpinned = agentRowActions({ isPinned: false, includePin: true });
   assert.deepEqual(unpinned.filter(isTogglePinAction).map((action) => action.id), ["pin-agent"]);
-  const pinned = agentRowActions({ isHidden: false, isPinned: true, includePin: true });
+  const pinned = agentRowActions({ isPinned: true, includePin: true });
   assert.deepEqual(pinned.filter(isTogglePinAction).map((action) => action.id), ["unpin-agent"]);
+});
+
+test("agentRowActions: the full menu is pin then delete, and nothing else", () => {
+  const actions = agentRowActions({ isPinned: false, includePin: true, includeDelete: true });
+  assert.deepEqual(actions.map((action) => action.id), ["pin-agent", "delete-agent"]);
+  assert.equal(actions.filter(isDeleteAgentAction).length, 1);
+  assert.deepEqual(agentRowActions({}), [], "no callbacks wired -> empty menu (AgentRowActions then never opens)");
 });

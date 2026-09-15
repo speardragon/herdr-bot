@@ -19,7 +19,10 @@ const KIT_BUTTON_SM = "sand-fifm61 sand-1d3mw78 sand-12oo3zp sand-1iorvi4 sand-1
 const ICON_BUTTON_BASE = "sand-kit-icon-button sand-1n2onr6 sand-3nfvp2 sand-6s0dn4 sand-l56j7k sand-2lah0s sand-9f619 sand-exx8yu sand-1xpa7k sand-18d9i69 sand-1uhho1l sand-c342km sand-ng3xce sand-jbqb8w sand-1ypdohk sand-tgyt42 sand-s2xxs2 sand-gdialr sand-9lcvmn sand-1k57tk5 sand-784prv sand-1t137rt sand-9v5kkp sand-4sht9k sand-1y3gkto sand-vy4d1p sand-xk0z11 sand-1kogg8i sand-1r8pydn sand-1o0liin sand-1fx2joi sand-7n8uir sand-99e291 sand-1v0sr2s";
 const INSERTED_CHIP = "sand-inserted-chip";
 const PILL_LABEL = "sand-1lliihq sand-b3r6kr sand-uxw1ft sand-3d5spo sand-1kpknzs sand-18qloa2 sand-pzgpc2 sand-gdialr sand-9lcvmn";
-const BUTTON_SIZE_CLASSES = { sm: "sand-1iorvi4", md: "sand-1yrsyyn" } as const;
+// herdr-bot: the shipped md size is the padding-top (sand-1yrsyyn, 6px) + padding-bottom (sand-10b6aqq,
+// 6px) pair; the recovered set had only the top half, which pushed every md button's icon and label
+// 3px below centre (both atomics are ×4 specificity, so owner CSS at ×3 could not repair it).
+const BUTTON_SIZE_CLASSES = { sm: "sand-1iorvi4", md: "sand-1yrsyyn sand-10b6aqq" } as const;
 const BUTTON_SHAPE_CLASSES = { rectangular: undefined, pill: "sand-163pfp" } as const;
 const BUTTON_SENTIMENT_CLASSES = {
   neutral: {

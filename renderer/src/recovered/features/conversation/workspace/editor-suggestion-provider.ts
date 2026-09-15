@@ -181,7 +181,6 @@ export function projectMentionMembers(value: unknown, allowEveryone = true): Edi
     const id = nonEmptyString(candidate.id);
     const label = nonEmptyString(candidate.name);
     if (id == null || label == null || seen.has(id)) continue;
-    if (candidate.isHiddenFromSidebar === true || candidate.hiddenFromSidebar === true) continue;
     seen.add(id);
     const members = stringArray(candidate.memberIds ?? candidate.members);
     const isGroup = candidate.isGroup === true;

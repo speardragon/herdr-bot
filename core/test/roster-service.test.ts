@@ -180,9 +180,13 @@ test("updateProfile and rooms round-trip", async () => {
   const h = harness();
   try {
     await h.service.createBot({ id: "a", name: "A" });
-    const updated = h.service.updateProfile("a", { name: "Ava", description: "helps", isHiddenFromSidebar: true });
+    const updated = h.service.updateProfile("a", { name: "Ava", description: "helps", title: "  research, marketing  ", isHiddenFromSidebar: true });
     assert.equal(updated?.name, "Ava");
     assert.equal(updated?.isHiddenFromSidebar, true);
+    // herdr-bot: the optional "label" (Grok's title) is trimmed, persisted, and clearable to "".
+    assert.equal(updated?.title, "research, marketing");
+    assert.equal(h.service.updateProfile("a", { title: "" })?.title, "");
+    assert.equal(h.service.updateProfile("a", { isHiddenFromSidebar: true })?.title, ""); // an unrelated patch leaves it alone
     const room = h.service.createRoom({ name: "r", memberIds: ["a"] });
     assert.equal(h.service.updateRoom(room.id, { name: "renamed" })?.name, "renamed");
     h.service.deleteRoom(room.id);

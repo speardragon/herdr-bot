@@ -122,7 +122,7 @@ export interface RootShellEmptyWorkspaceProps {
 
 export function RootShellEmptyWorkspace({ isVisible }: RootShellEmptyWorkspaceProps) {
   if (!isVisible) return null;
-  return <main aria-label={EMPTY_WORKSPACE_LABEL} className="sand-chat" data-empty="true" style={{ display: "grid", height: "100%", placeItems: "center" }}>
+  return <main aria-label={EMPTY_WORKSPACE_LABEL} className="sand-chat" data-empty="true" style={{ display: "grid", flex: "1 1 auto", height: "100%", minWidth: 0, placeItems: "center" }}>
     <p>{t(EMPTY_WORKSPACE_COPY)}</p>
   </main>;
 }

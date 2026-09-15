@@ -1,11 +1,120 @@
 /* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2773215 (sand-agent-settings) */
-.sand-agent-settings { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
-.sand-agent-settings input, .sand-agent-settings textarea { background: var(--cursor-bg-input, var(--cursor-bg-editor)); border: 1px solid var(--cursor-stroke-secondary); border-radius: 4px; color: var(--cursor-text-primary); font: inherit; min-height: 30px; padding: 6px 8px; }
-.sand-agent-settings textarea { min-height: 72px; resize: vertical; }
-.sand-agent-settings input:focus-visible, .sand-agent-settings textarea:focus-visible, .sand-agent-settings button:focus-visible { outline: 2px solid var(--cursor-icon-accent-primary); outline-offset: 2px; }
-.sand-agent-settings__card { border: 1px solid var(--cursor-stroke-secondary); border-radius: 6px; padding: 10px; }
-.sand-agent-settings__row { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
-.sand-agent-settings__text { display: flex; flex-direction: column; gap: 3px; }
-.sand-agent-settings__text small { color: var(--cursor-text-secondary); }
-.sand-agent-settings__control button { background: var(--cursor-bg-tertiary); border: 1px solid var(--cursor-stroke-secondary); border-radius: 999px; color: var(--cursor-text-primary); min-width: 48px; padding: 4px 8px; }
-.sand-agent-settings__control button[aria-checked="true"] { background: var(--cursor-bg-accent-secondary); border-color: var(--cursor-icon-accent-primary); }
+/* herdr-bot: restyled after the Grok Bot reference -- centered avatar hero, labeled rounded fields,
+ * and (bots only) the gray 알림 card with an iOS-style switch. Class names are all
+ * sand-agent-settings__* so nothing here leaks into the members pane that shares the aside. */
+.sand-agent-settings { display: flex; flex-direction: column; gap: 14px; padding: 16px 16px 24px; }
+
+.sand-agent-settings__hero {
+  display: grid; place-items: center; align-self: center;
+  width: 120px; height: 120px; margin: 8px 0 4px; padding: 0;
+  color: inherit; background: transparent;
+  border: 0; border-radius: 16px;
+}
+/* Only the bot hero (a button that opens the avatar editor) gets the tinted box; the group hero
+ * (reference A) is a plain cluster on the pane background. */
+button.sand-agent-settings__hero { cursor: pointer; background: color-mix(in srgb, var(--cursor-bg-secondary) 55%, transparent); }
+button.sand-agent-settings__hero:hover { background: var(--cursor-bg-secondary); }
+.sand-agent-settings__hero-avatar { display: grid; place-items: center; width: 72px; height: 72px; }
+.sand-agent-settings__hero-avatar > :not(.sand-group-hero) { width: 100%; height: 100%; }
+
+/* Group hero cluster (reference A): the "나" bubble top-centre, member avatars overlapping under it.
+ * Members come later in DOM order so they paint over the bubble's lower edge, as in the reference. */
+.sand-group-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 72px; height: 72px; }
+.sand-group-hero__self {
+  display: grid; place-items: center; width: 34px; height: 34px;
+  color: var(--cursor-text-secondary); font-size: 11px; font-weight: 600; line-height: 1;
+  background: var(--cursor-bg-secondary); border: 1px solid var(--cursor-stroke-secondary); border-radius: 50%;
+}
+.sand-group-hero__members { display: flex; margin-top: -10px; }
+.sand-group-hero__member { display: block; flex: 0 0 auto; width: 36px; height: 36px; }
+.sand-group-hero__member + .sand-group-hero__member { margin-left: -8px; }
+.sand-group-hero__member .sand-agent-avatar { display: block; width: 100%; height: 100%; }
+.sand-group-hero__overflow { display: grid; place-items: center; color: var(--cursor-text-secondary); font-size: 12px; background: var(--cursor-bg-secondary); border-radius: 50%; }
+
+/* Same cluster, scaled down for the sidebar row's 44px avatar slot (sidebar.tsx). Every measurement
+ * below is the xl rule above scaled by 22/36 (the ratio between the sidebar's `size="sm"`
+ * AgentAvatar, 22px, and the settings hero's `size="lg"`, 36px), so the two heroes read as the same
+ * shape at different sizes rather than two independently-tuned layouts. */
+.sand-group-hero--sm { width: 44px; height: 44px; }
+.sand-group-hero--sm .sand-group-hero__self { width: 21px; height: 21px; font-size: 7px; }
+.sand-group-hero--sm .sand-group-hero__members { margin-top: -6px; }
+.sand-group-hero--sm .sand-group-hero__member { width: 22px; height: 22px; }
+.sand-group-hero--sm .sand-group-hero__member + .sand-group-hero__member { margin-left: -5px; }
+.sand-group-hero--sm .sand-group-hero__overflow { font-size: 7px; }
+
+/* herdr-bot: from 3 members (group-hero-layout.ts) the cluster is a 2x2 arrangement after the Grok
+ * reference -- the "나" bubble top-left, members row-major in the other three corners. The four
+ * shapes OVERLAP a little rather than sitting edge to edge: each corner is pulled in from the frame
+ * edge by less than its own size, so the four cells' boxes physically overlap (8px xl / 5px sm).
+ * `.sand-group-hero__members` keeps its own box (no `display: contents` needed -- absolute
+ * positioning's containing block already skips past it to the nearest positioned ancestor, this
+ * `[data-layout="grid"]` root), and the base rule's flex/margin never applies once children are out
+ * of flow, so both are safely left alone. DOM order still puts the last corner (bottom-right) latest,
+ * so it paints on top of the other three, matching the reference. The "+N" cell is plain bold text,
+ * not a filled disc, in that same corner box when there's overflow. */
+.sand-group-hero[data-layout="grid"] { position: relative; }
+.sand-group-hero[data-layout="grid"] .sand-group-hero__self,
+.sand-group-hero[data-layout="grid"] .sand-group-hero__member { position: absolute; margin: 0; }
+.sand-group-hero[data-layout="grid"] .sand-group-hero__self { top: 4px; left: 4px; }
+.sand-group-hero[data-layout="grid"] .sand-group-hero__member:nth-child(1) { top: 4px; left: 32px; }
+.sand-group-hero[data-layout="grid"] .sand-group-hero__member:nth-child(2) { top: 32px; left: 4px; }
+.sand-group-hero[data-layout="grid"] .sand-group-hero__member:nth-child(3) { top: 32px; left: 32px; }
+.sand-group-hero[data-layout="grid"] .sand-group-hero__overflow {
+  background: none; border-radius: 0;
+  color: var(--cursor-text-secondary); font-size: 20px; font-weight: 600; letter-spacing: -0.02em;
+}
+.sand-group-hero--sm[data-layout="grid"] .sand-group-hero__self { top: 2.5px; left: 2.5px; }
+.sand-group-hero--sm[data-layout="grid"] .sand-group-hero__member:nth-child(1) { top: 2.5px; left: 19.5px; }
+.sand-group-hero--sm[data-layout="grid"] .sand-group-hero__member:nth-child(2) { top: 19.5px; left: 2.5px; }
+.sand-group-hero--sm[data-layout="grid"] .sand-group-hero__member:nth-child(3) { top: 19.5px; left: 19.5px; }
+.sand-group-hero--sm[data-layout="grid"] .sand-group-hero__overflow { font-size: 11px; }
+/* A group has no herdr runtime status (rooms carry `herdrBot: null`), so the only dot that can land
+ * on its avatar is the blue unread dot of a pinned tile / collapsed row (sidebar.tsx's StatusDot,
+ * bottom-right of the same wrapper) -- exactly where the "+N" cell is. Nudge the count up-left so
+ * the dot never covers the digits. */
+.herdr-avatar-wrap:has(> .herdr-status-dot) .sand-group-hero[data-layout="grid"] .sand-group-hero__overflow { translate: -4px -4px; }
+.herdr-avatar-wrap:has(> .herdr-status-dot) .sand-group-hero--sm[data-layout="grid"] .sand-group-hero__overflow { translate: -3px -3px; }
+
+
+.sand-agent-settings__field { display: flex; flex-direction: column; gap: 6px; }
+.sand-agent-settings__label { padding: 0 2px; color: var(--cursor-text-secondary); font-size: 13px; line-height: 18px; }
+.sand-agent-settings__input {
+  box-sizing: border-box; width: 100%; min-height: 38px; padding: 7px 12px;
+  color: var(--cursor-text-primary); font: inherit; font-size: 15px; line-height: 22px;
+  background: var(--cursor-bg-elevated); border: 1px solid var(--cursor-stroke-secondary); border-radius: 12px; outline: none;
+}
+.sand-agent-settings__input::placeholder { color: var(--cursor-text-tertiary); }
+/* The description grows with its content (reference shows the whole text, no inner scrollbar);
+ * `field-sizing: content` is supported by the bundled Chromium, and older engines keep the fixed
+ * min-height with an internal scroll. */
+textarea.sand-agent-settings__input { min-height: 120px; padding: 10px 12px; resize: none; field-sizing: content; }
+.sand-agent-settings__input:focus-visible,
+.sand-agent-settings__hero:focus-visible,
+.sand-agent-settings__switch:focus-visible { outline: 2px solid var(--cursor-stroke-focused, var(--cursor-icon-accent-primary)); outline-offset: 2px; }
+
+.sand-agent-settings__card {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-top: 4px; padding: 14px 16px;
+  background: var(--cursor-bg-secondary); border-radius: 14px;
+}
+.sand-agent-settings__card-text { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
+.sand-agent-settings__card-title { color: var(--cursor-text-primary); font-size: 15px; font-weight: 600; line-height: 20px; }
+.sand-agent-settings__card-subtitle { color: var(--cursor-text-secondary); font-size: 13px; line-height: 18px; }
+
+.sand-agent-settings__switch {
+  position: relative; flex: 0 0 auto; width: 44px; height: 26px; padding: 0;
+  background: var(--cursor-bg-tertiary, rgba(120, 120, 128, .32)); border: 0; border-radius: 999px; cursor: pointer;
+  transition: background-color .15s ease;
+}
+.sand-agent-settings__switch[aria-checked="true"] { background: var(--cursor-text-primary); }
+.sand-agent-settings__switch:disabled { cursor: progress; opacity: .6; }
+.sand-agent-settings__switch-knob {
+  position: absolute; top: 2px; left: 2px; width: 22px; height: 22px;
+  /* Theme token, not #fff: the on-track is --cursor-text-primary, which is near-white in dark mode. */
+  background: var(--cursor-bg-elevated); border-radius: 999px; box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+  transition: transform .15s ease;
+}
+.sand-agent-settings__switch[aria-checked="true"] .sand-agent-settings__switch-knob { transform: translateX(18px); }
+.sand-agent-settings__sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.sand-agent-settings__error { color: var(--cursor-text-danger, #e5484d); font-size: 12px; }

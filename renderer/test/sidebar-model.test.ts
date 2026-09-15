@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { sortRecentChats, projectRecentOrderList, partitionSidebarAgents } from "../src/production/sidebar-model.ts";
+import { sortRecentChats, projectSidebarOrder, partitionSidebarAgents, pinnedDropPosition, pinnedTileColumns } from "../src/production/sidebar-model.ts";
 
 interface Chat { id: string; lastMessageAt: number; createdAt: number; name?: string; hasUnread?: boolean; runtimeStatus?: string; isPinned?: boolean }
 
@@ -60,41 +60,78 @@ test("a temp/draft row is kept outside sortRecentChats and stays pinned above th
   assert.deepEqual(rendered.map((row) => row.id), ["__draft__", "room-b", "bot-a"]);
 });
 
-// herdr-bot (task 3, fix round 3, plan §2.2 "이 화면에서는 정렬 우선권을 적용하지 않고"): the recent-order
-// screen must never let a pinned-but-stale chat float above a recently-active one. sortRecentChats
-// alone doesn't guarantee this -- ConversationSidebar/partitionSidebarAgents groups any `isPinned: true`
-// item into a separate "Pinned agents" section regardless of array order -- so projectRecentOrderList
-// additionally normalizes isPinned to false on every item.
-test("projectRecentOrderList: a pinned-but-stale agent does NOT sort above a recently-active unpinned one", () => {
-  const staleButPinned: Chat = { id: "bot-pinned", lastMessageAt: 1, createdAt: 1, isPinned: true };
+// herdr-bot: the sidebar's row-menu "고정" (Pin) floats a chat to the top of the sidebar, in the order
+// the user pinned (or drag-reordered) them, with the rest of the roster in recency order underneath.
+// projectSidebarOrder is the flat version of that order -- what Cmd+N (focusAgent) must resolve the
+// Nth row against so the shortcut lands on the row the user actually sees. Pinned-ness is derived from
+// `pinnedAgentIds`, NOT from an `isPinned` field, because focusAgent runs it on the raw roster
+// (agentsRef.current) which never carries isPinned.
+test("projectSidebarOrder: a pinned-but-stale chat floats above a recently-active unpinned one", () => {
+  const staleButPinned: Chat = { id: "bot-pinned", lastMessageAt: 1, createdAt: 1 };
   const recentUnpinned: Chat = { id: "bot-recent", lastMessageAt: 100, createdAt: 1 };
-  const result = projectRecentOrderList([staleButPinned, recentUnpinned]);
-  assert.deepEqual(result.map((agent) => agent.id), ["bot-recent", "bot-pinned"], "recency order, not pin order");
+  assert.deepEqual(projectSidebarOrder([recentUnpinned, staleButPinned], ["bot-pinned"]).map((chat) => chat.id), ["bot-pinned", "bot-recent"]);
 });
 
-test("projectRecentOrderList: isPinned is normalized to false on every item, without touching any other field", () => {
-  const pinned: Chat = { id: "bot-pinned", lastMessageAt: 10, createdAt: 1, isPinned: true, name: "Pinned Bot" };
-  const unpinned: Chat = { id: "bot-plain", lastMessageAt: 5, createdAt: 1 };
-  const [first, second] = projectRecentOrderList([pinned, unpinned]);
-  assert.equal(first.isPinned, false);
-  assert.equal(first.name, "Pinned Bot", "only isPinned is overridden -- every other field is untouched");
-  assert.equal(second.isPinned, undefined, "an item that was never pinned is returned as-is (same falsy isPinned)");
+test("projectSidebarOrder: pinned chats follow pinnedAgentIds order, not recency", () => {
+  const a: Chat = { id: "bot-a", lastMessageAt: 10, createdAt: 1 };
+  const b: Chat = { id: "bot-b", lastMessageAt: 20, createdAt: 2 };
+  const c: Chat = { id: "bot-c", lastMessageAt: 30, createdAt: 3 };
+  assert.deepEqual(projectSidebarOrder([a, b, c], ["bot-a", "bot-c"]).map((chat) => chat.id), ["bot-a", "bot-c", "bot-b"]);
 });
 
-test("projectRecentOrderList: the result is still exactly sortRecentChats's order (same tie-break, same createdAt fallback)", () => {
-  const a: Chat = { id: "b-tied", lastMessageAt: 5, createdAt: 1, isPinned: true };
+test("projectSidebarOrder: a pinned id with no matching chat (deleted bot) is ignored", () => {
+  const a: Chat = { id: "bot-a", lastMessageAt: 10, createdAt: 1 };
+  assert.deepEqual(projectSidebarOrder([a], ["gone", "bot-a"]).map((chat) => chat.id), ["bot-a"]);
+});
+
+test("projectSidebarOrder: with nothing pinned it is exactly sortRecentChats", () => {
+  const a: Chat = { id: "b-tied", lastMessageAt: 5, createdAt: 1 };
   const b: Chat = { id: "a-tied", lastMessageAt: 5, createdAt: 2 };
-  assert.deepEqual(projectRecentOrderList([a, b]).map((chat) => chat.id), sortRecentChats([a, b]).map((chat) => chat.id));
+  const c: Chat = { id: "fresh", lastMessageAt: 0, createdAt: 50 };
+  assert.deepEqual(projectSidebarOrder([a, b, c], []).map((chat) => chat.id), sortRecentChats([a, b, c]).map((chat) => chat.id));
 });
 
 // This is the exact render trace ConversationSidebar performs (sidebar.tsx: `partitionSidebarAgents(agents, pinnedAgentIds)`,
-// then `orderedPinned.map(renderAgent)` followed by `unpinned.map(renderAgent)`). Feeding it
-// projectRecentOrderList's output (with pinnedAgentIds: []) proves, at the shared-function level, that
-// orderedPinned is always empty on the recent-order screen and unpinned is the full recency-ordered list.
-test("render trace: partitionSidebarAgents(projectRecentOrderList(agents), []) yields an empty pinned group and the full recency list as unpinned", () => {
-  const staleButPinned: Chat = { id: "bot-pinned", lastMessageAt: 1, createdAt: 1, isPinned: true };
-  const recentUnpinned: Chat = { id: "bot-recent", lastMessageAt: 100, createdAt: 1 };
-  const { pinned, unpinned } = partitionSidebarAgents(projectRecentOrderList([staleButPinned, recentUnpinned]), []);
-  assert.deepEqual(pinned, [], "no 'Pinned agents' group renders on this screen");
-  assert.deepEqual(unpinned.map((agent) => agent.id), ["bot-recent", "bot-pinned"], "the full recency-ordered list renders flat");
+// then `orderedPinned.map(renderAgent)` followed by `unpinned.map(renderAgent)`) on the list
+// ProductionRenderer hands it (`sortRecentChats(visibleAgents)`, where visibleAgents carries
+// `isPinned: pinnedAgentIds.includes(id)`). Flattening it must equal projectSidebarOrder on the raw
+// roster, or Cmd+N would open a different chat than the Nth visible row.
+test("render trace: flattened partitionSidebarAgents(sortRecentChats(withIsPinned), pinnedIds) equals projectSidebarOrder(raw, pinnedIds)", () => {
+  const raw: Chat[] = [
+    { id: "bot-a", lastMessageAt: 10, createdAt: 1 },
+    { id: "bot-b", lastMessageAt: 20, createdAt: 2 },
+    { id: "bot-c", lastMessageAt: 30, createdAt: 3 },
+    { id: "bot-d", lastMessageAt: 5, createdAt: 4 }
+  ];
+  const pinnedIds = ["bot-d", "bot-a", "gone"];
+  const withIsPinned = raw.map((chat) => ({ ...chat, isPinned: pinnedIds.includes(chat.id) }));
+  const { pinned, unpinned } = partitionSidebarAgents(sortRecentChats(withIsPinned), pinnedIds);
+  assert.deepEqual([...pinned, ...unpinned].map((chat) => chat.id), projectSidebarOrder(raw, pinnedIds).map((chat) => chat.id));
+  assert.deepEqual(pinned.map((chat) => chat.id), ["bot-d", "bot-a"], "pinned group renders in pin order");
+});
+
+// herdr-bot: pinned chats render as a 2-column grid of tiles (row-major, so "before" = left/up), while
+// a collapsed sidebar keeps them as stacked rows ("before" = top half). Drag-reorder must read the
+// pointer against the axis the layout actually flows on.
+test("pinnedDropPosition: a tile splits on the pointer's X (left half = before), a row on its Y", () => {
+  const bounds = { left: 100, top: 200, width: 120, height: 100 };
+  assert.equal(pinnedDropPosition({ isTile: true, clientX: 120, clientY: 290, bounds }), "before", "left half of a tile, even near its bottom");
+  assert.equal(pinnedDropPosition({ isTile: true, clientX: 200, clientY: 205, bounds }), "after", "right half of a tile, even near its top");
+  assert.equal(pinnedDropPosition({ isTile: false, clientX: 200, clientY: 210, bounds }), "before", "top half of a row, regardless of X");
+  assert.equal(pinnedDropPosition({ isTile: false, clientX: 105, clientY: 290, bounds }), "after", "bottom half of a row, regardless of X");
+});
+
+// herdr-bot: the pinned-tile grid starts at 2 columns (the sidebar's default 280px expandedWidth)
+// and grows to 3, then 4 as the user drags the sidebar wider -- "사이드바를 다 펼칠 때는 한 줄에 4개"
+// only kicks in once there is actually room (near SIDEBAR_LAYOUT_BOUNDS.maxExpandedWidth, 400). The
+// tile avatar itself is a constant 72px at every column count (AgentSidebarItem hardcodes "xl") --
+// this only ever changes how many fit in a row.
+test("pinnedTileColumns: 2 at the default width, 3 once widened, 4 near the max", () => {
+  assert.equal(pinnedTileColumns(240), 2, "minExpandedWidth");
+  assert.equal(pinnedTileColumns(280), 2, "default expandedWidth");
+  assert.equal(pinnedTileColumns(319), 2);
+  assert.equal(pinnedTileColumns(320), 3);
+  assert.equal(pinnedTileColumns(379), 3);
+  assert.equal(pinnedTileColumns(380), 4);
+  assert.equal(pinnedTileColumns(400), 4, "maxExpandedWidth");
 });

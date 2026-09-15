@@ -24,9 +24,6 @@ const STATUS_DOT_CLASSES: Record<SidebarStatusDotStatus, string> = {
   info: "sand-2uzfp6"
 };
 const STATUS_DOT_ROOT_CLASS = "sand-1rg5ohu sand-2lah0s sand-1xc55vz sand-dk7pt sand-149ho13";
-const CORNER_ROOT_CLASS = "sand-10l6tqk sand-3nfvp2 sand-6s0dn4 sand-l56j7k sand-149ho13 sand-47corl";
-const CORNER_ANIMATION_CLASS = "sand-1aquc0h sand-1jq8d06 sand-1lfcbla";
-const TRAILING_CLASS = "sand-agent-item__trailing";
 const ACTIVITY_CLASS = "sand-agent-item__activity";
 
 export interface SidebarStatusDotProps extends Omit<HTMLAttributes<HTMLSpanElement>, "className" | "style"> {
@@ -64,11 +61,6 @@ export interface SidebarAgentStatusProjection {
   readonly trailing: "marker" | null;
 }
 
-export interface SidebarAgentStatusViewProps extends SidebarAgentStatusInput {
-  /** Private d0e indicator slot; omitted when that renderer primitive is unavailable. */
-  readonly renderIndicator?: (status: SidebarStatusDotStatus) => ReactNode;
-}
-
 export interface SidebarAgentActivityProps {
   /** The existing last-entry preview; empty activity remains an empty carrier. */
   readonly preview?: ReactNode;
@@ -83,11 +75,10 @@ export function SidebarAgentActivity({ preview, previewTitle }: SidebarAgentActi
   }, preview ?? null);
 }
 
-// herdr-bot (task 3): this corner marker now owns ONLY the blue blocked/unread indicator. The
-// avatar-corner "running" (green) rendering it used to also own for collapsed/pinned rows has been
-// superseded by the independent green working/done dot (bot-activity.ts + sidebar.tsx's
-// `.herdr-working-dot`), which is driven by the root-owned activity map rather than isRunning/
-// isActivityNamed. Keeping both here would stack two dots in the same corner.
+// herdr-bot: this projection now feeds only the expanded row's "working" activity preview
+// (isWorking) and the preview-card marker label. The dots themselves moved: the runtime-status dot
+// on the avatar is sidebar-status-dot.ts + sidebar.tsx's StatusDot, and the expanded row's blue
+// unread dot is rendered directly in sidebar.tsx's trailing column.
 export function projectSidebarAgentStatus({ layout = "expanded", waitingReason, hasUnread = false, isRunning = false }: SidebarAgentStatusInput): SidebarAgentStatusProjection {
   const marker: SidebarAgentStatusMarker = waitingReason != null ? "blocked" : hasUnread ? "unread" : null;
   const isWorking = waitingReason == null && isRunning;
@@ -101,37 +92,4 @@ export function projectSidebarAgentStatus({ layout = "expanded", waitingReason, 
     corner: layout === "expanded" ? null : markerCorner,
     trailing: layout === "expanded" && marker != null ? "marker" : null
   };
-}
-
-function indicatorFor(projection: SidebarAgentStatusProjection, renderIndicator?: (status: SidebarStatusDotStatus) => ReactNode): ReactNode {
-  const status: SidebarStatusDotStatus = projection.marker === "blocked" ? "needs-attention" : projection.marker === "unread" ? "info" : "working";
-  return (renderIndicator ?? ((nextStatus) => createElement(SidebarStatusDot, { status: nextStatus })))(status);
-}
-
-/** Exact corner wrapper for the blocked/unread marker on collapsed/pinned rows. Positioned top-right
- * (task 3) -- not bottom-right -- so it never overlaps the independent green working/done dot, which
- * owns the avatar's bottom-right corner (`.herdr-working-dot`) for every row layout. */
-export function SidebarAgentStatusCorner({ layout = "expanded", renderIndicator, ...input }: SidebarAgentStatusViewProps) {
-  const projection = projectSidebarAgentStatus({ ...input, layout });
-  if (projection.corner == null) return null;
-  const pinned = layout === "pinned";
-  const size = pinned ? 10 : 8;
-  const status = projection.markerLabel == null ? undefined : projection.markerLabel;
-  const className = [
-    "sand-agent-item__corner-dot",
-    CORNER_ROOT_CLASS,
-    CORNER_ANIMATION_CLASS
-  ].join(" ");
-  return createElement("span", {
-    ...(status == null ? { "aria-hidden": true } : { "aria-label": status, role: "status" }),
-    className,
-    style: { width: size, height: size, right: 2, top: 2 }
-  }, indicatorFor(projection, renderIndicator));
-}
-
-/** Exact expanded-row trailing marker wrapper. */
-export function SidebarAgentStatusView({ renderIndicator, ...input }: SidebarAgentStatusViewProps) {
-  const projection = projectSidebarAgentStatus(input);
-  if (projection.trailing !== "marker" || projection.markerLabel == null) return null;
-  return createElement("span", { "aria-label": projection.markerLabel, className: TRAILING_CLASS, role: "status" }, indicatorFor(projection, renderIndicator));
 }

@@ -1,5 +1,6 @@
 import type { RendererAgent } from "./model";
 import type { CommandPaletteCommand } from "./command-palette-model";
+import type { SandIconName } from "../recovered/ui/sand-icon-registry";
 
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=5465664 (MDn)
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=5331185 (HOn)
@@ -20,7 +21,7 @@ export interface CommandPaletteRootCommandInput {
 function infoCommand(
   id: string,
   label: string,
-  icon: string,
+  icon: SandIconName,
   keywords: readonly string[],
   run: () => void
 ): CommandPaletteCommand {

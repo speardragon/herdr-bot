@@ -27,6 +27,28 @@ export function partitionSidebarAgents<T extends SidebarOrderAgent>(agents: read
   return { pinned, unpinned: agents.filter((agent) => !pinnedSet.has(agent.id) && !agent.isPinned) };
 }
 
+/**
+ * How many columns the pinned-tile grid shows, based on the sidebar's current width
+ * (SIDEBAR_LAYOUT_BOUNDS: 240-400px) -- 2 at the default 280px width, growing to 3 then 4 as the
+ * user drags the sidebar wider, so a full-width sidebar (near 400px) is what finally shows 4 per row.
+ */
+export function pinnedTileColumns(sidebarWidth: number): 2 | 3 | 4 {
+  if (sidebarWidth >= 380) return 4;
+  if (sidebarWidth >= 320) return 3;
+  return 2;
+}
+
+/**
+ * Which side of a pinned drop target the dragged chat lands on. The expanded sidebar lays pinned
+ * chats out as a row-major 2-column grid of tiles, so "before" means the pointer is in the target's
+ * LEFT half; the collapsed sidebar stacks them as rows, where "before" is the TOP half.
+ */
+export function pinnedDropPosition({ isTile, clientX, clientY, bounds }: { isTile: boolean; clientX: number; clientY: number; bounds: { left: number; top: number; width: number; height: number } }): PinnedMovePosition {
+  return isTile
+    ? (clientX < bounds.left + bounds.width / 2 ? "before" : "after")
+    : (clientY < bounds.top + bounds.height / 2 ? "before" : "after");
+}
+
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L49795
 export function movePinnedAgent(storedIds: readonly string[], movedId: string, targetId: string, position: PinnedMovePosition): string[] {
   if (movedId === targetId) return [...storedIds];
@@ -51,15 +73,17 @@ export function sortRecentChats<T extends { id: string; lastMessageAt: number; c
 }
 
 /**
- * The recent-order screen's list (plan §2.2: "이 화면에서는 정렬 우선권을 적용하지 않고" -- no position
- * priority on this screen at all). `sortRecentChats` alone is not enough: `ConversationSidebar`/
- * `partitionSidebarAgents` still floats any item with `isPinned: true` into a separate group above the
- * recency order, regardless of array order. This normalizes `isPinned` to `false` on every item (a
- * pure, local override -- it does NOT touch the caller's stored pin state) after sorting by recency, so
- * that a pinned-but-stale chat can never float above a recently-active one on this screen, while the
- * underlying pin data a caller passed in is otherwise left alone (id, lastMessageAt, and every other
- * field are untouched).
+ * The sidebar's flat visible order: chats the user pinned (row menu "고정"), in `pinnedAgentIds` order,
+ * followed by the rest in `sortRecentChats` order. This is the flattened form of what
+ * `ConversationSidebar` renders via `partitionSidebarAgents` (pinned group first, then unpinned) and
+ * is what row-index shortcuts (Cmd+N → focusAgent) resolve against, so the shortcut always opens the
+ * Nth row the user sees. Pinned-ness comes from `pinnedAgentIds` rather than an `isPinned` field so it
+ * works on the raw roster too; ids with no matching chat (a pinned bot that was deleted) are skipped.
  */
-export function projectRecentOrderList<T extends { id: string; lastMessageAt: number; createdAt: number; isPinned?: boolean }>(agents: readonly T[]): T[] {
-  return sortRecentChats(agents).map((agent) => agent.isPinned ? { ...agent, isPinned: false } : agent);
+export function projectSidebarOrder<T extends { id: string; lastMessageAt: number; createdAt: number }>(agents: readonly T[], pinnedAgentIds: readonly string[]): T[] {
+  const byId = new Map(agents.map((agent) => [agent.id, agent]));
+  // Set keeps insertion order (spec-guaranteed), so this both dedupes and preserves pin order.
+  const pinnedSet = new Set(pinnedAgentIds.filter((id) => byId.has(id)));
+  const pinned = [...pinnedSet].map((id) => byId.get(id) as T);
+  return [...pinned, ...sortRecentChats(agents.filter((agent) => !pinnedSet.has(agent.id)))];
 }

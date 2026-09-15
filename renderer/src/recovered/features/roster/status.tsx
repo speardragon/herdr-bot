@@ -1,20 +1,20 @@
 import { t } from "../../../production/locale";
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#L511
-// @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2554016 (all-hidden roster state)
+// herdr-bot: the "all-hidden" state (and its "Show Hidden Bots" action) was dropped along with the
+// hide-bot feature -- see AgentRowActions.tsx/ProductionRenderer.tsx.
 import { SandButton } from "../../ui/sand-kit-primitives";
 
-export type RosterStatusKind = "loading" | "empty" | "all-hidden" | "error";
+export type RosterStatusKind = "loading" | "empty" | "error";
 
 export interface RosterStatusProps {
   kind: RosterStatusKind;
   isRetrying?: boolean;
   onRetry?(): void;
-  onShowHiddenBots?(): void;
 }
 
 const ROSTER_STATUS_COPY = { retry: "Retry", retrying: "Retrying…" };
 
-export function RosterStatus({ kind, isRetrying = false, onRetry, onShowHiddenBots }: RosterStatusProps) {
+export function RosterStatus({ kind, isRetrying = false, onRetry }: RosterStatusProps) {
   if (kind === "loading") {
     return (
       <div className="sand-agents-state sand-agents-state--connecting" role="status">
@@ -27,13 +27,6 @@ export function RosterStatus({ kind, isRetrying = false, onRetry, onShowHiddenBo
   }
 
   if (kind === "empty") return <div className="sand-agents-empty">{t("No saved agents yet.")}</div>;
-
-  if (kind === "all-hidden") {
-    return <div className="sand-agents-empty">
-      <span>{t("All bots are hidden")}</span>
-      <SandButton onClick={onShowHiddenBots} size="sm" variant="secondary">{t("Show Hidden Bots")}</SandButton>
-    </div>;
-  }
 
   return (
     <div className="sand-agents-state sand-agents-state--unreachable" role="status">

@@ -1,6 +1,8 @@
 import { t } from "../../../../production/locale";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import type { AppAlertController } from "../../window-chrome/app-alert/controller";
+import { AgentAvatar } from "../../conversation/workspace/agent-avatar";
+import { SandIcon } from "../../../ui/sand-kit-primitives";
 import { GROUP_MAX_MEMBERS, type GroupMemberAgent, type GroupMembersProvider } from "./model";
 import "./view.css";
 
@@ -17,15 +19,24 @@ import "./view.css";
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2733478 (shipped cap template; Sge=6 at UTF-8 offset 2297717; SHA256 ef4e9831b65d39633f09c9ad0c083b98b7ebf52e3bb558182aee5bde31f876fa)
 // @evidence recovered/frontend/app/assets/index-UbX-y3il.js#byteOffset=3477363 (Windows shipped cap template; Sge=6 at UTF-8 offset 2914801; SHA256 80464803b50f478598080bdc1b91da3996c6b74168e2351ea26f620f2ec62ba5)
 
+/** herdr-bot: the roster snapshot only carries id/name per member, so the host resolves each row's
+ * real (possibly custom) avatar; null falls back to the id-derived persona mark. */
+export interface GroupMemberAvatarData {
+  readonly dataUrl?: string | null;
+  readonly shape?: string | null;
+  readonly color?: string | null;
+}
+
 export interface GroupMembersPaneProps {
   readonly provider: GroupMembersProvider;
   readonly alert: AppAlertController;
   readonly agent: GroupMemberAgent;
   readonly accountGeneration: number;
   onOpenAgentChat(agentId: string): void;
+  resolveMemberAvatar?(memberId: string): GroupMemberAvatarData | null;
 }
 
-export function GroupMembersPane({ provider, alert: _alert, agent, accountGeneration, onOpenAgentChat }: GroupMembersPaneProps) {
+export function GroupMembersPane({ provider, alert: _alert, agent, accountGeneration, onOpenAgentChat, resolveMemberAvatar }: GroupMembersPaneProps) {
   const snapshot = useSyncExternalStore(provider.subscribe, provider.getSnapshot, provider.getSnapshot);
   const headingId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -72,18 +83,35 @@ export function GroupMembersPane({ provider, alert: _alert, agent, accountGenera
       <ul aria-labelledby={headingId} className="sand-group-members-list">
         {snapshot.members.map((member) => {
           const nameId = `${headingId}-${member.id}-name`;
+          const avatar = resolveMemberAvatar?.(member.id) ?? null;
+          // herdr-bot (reference B): avatar + name rows; the remove action is not in the reference, so
+          // it is revealed on row hover / focus-within rather than shown permanently.
           return <li aria-labelledby={nameId} className="sand-group-member-row" key={member.id}>
             <button aria-label={`Open ${member.name}'s chat`} className="sand-group-member-open" onClick={() => onOpenAgentChat(member.id)} type="button">
+              <span className="sand-group-member-avatar"><AgentAvatar agentId={member.id} color={avatar?.color} dataUrl={avatar?.dataUrl} isStatic name={member.name} shape={avatar?.shape} size="lg" /></span>
               <span className="sand-group-member-name" id={nameId}>{member.name}</span>
             </button>
-            <button aria-label={`Remove ${member.name}`} disabled={!snapshot.canRemove} onClick={() => { void provider.requestRemoveMember(member); }} type="button">{t("Remove")}</button>
+            <button aria-label={`Remove ${member.name}`} className="sand-group-member-remove" disabled={!snapshot.canRemove} onClick={() => { void provider.requestRemoveMember(member); }} type="button">{t("Remove", "제거")}</button>
           </li>;
         })}
         {snapshot.canAdd ? <li className="sand-group-member-add-row">
           <div ref={menuRef}>
-            <button aria-expanded={menuOpen} aria-haspopup="menu" aria-label={t("Add Member")} className="sand-group-member-add" disabled={snapshot.pending != null} onClick={() => setMenuOpen((open) => !open)} ref={triggerRef} type="button">{t("Add Member")}</button>
-            {menuOpen ? <div aria-label={t("Add Member")} role="menu">
-              {snapshot.candidates.map((candidate) => <button key={candidate.id} onClick={() => selectMember(candidate)} role="menuitem" type="button">{candidate.name}</button>)}
+            <button aria-expanded={menuOpen} aria-haspopup="menu" aria-label={t("Add Member", "멤버 추가")} className="sand-group-member-add" disabled={snapshot.pending != null} onClick={() => setMenuOpen((open) => !open)} ref={triggerRef} type="button">
+              <span aria-hidden="true" className="sand-group-member-avatar sand-group-member-add__icon"><SandIcon name="plus" size="md" /></span>
+              <span className="sand-group-member-name">{t("Add Member", "멤버 추가")}</span>
+            </button>
+            {/* herdr-bot: same visual recipe as the @-mention listbox (rich-text-editor.tsx's
+                createSuggestionRenderer) -- 22px avatar + name row, but width: fit-content instead of
+                that listbox's fixed min(320px, ...), since this menu sits inline under a narrow
+                button rather than floating over the transcript. */}
+            {menuOpen ? <div aria-label={t("Add Member", "멤버 추가")} className="sand-group-member-add-menu" role="menu">
+              {snapshot.candidates.map((candidate) => {
+                const avatar = resolveMemberAvatar?.(candidate.id) ?? null;
+                return <button className="sand-group-member-add-menu__option" key={candidate.id} onClick={() => selectMember(candidate)} role="menuitem" type="button">
+                  <span aria-hidden="true" className="herdr-mention-avatar"><AgentAvatar agentId={candidate.id} color={avatar?.color} dataUrl={avatar?.dataUrl} isStatic name={candidate.name} shape={avatar?.shape} size="sm" /></span>
+                  <span>{candidate.name}</span>
+                </button>;
+              })}
             </div> : null}
           </div>
         </li> : null}

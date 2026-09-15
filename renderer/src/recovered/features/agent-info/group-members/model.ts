@@ -90,10 +90,13 @@ function removalRequest(
   removeMember: () => Promise<void>
 ): AppAlertRequest {
   return {
-    title: t(`Remove ${name} from this conversation?`, `이 방에서 ${name} 봇을 제외할까요?`),
+    // herdr-bot: "제거" (not "제외") to match the reference and the row's own hover-revealed
+    // "제거" button (group-members/view.tsx) -- this is the confirmation that button opens, so the
+    // wording between the two must agree.
+    title: t(`Remove ${name} from this conversation?`, `이 대화에서 ${name}을(를) 제거할까요?`),
     description: "",
-    confirmLabel: t("Remove"),
-    pendingLabel: t("Removing...", "제외하는 중…"),
+    confirmLabel: t("Remove", "제거"),
+    pendingLabel: t("Removing...", "제거하는 중…"),
     cancelLabel: t("Cancel"),
     destructive: true,
     perform: async () => {

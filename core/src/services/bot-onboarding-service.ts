@@ -157,7 +157,11 @@ export class BotOnboardingService {
     const now = this.#now();
     return {
       id,
-      name: request.locale === "ko" ? `새 Bot ${id.slice(-6)}` : `New Bot ${id.slice(-6)}`,
+      // herdr-bot: a name typed into the "+" combobox before selecting "이름이 "...인 Bot 만들기"
+      // wins; leaving the combobox empty (plain "Create a new Bot") reserves an untitled bot the
+      // user renames later, plain "새 Bot"/"New Bot" with no disambiguating suffix -- ids already
+      // differ (bot-<requestId>), so a collision-avoidance suffix on the display name isn't needed.
+      name: request.name?.trim() || (request.locale === "ko" ? "새 Bot" : "New Bot"),
       description: "",
       kind: this.#deps.config.defaultKind,
       cwd: this.#deps.config.defaultCwd,

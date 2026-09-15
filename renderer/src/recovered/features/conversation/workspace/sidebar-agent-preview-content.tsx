@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { RendererAgentLastEntry } from "../../../../production/model";
 import {
   AgentPreviewHeader,
@@ -128,14 +129,22 @@ export interface AgentPreviewCompositorProps extends Omit<AgentPreviewContentPro
  */
 export function AgentPreviewCompositor({ children, isEnabled = true, ...contentProps }: AgentPreviewCompositorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // herdr-bot: the card lives inline in every anchor's DOM position but its 260px box would sit
+  // outside the row it hovers from -- see render below, where it now portals to document.body
+  // instead. `rootRef` alone can no longer decide "still inside the hover target" once the card is
+  // a document.body sibling, so every containment check below also asks `contentRef`.
+  const containsNode = (node: Node | null): boolean =>
+    node != null && (rootRef.current?.contains(node) === true || contentRef.current?.contains(node) === true);
+
   useEffect(() => {
     if (!isOpen || !isEnabled) return;
     const closeOutside = (event: PointerEvent) => {
-      if (event.target instanceof Node && rootRef.current?.contains(event.target)) return;
+      if (event.target instanceof Node && containsNode(event.target)) return;
       setIsOpen(false);
     };
     const closeEscape = (event: KeyboardEvent) => {
@@ -144,11 +153,22 @@ export function AgentPreviewCompositor({ children, isEnabled = true, ...contentP
       setIsOpen(false);
       triggerRef.current?.focus();
     };
+    // Formerly this card was `position: absolute; left: calc(100% + 8px)` inside the sidebar row,
+    // which extended the row's own box 260px past the sidebar's right edge -- since
+    // `.sand-agents-list` is `overflow: auto` on both axes, that alone opened a horizontal
+    // scrollbar on every hover. Portaling removes it from that scroll content, but an ancestor
+    // scroll would then leave the fixed-positioned card stranded over the wrong row, so any
+    // scroll while it's open just closes it (a stale card is worse than a closed one).
+    const closeOnScroll = () => setIsOpen(false);
     document.addEventListener("pointerdown", closeOutside, true);
     document.addEventListener("keydown", closeEscape, true);
+    document.addEventListener("scroll", closeOnScroll, true);
+    window.addEventListener("resize", closeOnScroll);
     return () => {
       document.removeEventListener("pointerdown", closeOutside, true);
       document.removeEventListener("keydown", closeEscape, true);
+      document.removeEventListener("scroll", closeOnScroll, true);
+      window.removeEventListener("resize", closeOnScroll);
     };
   }, [isEnabled, isOpen]);
 
@@ -157,14 +177,16 @@ export function AgentPreviewCompositor({ children, isEnabled = true, ...contentP
     setIsOpen(false);
   }, [isEnabled]);
 
-  const open = (event?: ReactPointerEvent<HTMLDivElement>) => {
+  const openFrom = (target: EventTarget | null) => {
     if (!isEnabled) return;
-    if (event?.target instanceof HTMLElement) triggerRef.current = event.target;
+    if (target instanceof HTMLElement) triggerRef.current = target;
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (rect != null) setAnchor({ top: rect.top, left: rect.right + 8 });
     setIsOpen(true);
   };
-  const closeIfLeaving = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const closeIfLeaving = (event: ReactPointerEvent) => {
     const next = event.relatedTarget;
-    if (next instanceof Node && rootRef.current?.contains(next)) return;
+    if (next instanceof Node && containsNode(next)) return;
     setIsOpen(false);
   };
 
@@ -173,21 +195,28 @@ export function AgentPreviewCompositor({ children, isEnabled = true, ...contentP
     data-preview-open={isOpen || undefined}
     onBlurCapture={(event) => {
       const next = event.relatedTarget;
-      if (!(next instanceof Node) || !rootRef.current?.contains(next)) setIsOpen(false);
+      if (!(next instanceof Node) || !containsNode(next)) setIsOpen(false);
     }}
-    onFocusCapture={(event) => {
-      if (!isEnabled) return;
-      if (event.target instanceof HTMLElement) triggerRef.current = event.target;
-      setIsOpen(true);
-    }}
-    onPointerEnter={open}
+    onFocusCapture={(event) => openFrom(event.target)}
+    onPointerEnter={(event) => openFrom(event.target)}
     onPointerLeave={closeIfLeaving}
     ref={rootRef}
     style={{ minWidth: 0, position: "relative" }}
   >
     {children}
-    {isEnabled && isOpen ? <div aria-label={`${contentProps.agent.name} chat preview`} className="sand-agent-hover-card" ref={contentRef} role="tooltip" style={{ background: "#20231f", border: "1px solid #3a4036", borderRadius: 10, boxShadow: "0 12px 30px rgb(0 0 0 / 28%)", color: "#dcdfd8", left: "calc(100% + 8px)", padding: 10, position: "absolute", top: 0, width: 260, zIndex: 3100 }}>
-      <AgentPreviewContent {...contentProps} now={Date.now()} />
-    </div> : null}
+    {isEnabled && isOpen && anchor != null && typeof document !== "undefined" ? createPortal(
+      <div
+        aria-label={`${contentProps.agent.name} chat preview`}
+        className="sand-agent-hover-card"
+        onPointerEnter={() => setIsOpen(true)}
+        onPointerLeave={closeIfLeaving}
+        ref={contentRef}
+        role="tooltip"
+        style={{ background: "#20231f", border: "1px solid #3a4036", borderRadius: 10, boxShadow: "0 12px 30px rgb(0 0 0 / 28%)", color: "#dcdfd8", left: anchor.left, padding: 10, position: "fixed", top: anchor.top, width: 260, zIndex: 3100 }}
+      >
+        <AgentPreviewContent {...contentProps} now={Date.now()} />
+      </div>,
+      document.body
+    ) : null}
   </div>;
 }
