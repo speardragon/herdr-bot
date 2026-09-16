@@ -2,7 +2,17 @@ import { useMemo, type CSSProperties } from "react";
 import { OnboardingCharacter, resolvePersonaColor, resolvePersonaShape } from "../../onboarding/signed-in/character";
 import type { OnboardingCharacterState } from "../../onboarding/signed-in/scene";
 import { personaAvatarImageSrc, type PersonaAvatarImageMap } from "../../../../production/persona-avatar-images";
+import blackBotAvatarImage from "../../../../assets/persona-avatars/black-bot.png";
+import brownBotAvatarImage from "../../../../assets/persona-avatars/brown-bot.png";
+import redBotAvatarImage from "../../../../assets/persona-avatars/red-bot.png";
+import orangeBotAvatarImage from "../../../../assets/persona-avatars/orange-bot.png";
+import yellowBotAvatarImage from "../../../../assets/persona-avatars/yellow-bot.png";
 import greenBotAvatarImage from "../../../../assets/persona-avatars/green-bot.png";
+import cyanBotAvatarImage from "../../../../assets/persona-avatars/cyan-bot.png";
+import blueBotAvatarImage from "../../../../assets/persona-avatars/blue-bot.png";
+import violetBotAvatarImage from "../../../../assets/persona-avatars/violet-bot.png";
+import magentaBotAvatarImage from "../../../../assets/persona-avatars/magenta-bot.png";
+import grayBotAvatarImage from "../../../../assets/persona-avatars/gray-bot.png";
 
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2302348 (Iee avatar dispatcher; Mac SHA256 ef4e9831b65d39633f09c9ad0c083b98b7ebf52e3bb558182a3dcd717...)
 // @evidence recovered/frontend/app/assets/index-UbX-y3il.js#byteOffset=2925837 (Iee avatar dispatcher; Windows SHA256 80464803b50f478598080bdc1b91da3996c6b74168e2351ea26f620f2ec62ba5)
@@ -83,9 +93,23 @@ function avatarStyle(sizePx: number): CSSProperties {
 // herdr-bot: bots without an explicit avatar shape render as clouds, matching the shipped Grok Bot look.
 const HERDR_BOT_DEFAULT_SHAPE = "cloud";
 
-// herdr-bot: color -> custom avatar image (persona-avatar-images.ts). Only "green" has one so far;
-// every other resolved color keeps the drawn PersonaMark below unchanged.
-const PERSONA_AVATAR_IMAGES: PersonaAvatarImageMap = { green: greenBotAvatarImage };
+// herdr-bot: color -> custom avatar image (persona-avatar-images.ts), one per character.tsx COLORS
+// key. Every resolved persona color now has an image, so the drawn PersonaMark/OnboardingCharacter
+// mark below is effectively retired for agent avatars -- it stays as the fallback for any color that
+// might reach here without a mapped image (e.g. a future eleventh-hour color-resolver change).
+const PERSONA_AVATAR_IMAGES: PersonaAvatarImageMap = {
+  black: blackBotAvatarImage,
+  brown: brownBotAvatarImage,
+  red: redBotAvatarImage,
+  orange: orangeBotAvatarImage,
+  yellow: yellowBotAvatarImage,
+  green: greenBotAvatarImage,
+  cyan: cyanBotAvatarImage,
+  blue: blueBotAvatarImage,
+  violet: violetBotAvatarImage,
+  magenta: magentaBotAvatarImage,
+  gray: grayBotAvatarImage
+};
 
 function PersonaMark({ agentId, color, shape, size, sizePx, state, isStatic, paused, isFollowingPointer, followTarget, emphasis, spinSignal }: { agentId: string; color: string; shape: string; state: PersonaState; size?: AgentAvatarSize } & Pick<AgentAvatarProps, "isStatic" | "paused" | "isFollowingPointer" | "followTarget" | "emphasis" | "spinSignal"> & { sizePx: number }) {
   const imageSrc = personaAvatarImageSrc(PERSONA_AVATAR_IMAGES, color);
