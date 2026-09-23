@@ -150,9 +150,14 @@ function rpcErrorMessage(parsed: Record<string, unknown>, fallback: string): str
  * The server interleaves unrelated notifications (no `id`, e.g. `remoteControl/status/changed`) on the
  * same stream; those are skipped while waiting for the reply matching the request just sent.
  */
+const CODEX_CLIENT_INFO = { name: "herdr-bot", version: "0.1.0" };
+
 function runCodexModelList(command: string, deps: ModelCatalogDeps): Promise<ModelEntry[]> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, ["app-server"], { env: deps.env, stdio: ["pipe", "pipe", "pipe"] });
+    // stderr is ignored, not piped: an unread pipe fills its OS buffer once the child logs enough,
+    // which blocks the child until *we* time it out -- turning a log-noisy build into a guaranteed
+    // 5s stall instead of a fast reply.
+    const child = spawn(command, ["app-server"], { env: deps.env, stdio: ["pipe", "pipe", "ignore"] });
     let buffer = "";
     let settled = false;
     let awaiting: 1 | 2 = 1;
@@ -163,6 +168,11 @@ function runCodexModelList(command: string, deps: ModelCatalogDeps): Promise<Mod
       clearTimeout(timer);
       child.stdout.removeAllListeners("data");
       child.removeAllListeners("error");
+      child.removeAllListeners("exit");
+      child.stdin.on("error", () => {
+        // A write can race a just-exited process (ENOENT/EPIPE); the exit/error listeners above
+        // already report that failure, so a stray stdin error here must not crash the process.
+      });
       try {
         child.kill();
       } catch {
@@ -173,9 +183,14 @@ function runCodexModelList(command: string, deps: ModelCatalogDeps): Promise<Mod
 
     const timer = setTimeout(() => finish(() => reject(new Error(`${command} app-server timed out`))), deps.timeoutMs);
 
-    function send(id: 1 | 2, method: string): void {
+    // An old/mismatched `codex` binary without an `app-server` subcommand prints usage and exits
+    // immediately, rather than replying with a JSON-RPC error: fail fast instead of idling out the
+    // full timeout waiting for a reply that will never come.
+    child.on("exit", (code) => finish(() => reject(new Error(`${command} app-server exited before replying (code ${code})`))));
+
+    function send(id: 1 | 2, method: string, params: unknown): void {
       awaiting = id;
-      child.stdin.write(`${JSON.stringify({ id, method, params: {} })}\n`);
+      child.stdin.write(`${JSON.stringify({ id, method, params })}\n`);
     }
 
     child.on("error", (error) => finish(() => reject(error instanceof Error ? error : new Error(String(error)))));
@@ -199,7 +214,7 @@ function runCodexModelList(command: string, deps: ModelCatalogDeps): Promise<Mod
             finish(() => reject(new Error(rpcErrorMessage(parsed, "initialize failed"))));
             return;
           }
-          send(2, "model/list");
+          send(2, "model/list", {});
           continue;
         }
         if (parsed.error != null) {
@@ -212,7 +227,7 @@ function runCodexModelList(command: string, deps: ModelCatalogDeps): Promise<Mod
       }
     });
 
-    send(1, "initialize");
+    send(1, "initialize", { clientInfo: CODEX_CLIENT_INFO });
   });
 }
 

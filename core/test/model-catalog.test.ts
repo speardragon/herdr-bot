@@ -9,7 +9,23 @@ import {
   parseGrokModelsOutput,
   parseOpencodeModelsOutput,
   projectCodexModels,
+  type ModelCatalog,
+  type ModelCatalogResult,
 } from "../src/bots/model-catalog.ts";
+
+/** Polls the catalog's cached value for `kind` until it matches `expected`, instead of sleeping a
+ * fixed duration -- the background refresh under test is a real child-process spawn plus a cache
+ * write, and neither step's completion is otherwise observable from the test. A fixed sleep would be
+ * calibrated for an idle machine and flake under full-suite parallel load. */
+async function waitForModels(catalog: ModelCatalog, kind: string, expected: unknown, timeoutMs = 5_000): Promise<ModelCatalogResult> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const result = await catalog.listBotModels(kind);
+    if (JSON.stringify(result.models) === JSON.stringify(expected)) return result;
+    if (Date.now() >= deadline) throw new Error(`waitForModels: "${kind}" never reached ${JSON.stringify(expected)} (last saw ${JSON.stringify(result.models)})`);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
 
 interface FixtureBin {
   readonly dir: string;
@@ -289,6 +305,12 @@ test("codex: a server that never replies times out to unavailable, without waiti
   }
 });
 
+test("codex: a binary missing from PATH becomes unavailable (mirrors the grok ENOENT case, since codex spawns via a different code path)", async () => {
+  const catalog = createModelCatalog({ env: { PATH: "/definitely/not/a/real/path" } });
+  const result = await catalog.listBotModels("codex");
+  assert.equal(result.source, "unavailable");
+});
+
 test("cache: a cold call queries the CLI once; a repeat call within the TTL reuses it without spawning again", async () => {
   const bin = makeFixtureBin();
   const logPath = join(bin.dir, "invocations.log");
@@ -330,10 +352,12 @@ process.stdout.write(count === 0 ? "Available models:\\n  - grok-4.7\\n" : "Avai
     now += ttlMs + 1;
     const stale = await catalog.listBotModels("grok");
     assert.deepEqual(stale.models, [{ id: "grok-4.7", label: "grok-4.7" }], "the aged-out call must still return the last known list immediately");
-    // Let the background refresh (a real child process) finish, then the next call sees the new list.
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const refreshed = await catalog.listBotModels("grok");
-    assert.deepEqual(refreshed.models, [{ id: "grok-4.8", label: "grok-4.8" }]);
+    // Let the background refresh (a real child process, then a cache write) finish, then the next
+    // call sees the new list. Polled against the actual cached value -- not a fixed sleep, which is
+    // calibrated for an idle machine and flakes under full-suite parallel load, and not just the
+    // fixture's own log file, whose write lands before the cache update it triggers actually does.
+    const refreshed = await waitForModels(catalog, "grok", [{ id: "grok-4.8", label: "grok-4.8" }]);
+    assert.equal(refreshed.source, "installed-cli");
     assert.equal(readFileSync(logPath, "utf8").length, 2, "exactly one background refresh should have run, not one per stale call");
   } finally {
     bin.cleanup();
