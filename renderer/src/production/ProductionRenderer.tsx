@@ -54,6 +54,7 @@ import { GroupMembersPane } from "../recovered/features/agent-info/group-members
 import { createAvatarEditorProductionAdapter } from "../recovered/features/agent-info/avatar-editor/production-adapter";
 import { AvatarEditorView } from "../recovered/features/agent-info/avatar-editor/view";
 import { AgentAvatar } from "../recovered/features/conversation/workspace/agent-avatar";
+import type { MentionIdentity } from "../recovered/features/conversation/workspace/mention-chip";
 import { createPluginAuthProductionAdapter } from "../recovered/features/plugins/overlay/production-adapter";
 import { projectGroupMemberAgent } from "../recovered/features/agent-info/group-members/model";
 import { GROUP_INFO_PANE_HEADER, projectGroupInfoPaneRoute } from "../recovered/features/agent-info/group-members/route";
@@ -1452,6 +1453,14 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   }, [settingsNoticeController, settingsNoticeScope]);
   const mentionScope = useRef({ activeAgent, agents });
   mentionScope.current = { activeAgent, agents };
+  const resolveMentionIdentity = useCallback((id: string): MentionIdentity | null => {
+    const agent = agents.find((candidate) => candidate.id === id);
+    return agent == null ? null : {
+      color: agent.avatarColor ?? null,
+      shape: agent.avatarShape ?? null,
+      dataUrl: agent.avatarDataUrl ?? null
+    };
+  }, [agents]);
   const editorProviders = useMemo(() => {
     const providers = editorSuggestionAdapter == null ? {} : {
       ...editorSuggestionAdapter.providers,
@@ -1459,6 +1468,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         ? undefined
         : {
             ...editorSuggestionAdapter.providers.mention,
+            resolveMentionIdentity,
             getMembers: (query = "") => {
               const { activeAgent: chat, agents: roster } = mentionScope.current;
               const scope = chat == null ? null : { isGroup: chat.isGroup, id: chat.id, memberIds: chat.memberIds };
@@ -1472,7 +1482,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       ...providers,
       prReference: { getCandidates: () => [] }
     };
-  }, [editorSuggestionAdapter]);
+  }, [editorSuggestionAdapter, resolveMentionIdentity]);
   useEffect(() => {
     if (editorSuggestionAdapter == null) return;
     const scopedAgentId = activeAgentId.length > 0 ? activeAgentId : null;
@@ -3755,6 +3765,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
             ? <TranscriptLoadErrorSurface onRetry={() => void openAgent(activeAgent.id)} />
             : <ConversationTranscript
                 entries={entries}
+                resolveMentionIdentity={resolveMentionIdentity}
                 hasOlder={transcriptPaginationSnapshot.hasOlder}
                 isLoadingOlder={transcriptPaginationSnapshot.isLoadingOlder}
                 isAgentRunning={activeAgent.isRunning}

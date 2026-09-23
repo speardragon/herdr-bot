@@ -34,6 +34,19 @@
   min-height: 32px; padding: 4px 10px;
 }
 .herdr-mention-avatar { width: 22px; height: 22px; flex: 0 0 22px; }
+.sand-mention {
+  align-items: center;
+  background: color-mix(in srgb, var(--mention-color) 14%, var(--cursor-bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--mention-color) 28%, transparent);
+  border-radius: 999px;
+  color: var(--cursor-text-primary);
+  display: inline-flex;
+  gap: 4px;
+  line-height: 20px;
+  padding: 1px 6px 1px 2px;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
 /* herdr-bot: this used to be `position: absolute; right: 0` -- an overlay that covered the chat
  * area instead of making room for it. It's now a normal flex child of `.sand-info-pane-slot`
  * (production.css "9b"), which owns the width that animates open/closed; the pane itself just

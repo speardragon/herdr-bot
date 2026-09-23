@@ -8,6 +8,8 @@ import { AssistantMath } from "./math";
 import { TranscriptAttachmentGallery } from "./media-viewer";
 import { MermaidDiagram } from "./mermaid";
 import { createPromptEditorExtensions } from "./rich-text-editor";
+import { MentionChip } from "./mention-chip";
+import type { ResolveMentionIdentity } from "./editor-suggestion-provider";
 import type { AttachmentBytesResult, AttachmentMedia } from "../../../contracts/desktop-bridge";
 import type { ConversationTranscriptEntry, TranscriptComputerHandoff, TranscriptMessage, TranscriptThinking, TranscriptToolCall } from "./model";
 import type { TranscriptCardEntry } from "../cards/transcript-card/protocol";
@@ -471,9 +473,9 @@ function SendMessageTextImages({ images }: { images: readonly SendMessageTextIma
 const readOnlyRichTextExtensions = createPromptEditorExtensions("", undefined);
 const readOnlyRichTextSchema = getSchema(readOnlyRichTextExtensions);
 
-function richTextNodeChildren(node: ProseMirrorNode): ReactNode[] {
+function richTextNodeChildren(node: ProseMirrorNode, resolveMentionIdentity: ResolveMentionIdentity): ReactNode[] {
   const children: ReactNode[] = [];
-  node.forEach((child, _offset, index) => children.push(renderRichTextNode(child, `${node.type.name}-${index}`)));
+  node.forEach((child, _offset, index) => children.push(renderRichTextNode(child, `${node.type.name}-${index}`, resolveMentionIdentity)));
   return children;
 }
 
@@ -495,9 +497,9 @@ function applyRichTextMarks(node: ProseMirrorNode, content: ReactNode): ReactNod
   }, content);
 }
 
-function renderRichTextNode(node: ProseMirrorNode, key: string): ReactNode {
+function renderRichTextNode(node: ProseMirrorNode, key: string, resolveMentionIdentity: ResolveMentionIdentity): ReactNode {
   if (node.isText) return applyRichTextMarks(node, node.text ?? "");
-  const children = richTextNodeChildren(node);
+  const children = richTextNodeChildren(node, resolveMentionIdentity);
   switch (node.type.name) {
     case "doc": return <Fragment key={key}>{children}</Fragment>;
     case "paragraph": return <p key={key}>{children}</p>;
@@ -513,7 +515,11 @@ function renderRichTextNode(node: ProseMirrorNode, key: string): ReactNode {
     case "codeBlock": return <pre key={key}><code>{children}</code></pre>;
     case "hardBreak": return <br key={key} />;
     case "horizontalRule": return <hr key={key} />;
-    case "mention": return <span className="sand-mention" data-type="mention" key={key}>@{String(node.attrs.label ?? node.attrs.id ?? "")}</span>;
+    case "mention": {
+      const id = String(node.attrs.id ?? "");
+      const label = String(node.attrs.label ?? id);
+      return <MentionChip id={id} identity={resolveMentionIdentity(id)} key={key} label={label} />;
+    }
     case "workflowReference": return <span className="sand-workflow-chip" data-type="workflow-reference" key={key}>@{String(node.attrs.label ?? "")}</span>;
     case "prReference": {
       const number = Number(node.attrs.prNumber);
@@ -523,24 +529,24 @@ function renderRichTextNode(node: ProseMirrorNode, key: string): ReactNode {
   }
 }
 
-function readOnlyRichTextContent(value: string): ReactNode | null {
+function readOnlyRichTextContent(value: string, resolveMentionIdentity: ResolveMentionIdentity): ReactNode | null {
   try {
     const parsed: unknown = JSON.parse(value);
     if (typeof parsed !== "object" || parsed == null || (parsed as { type?: unknown }).type !== "doc") return null;
     const document = readOnlyRichTextSchema.nodeFromJSON(parsed as JSONContent);
-    return readRichTextDocument(document);
+    return readRichTextDocument(document, resolveMentionIdentity);
   } catch {
     // Immutable BPn falls back to the plain content when persisted rich text is malformed.
     return null;
   }
 }
 
-function readRichTextDocument(document: ProseMirrorNode): ReactNode {
-  return renderRichTextNode(document, "rich-text-document");
+function readRichTextDocument(document: ProseMirrorNode, resolveMentionIdentity: ResolveMentionIdentity): ReactNode {
+  return renderRichTextNode(document, "rich-text-document", resolveMentionIdentity);
 }
 
-function UserMessageContent({ text, richText }: { text: string; richText?: string }) {
-  const content = richText == null || richText.length === 0 ? null : readOnlyRichTextContent(richText);
+function UserMessageContent({ text, richText, resolveMentionIdentity }: { text: string; richText?: string; resolveMentionIdentity: ResolveMentionIdentity }) {
+  const content = richText == null || richText.length === 0 ? null : readOnlyRichTextContent(richText, resolveMentionIdentity);
   if (content != null) return <div className="sand-message-prose">{content}</div>;
   return <div className="sand-message-prose">{text ? <p>{text}</p> : null}</div>;
 }
@@ -621,7 +627,7 @@ export function TranscriptThinkingRow({ entry, expanded, onToggle }: { entry: Tr
   );
 }
 
-export function ConversationTranscript({ entries, hasOlder = false, isLoadingOlder = false, loadOlder, isAgentRunning = false, renderComputerHandoff, isTransportDown = false, isReadOnly = false, onCancelQueuedSend, onCopyMessage, onDeleteFailedSend, onReply, onStartThread, renderMessageReactionActions, renderMessageReactionPills, resolveTranscriptCardInteractions, onResendFailedSend, resolveAttachmentMedia, readAttachmentBytes, downloadAttachment, resolveReplyPreview, isReplyTargetInScope, onOpenReply, onOpenAutomation, localToolPermissionStore, resolveLocalToolPermission, transcriptCards, urlCards, threadRootId = null, transcriptHandleRef }: { entries: readonly ConversationTranscriptEntry[]; isAgentRunning?: boolean; isReadOnly?: boolean; renderComputerHandoff?(entry: TranscriptComputerHandoff): ReactNode; resolveAttachmentMedia?: (source: string) => Promise<AttachmentMedia | null>; readAttachmentBytes?: (path: string, maxBytes: number) => Promise<AttachmentBytesResult | null>; downloadAttachment?: (path: string, suggestedName?: string) => Promise<boolean>; resolveReplyPreview?(targetId: string): TranscriptReplyPreview | null; isReplyTargetInScope?(targetId: string): boolean; localToolPermissionStore?: LocalToolPermissionStore; resolveLocalToolPermission?(input: ResolveLocalToolPermissionInput): Promise<unknown>; transcriptCards?: TranscriptCardRootMountContract; resolveTranscriptCardInteractions?: TranscriptCardInteractionContext; urlCards?: UrlCardProvider | null; threadRootId?: string | null; transcriptHandleRef?: { current: FindInChatTranscriptHandle | null } } & ConversationTranscriptActions) {
+export function ConversationTranscript({ entries, hasOlder = false, isLoadingOlder = false, loadOlder, isAgentRunning = false, renderComputerHandoff, isTransportDown = false, isReadOnly = false, onCancelQueuedSend, onCopyMessage, onDeleteFailedSend, onReply, onStartThread, renderMessageReactionActions, renderMessageReactionPills, resolveTranscriptCardInteractions, onResendFailedSend, resolveAttachmentMedia, readAttachmentBytes, downloadAttachment, resolveReplyPreview, resolveMentionIdentity = () => null, isReplyTargetInScope, onOpenReply, onOpenAutomation, localToolPermissionStore, resolveLocalToolPermission, transcriptCards, urlCards, threadRootId = null, transcriptHandleRef }: { entries: readonly ConversationTranscriptEntry[]; isAgentRunning?: boolean; isReadOnly?: boolean; renderComputerHandoff?(entry: TranscriptComputerHandoff): ReactNode; resolveAttachmentMedia?: (source: string) => Promise<AttachmentMedia | null>; readAttachmentBytes?: (path: string, maxBytes: number) => Promise<AttachmentBytesResult | null>; downloadAttachment?: (path: string, suggestedName?: string) => Promise<boolean>; resolveReplyPreview?(targetId: string): TranscriptReplyPreview | null; resolveMentionIdentity?: ResolveMentionIdentity; isReplyTargetInScope?(targetId: string): boolean; localToolPermissionStore?: LocalToolPermissionStore; resolveLocalToolPermission?(input: ResolveLocalToolPermissionInput): Promise<unknown>; transcriptCards?: TranscriptCardRootMountContract; resolveTranscriptCardInteractions?: TranscriptCardInteractionContext; urlCards?: UrlCardProvider | null; threadRootId?: string | null; transcriptHandleRef?: { current: FindInChatTranscriptHandle | null } } & ConversationTranscriptActions) {
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const olderLoadInFlightRef = useRef(false);
   const viewCommitListenersRef = useRef(new Set<() => void>());
@@ -790,7 +796,7 @@ export function ConversationTranscript({ entries, hasOlder = false, isLoadingOld
                   targetId={entry.replyToId ?? ""}
                   timestampMs={referencedEntry != null && "timestampMs" in referencedEntry ? referencedEntry.timestampMs : undefined}
                 /> : null}
-                {messageLink != null && messageUrlCards != null ? <LinkCardView isGroupStart={messageAdjacency.isGroupStart} provider={messageUrlCards} url={messageLink} /> : entry.isStreaming && entry.role === "assistant" && !entry.text ? <StreamingMessage /> : entry.role === "assistant" ? <AssistantMessageContent channel={entry.channel} images={entry.images} isSourceTrusted={entry.isSourceTrusted} isStreaming={entry.isStreaming} text={entry.text} /> : <UserMessageContent richText={entry.richText} text={entry.text} />}
+                {messageLink != null && messageUrlCards != null ? <LinkCardView isGroupStart={messageAdjacency.isGroupStart} provider={messageUrlCards} url={messageLink} /> : entry.isStreaming && entry.role === "assistant" && !entry.text ? <StreamingMessage /> : entry.role === "assistant" ? <AssistantMessageContent channel={entry.channel} images={entry.images} isSourceTrusted={entry.isSourceTrusted} isStreaming={entry.isStreaming} text={entry.text} /> : <UserMessageContent resolveMentionIdentity={resolveMentionIdentity} richText={entry.richText} text={entry.text} />}
                 {renderMessageReactionPills?.(reactionPillProps)}
                 {entry.attachments?.length ? <TranscriptAttachmentGallery adjacency={messageAdjacency} attachments={entry.attachments} downloadAttachment={downloadAttachment} readAttachmentBytes={readAttachmentBytes} resolveMedia={resolveAttachmentMedia} role={entry.role} /> : null}
                 {entry.delivery === "queued" && entry.composedAtMs == null ? <QueuedSendNotice entry={entry} isTransportDown={isTransportDown} onCancel={onCancelQueuedSend} /> : null}

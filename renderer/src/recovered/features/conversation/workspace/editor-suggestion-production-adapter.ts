@@ -56,6 +56,7 @@ export function createComposerEditorSuggestionAdapter(input: {
   const controller = createEditorSuggestionController(input.source);
   const providers: PromptEditorProviders = {
     mention: {
+      resolveMentionIdentity: () => null,
       getMembers: (query = "") => controller.mentionRows(query).filter((entry): entry is EditorMentionSuggestion => entry.category === "assistants"),
       getWorkflows: (query = "") => controller.mentionRows(query).filter((entry): entry is EditorWorkflowSuggestion => entry.category === "automations"),
       resolveSkillIcon: resolveEditorSkillIcon,

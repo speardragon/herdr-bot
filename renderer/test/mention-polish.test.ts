@@ -1,11 +1,71 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { createServer } from "vite";
+import { getSchema } from "@tiptap/core";
 import {
   prioritizeEveryone,
   projectMentionMembers,
   computeMentionCandidates,
   selectEditorSuggestion,
 } from "../src/recovered/features/conversation/workspace/editor-suggestion-provider.ts";
+
+test("mention chip shows the current avatar and a tinted label", async () => {
+  const server = await createServer({ configFile: "renderer/vite.config.ts", server: { hmr: false, middlewareMode: true } });
+  try {
+    const { MentionChip } = await server.ssrLoadModule("/src/recovered/features/conversation/workspace/mention-chip.tsx");
+    const html = renderToStaticMarkup(createElement(MentionChip, {
+      id: "reviewer", label: "Reviewer", identity: { color: "blue", shape: "circle", dataUrl: null },
+    }));
+    assert.match(html, /class="sand-mention"/);
+    assert.match(html, /sand-agent-avatar/);
+    assert.match(html, /@Reviewer/);
+    assert.match(html, /--mention-color:/);
+    assert.match(html, /data-size="xs"/);
+    const missingIdentity = createElement(MentionChip, { id: "removed-agent", label: "Former teammate", identity: null });
+    const fallback = renderToStaticMarkup(missingIdentity);
+    assert.equal(renderToStaticMarkup(missingIdentity), fallback);
+    assert.match(fallback, /sand-agent-avatar/);
+    assert.match(fallback, /@Former teammate/);
+  } finally {
+    await server.close();
+  }
+});
+
+test("read-only transcript resolves mention avatars from the current roster", async () => {
+  const server = await createServer({ configFile: "renderer/vite.config.ts", server: { middlewareMode: true } });
+  try {
+    const { ConversationTranscript } = await server.ssrLoadModule("/src/recovered/features/conversation/workspace/transcript.tsx");
+    const entry = {
+      kind: "message", id: "m1", role: "user", author: "You", text: "@Reviewer", timestampMs: 0,
+      richText: JSON.stringify({ type: "doc", content: [{ type: "paragraph", content: [{ type: "mention", attrs: { id: "reviewer", label: "Reviewer" } }] }] }),
+    };
+    const html = renderToStaticMarkup(createElement(ConversationTranscript, {
+      entries: [entry],
+      resolveMentionIdentity: (id: string) => id === "reviewer" ? { color: "blue", shape: "circle", dataUrl: "data:image/png;base64,AAA" } : null,
+    }));
+    assert.match(html, /data-avatar-kind="photo"/);
+    assert.match(html, /@Reviewer/);
+    const removed = renderToStaticMarkup(createElement(ConversationTranscript, { entries: [entry], resolveMentionIdentity: () => null }));
+    assert.match(removed, /sand-agent-avatar/);
+    assert.doesNotMatch(removed, /data-avatar-kind="photo"/);
+  } finally {
+    await server.close();
+  }
+});
+
+test("editor mention JSON keeps only stable identity and label", async () => {
+  const server = await createServer({ configFile: "renderer/vite.config.ts", server: { middlewareMode: true } });
+  try {
+    const { createPromptEditorExtensions } = await server.ssrLoadModule("/src/recovered/features/conversation/workspace/rich-text-editor.tsx");
+    const schema = getSchema(createPromptEditorExtensions("", { mention: { getMembers: () => [], resolveMentionIdentity: () => ({ color: "blue", shape: "circle", dataUrl: "data:image/png;base64,AAA" }) } }));
+    const mention = schema.nodes.mention.create({ id: "reviewer", label: "Reviewer" });
+    assert.deepEqual(JSON.parse(JSON.stringify(mention.toJSON())), { type: "mention", attrs: { id: "reviewer", label: "Reviewer" } });
+  } finally {
+    await server.close();
+  }
+});
 
 test("everyone stays first after recency ranking", () => {
   assert.deepEqual(prioritizeEveryone([{ id: "a" }, { id: "__everyone__" }, { id: "b" }])

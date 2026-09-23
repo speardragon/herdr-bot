@@ -5,6 +5,9 @@ import {
   type EmojiEntry,
 } from "../cards/transcript-card/emoji-catalog.ts";
 import { t } from "../../../../production/locale.ts";
+import type { MentionIdentity } from "./mention-chip";
+
+export type ResolveMentionIdentity = (id: string) => MentionIdentity | null;
 
 // Immutable prompt suggestion contracts:
 // Mac index-UbX-y3il.js (SHA-256 ef4e9831b65d39633f09c9ad0c083b98b7ebf52e3bb558182aee5bde31f876fa):

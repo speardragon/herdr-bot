@@ -3,15 +3,16 @@ import { Extension, Node as TiptapNode, mergeAttributes, type Editor, type NodeV
 import { Placeholder } from "@tiptap/extension-placeholder";
 import { Link } from "@tiptap/extension-link";
 import { Mention } from "@tiptap/extension-mention";
-import { useEditor, EditorContent, type EditorContentProps } from "@tiptap/react";
+import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, type EditorContentProps, type NodeViewProps } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Suggestion, type SuggestionMatch, type SuggestionOptions } from "@tiptap/suggestion";
 import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, type RefObject } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { EmojiEntry } from "../cards/transcript-card/emoji-catalog";
-import type { EditorMcpSuggestion, EditorMentionSuggestion, EditorSuggestionEntry, EditorSuggestionIcon, EditorWorkflowSuggestion } from "./editor-suggestion-provider";
+import type { EditorMcpSuggestion, EditorMentionSuggestion, EditorSuggestionEntry, EditorSuggestionIcon, EditorWorkflowSuggestion, ResolveMentionIdentity } from "./editor-suggestion-provider";
 import { AgentAvatar, type AgentAvatarProps } from "./agent-avatar";
+import { MentionChip, type MentionIdentity } from "./mention-chip";
 
 // Immutable editor closure: e9n/hft in index-UbX-y3il.js. The package graph
 // is intentionally owned by B6; this leaf only imports the released graph.
@@ -46,6 +47,7 @@ export interface PromptEditorPrReference {
 export interface PromptEditorProviders {
   readonly mention?: {
     getMembers(query?: string): readonly EditorMentionSuggestion[];
+    resolveMentionIdentity: ResolveMentionIdentity;
     getWorkflows?(query?: string): readonly EditorWorkflowSuggestion[];
     getMcpReferences?(): readonly EditorMcpSuggestion[];
     getRecents?(): readonly { readonly category: string; readonly id: string }[];
@@ -175,10 +177,23 @@ function simpleNodeView(className: string, text: (node: { attrs: Record<string, 
   };
 }
 
+const MentionIdentityContext = createContext<(id: string) => MentionIdentity | null>(() => null);
+
+function MentionNodeView({ node }: NodeViewProps) {
+  const resolveMentionIdentity = useContext(MentionIdentityContext);
+  const id = String(node.attrs.id ?? "");
+  const label = String(node.attrs.label ?? id);
+  return <NodeViewWrapper as="span" contentEditable={false}><MentionChip id={id} identity={resolveMentionIdentity(id)} label={label} /></NodeViewWrapper>;
+}
+
 const PromptMention = Mention.extend({
   selectable: true,
+  addAttributes() {
+    const { mentionSuggestionChar: _suggestionChar, ...identity } = this.parent?.() ?? {};
+    return identity;
+  },
   addNodeView() {
-    return simpleNodeView("sand-mention", (node) => `@${String(node.attrs.label ?? node.attrs.id ?? "")}`);
+    return ReactNodeViewRenderer(MentionNodeView);
   }
 });
 
@@ -949,7 +964,7 @@ export function PromptRichTextEditor({ prompt, richText, scopeKey = "", clearGen
   }, [editor, onControls]);
 
   const contentProps: EditorContentProps = { editor };
-  return <EditorContent {...contentProps} />;
+  return <MentionIdentityContext.Provider value={providers?.mention?.resolveMentionIdentity ?? (() => null)}><EditorContent {...contentProps} /></MentionIdentityContext.Provider>;
 }
 
 export type PromptEditorRef = RefObject<PromptEditorControls | null>;
