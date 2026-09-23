@@ -10,6 +10,15 @@ test("say joins the remaining words and carries the pane id", () => {
   assert.deepEqual(parseCliArgs(["say", "room-1"], env), { error: "say needs <chatId> and <text>" });
 });
 
+test("message carries the caller pane and preserves a quoted multiline body", () => {
+  assert.deepEqual(parseCliArgs(["message", "bot-b", "First line\nSecond line"], env),
+    { kind: "control", method: "message", params: { paneId: "w1:p2", chatId: "bot-b", text: "First line\nSecond line" }, output: "json" });
+  assert.deepEqual(parseCliArgs(["message", "room-1", "hello", "there"], env),
+    { kind: "control", method: "message", params: { paneId: "w1:p2", chatId: "room-1", text: "hello there" }, output: "json" });
+  assert.deepEqual(parseCliArgs(["message", "bot-b"], env), { error: "message needs <chatId> and <text>" });
+  assert.deepEqual(parseCliArgs(["message"], env), { error: "message needs <chatId> and <text>" });
+});
+
 test("read/rooms/whoami/status/send map to control methods", () => {
   assert.deepEqual(parseCliArgs(["read", "room-1", "--limit", "5"], env), { kind: "control", method: "read", params: { chatId: "room-1", limit: 5 }, output: "transcript" });
   assert.deepEqual(parseCliArgs(["rooms"], env), { kind: "control", method: "rooms", params: {}, output: "json" });
@@ -44,6 +53,6 @@ test("bot create accepts working directory and launch selections", () => {
 test("serve and install-shim are local commands; unknown commands error", () => {
   assert.deepEqual(parseCliArgs(["serve"], env), { kind: "serve" });
   assert.deepEqual(parseCliArgs(["install-shim"], env), { kind: "install-shim" });
-  assert.deepEqual(parseCliArgs([], env), { error: "usage: herdr-bot <say|pass|read|rooms|whoami|send|bot|room|status|serve|install-shim> ...\nexample: herdr-bot bot create reviewer --cwd /work/repo --kind codex --model gpt-5.4 --reasoning high" });
+  assert.deepEqual(parseCliArgs([], env), { error: "usage: herdr-bot <say|message|pass|read|rooms|whoami|send|bot|room|status|serve|install-shim> ...\nexample: herdr-bot bot create reviewer --cwd /work/repo --kind codex --model gpt-5.4 --reasoning high" });
   assert.deepEqual(parseCliArgs(["dance"], env), { error: 'unknown command "dance"' });
 });

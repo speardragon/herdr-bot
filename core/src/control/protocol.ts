@@ -9,7 +9,7 @@ export type ControlResponse =
   | { readonly id: string; readonly error: { readonly code: string; readonly message: string } };
 
 export const CONTROL_ERROR_CODES = [
-  "unknown_pane", "unknown_chat", "unknown_bot", "not_a_member", "over_cap", "invalid_params", "unknown_method",
+  "unknown_pane", "unknown_chat", "unknown_bot", "not_a_member", "over_cap", "use_say", "bot_not_ready", "invalid_params", "unknown_method",
   "herdr_error", "internal", "connect_failed", "timeout", "host_already_running", "bad_response",
 ] as const;
 

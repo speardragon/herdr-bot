@@ -9,7 +9,7 @@ export type CliCommand =
 
 export type CliParse = CliCommand | { readonly error: string };
 
-const USAGE = "usage: herdr-bot <say|pass|read|rooms|whoami|send|bot|room|status|serve|install-shim> ...\nexample: herdr-bot bot create reviewer --cwd /work/repo --kind codex --model gpt-5.4 --reasoning high";
+const USAGE = "usage: herdr-bot <say|message|pass|read|rooms|whoami|send|bot|room|status|serve|install-shim> ...\nexample: herdr-bot bot create reviewer --cwd /work/repo --kind codex --model gpt-5.4 --reasoning high";
 
 function parseReasoningEffort(value: string): ReasoningEffort | null {
   return REASONING_EFFORTS.includes(value as ReasoningEffort) ? value as ReasoningEffort : null;
@@ -90,6 +90,11 @@ export function parseCliArgs(argv: readonly string[], env: NodeJS.ProcessEnv = p
       const [chatId, ...words] = rest;
       if (chatId == null || words.length === 0) return { error: "say needs <chatId> and <text>" };
       return control("say", { chatId, text: words.join(" "), paneId });
+    }
+    case "message": {
+      const [chatId, ...words] = rest;
+      if (chatId == null || words.length === 0) return { error: "message needs <chatId> and <text>" };
+      return control("message", { paneId, chatId, text: words.join(" ") });
     }
     case "pass": return rest[0] == null ? { error: "pass needs <chatId>" } : control("pass", { chatId: rest[0], paneId });
     case "read": {

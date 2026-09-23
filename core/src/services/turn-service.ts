@@ -109,6 +109,33 @@ export class TurnService {
     return { entryId: entry.id, mode };
   }
 
+  handleMessage(paneId: string, chatId: string, text: string): { entryId: string } {
+    const sender = this.#deps.roster.resolveBotByPane(paneId);
+    if (sender == null) throw new ControlError("unknown_pane", `No bot is bound to pane ${paneId}`);
+    const body = text.trim();
+    if (body.length === 0) throw new ControlError("invalid_params", "Message text must not be empty");
+    const onboarding = sender.onboarding;
+    if (onboarding != null && onboarding.stage !== "ready" && onboarding.stage !== "failed" && chatId !== sender.id) {
+      throw new ControlError("not_a_member", `${sender.id} is still being set up and can only message its own chat`);
+    }
+    if (this.#deps.inbox.isOpen(chatId, sender.id)) {
+      throw new ControlError("use_say", "Use say for the chat whose turn is currently open");
+    }
+
+    const kind = this.#deps.chat.chatKind(chatId);
+    if (kind == null) throw new ControlError("unknown_chat", `Unknown chat: ${chatId}`);
+    const targetBot = kind === "bot" ? this.#deps.roster.memberIdFor(chatId) : null;
+    const roomMemberIds = kind === "room" ? this.#roomMembers(chatId) ?? [] : [];
+    if (kind === "room" && !roomMemberIds.includes(sender.id)) {
+      throw new ControlError("not_a_member", `${sender.id} is not a member of ${chatId}`);
+    }
+    if (kind === "bot" && targetBot == null) throw new ControlError("bot_not_ready", `${chatId} is not ready`);
+
+    const entry = this.#deps.chat.appendBot(chatId, { id: sender.id, name: sender.name }, body);
+    void this.schedule(chatId);
+    return { entryId: entry.id };
+  }
+
   /**
    * The say a bot makes during its greeting turn: stored once, verbatim as the canonical greeting,
    * tagged with the onboarding key. A repeat for the same key returns the existing entry (idempotent);

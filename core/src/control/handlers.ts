@@ -24,6 +24,10 @@ function say(host: Host, params: Params): unknown {
   return host.turns.handleSay(requireString(params, "paneId"), requireString(params, "chatId"), requireString(params, "text"));
 }
 
+function message(host: Host, params: Params): unknown {
+  return host.turns.handleMessage(requireString(params, "paneId"), requireString(params, "chatId"), requireString(params, "text"));
+}
+
 function pass(host: Host, params: Params): unknown {
   host.turns.handlePass(requireString(params, "paneId"), requireString(params, "chatId"));
   return { ok: true };
@@ -101,6 +105,7 @@ function roomSetMembers(host: Host, params: Params): unknown {
 
 const METHOD_TABLE: Readonly<Record<string, Handler>> = {
   say,
+  message,
   pass,
   read,
   rooms,

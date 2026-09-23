@@ -15,20 +15,22 @@ import { RoomStore } from "../src/store/room-store.ts";
 import { ViewStateStore } from "../src/store/view-state-store.ts";
 import { startControlServer } from "../src/control/server.ts";
 import { ControlError } from "../src/control/protocol.ts";
+import { createControlHandler } from "../src/control/handlers.ts";
+import type { Host } from "../src/host.ts";
 import { installFakeHerdr, type FakeHerdrState } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
 import { sampleProfile, sampleRoom } from "./helpers/fixtures.ts";
 
 const agent = (name: string, status: "idle" | "working" | "blocked" = "idle") => ({ name, agent: "claude", agent_status: status, pane_id: `w1:p-${name}`, tab_id: "w1:t1", workspace_id: "w1", cwd: "/tmp" });
 
-async function harness(state: FakeHerdrState) {
+async function harness(state: FakeHerdrState, roomMemberIds = state.agents.map((a) => a.name ?? "")) {
   const temp = makeTempHome();
   const fake = installFakeHerdr(temp.home, state);
   const config = resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BIN_PATH: fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_TURN_TIMEOUT_MS: "5000" });
   const profiles = new ProfileStore(temp.home);
   const rooms = new RoomStore(temp.home);
   for (const a of state.agents) profiles.save(sampleProfile({ id: a.name ?? "x", name: (a.name ?? "x").toUpperCase(), herdr: { paneId: a.pane_id, workspaceId: "w1", sessionId: null } }));
-  rooms.save(sampleRoom({ id: "room-1", memberIds: state.agents.map((a) => a.name ?? "") }));
+  rooms.save(sampleRoom({ id: "room-1", memberIds: roomMemberIds }));
   const cli = createHerdrCli(fake.binPath, fake.env);
   const mirror = new StatusMirror({ cli, socketPath: null, botIds: () => profiles.list().map((p) => p.id), onChange: () => undefined });
   await mirror.refresh();
@@ -43,8 +45,100 @@ async function harness(state: FakeHerdrState) {
     if (method === "say") return turns!.handleSay(String(params.paneId), String(params.chatId), String(params.text));
     throw new ControlError("unknown_method", method);
   });
-  return { temp, fake, chat, turns, cleanup: async () => { await server.close(); temp.cleanup(); } };
+  return { temp, fake, chat, turns, profiles, inbox, runQueue, cleanup: async () => { await server.close(); temp.cleanup(); } };
 }
+
+test("a bot can message another bot DM and wake the recipient", async () => {
+  const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [] });
+  try {
+    const result = h.turns.handleMessage("w1:p-a", "b", "Can you inspect the parser?");
+    assert.match(result.entryId, /^e\d+$/);
+    const entry = h.chat.transcript("b").last();
+    assert.equal(entry?.id, result.entryId);
+    assert.equal((entry?.author as { id?: string } | undefined)?.id, "a");
+    assert.equal((entry?.message as { content?: string } | undefined)?.content, "Can you inspect the parser?");
+    await h.runQueue.enqueue("b", async () => undefined);
+    assert.deepEqual(h.fake.readState().prompts?.map((prompt) => prompt.target), ["b"]);
+    assert.match(h.fake.readState().prompts![0]!.text, /A: Can you inspect the parser\?/);
+    h.turns.handleMessage("w1:p-b", "a", "I found it");
+    await h.runQueue.enqueue("a", async () => undefined);
+    assert.equal((h.chat.transcript("a").last()?.author as { id?: string } | undefined)?.id, "b");
+    assert.deepEqual(h.fake.readState().prompts?.map((prompt) => prompt.target), ["b", "a"]);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("room messaging requires membership and schedules the room", async () => {
+  const h = await harness({ agents: [agent("a"), agent("outsider")], workspaces: [] }, ["a"]);
+  try {
+    assert.throws(() => h.turns.handleMessage("w1:p-outsider", "room-1", "hello"),
+      (error: unknown) => error instanceof ControlError && error.code === "not_a_member");
+    assert.equal(h.chat.transcript("room-1").readAll().length, 0);
+    h.turns.handleMessage("w1:p-a", "room-1", "I found the issue");
+    await h.runQueue.enqueue("room-1", async () => undefined);
+    assert.equal((h.chat.transcript("room-1").last()?.author as { id?: string } | undefined)?.id, "a");
+    assert.deepEqual(h.fake.readState().prompts?.map((prompt) => prompt.target), ["a"]);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("message cannot bypass the active-turn say limit", async () => {
+  const h = await harness({ agents: [agent("a")], workspaces: [] });
+  try {
+    const turn = h.inbox.open("room-1", "a");
+    assert.throws(() => h.turns.handleMessage("w1:p-a", "room-1", "third reply"),
+      (error: unknown) => error instanceof ControlError && error.code === "use_say");
+    assert.equal(h.chat.transcript("room-1").readAll().length, 0);
+    turn.close();
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("control message uses the supplied pane binding and rejects missing pane IDs", async () => {
+  const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [] });
+  try {
+    const call = createControlHandler({ turns: h.turns } as Host);
+    await assert.rejects(call("message", { chatId: "b", text: "forged" }),
+      (error: unknown) => error instanceof ControlError && error.code === "invalid_params");
+    const result = await call("message", { paneId: "w1:p-a", chatId: "b", text: "from A" }) as { entryId: string };
+    assert.equal(h.chat.transcript("b").last()?.id, result.entryId);
+    assert.equal((h.chat.transcript("b").last()?.author as { id?: string } | undefined)?.id, "a");
+    await h.runQueue.enqueue("b", async () => undefined);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("message rejects unknown panes and blank text without appending", async () => {
+  const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [] });
+  try {
+    assert.throws(() => h.turns.handleMessage("w1:p-unknown", "b", "forged"),
+      (error: unknown) => error instanceof ControlError && error.code === "unknown_pane");
+    assert.throws(() => h.turns.handleMessage("w1:p-a", "b", " \n "),
+      (error: unknown) => error instanceof ControlError && error.code === "invalid_params");
+    assert.equal(h.chat.transcript("b").readAll().length, 0);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("a bot in onboarding cannot message another chat", async () => {
+  const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [] });
+  try {
+    const sender = h.profiles.get("a")!;
+    h.profiles.save({ ...sender, onboarding: { requestId: "setup-a", locale: "en", stage: "greeting", error: null } });
+    for (const chatId of ["b", "room-1"]) {
+      assert.throws(() => h.turns.handleMessage("w1:p-a", chatId, "hello"),
+        (error: unknown) => error instanceof ControlError && error.code === "not_a_member");
+      assert.equal(h.chat.transcript(chatId).readAll().length, 0);
+    }
+  } finally {
+    await h.cleanup();
+  }
+});
 
 test("a user message runs a full room turn: every member speaks, replies land in the transcript with authors", async () => {
   const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [], onPrompt: { a: { say: ["a says hi"], sayOnce: true }, b: { say: ["b says hi"], sayOnce: true } } });
