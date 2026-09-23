@@ -194,6 +194,26 @@ const PromptMention = Mention.extend({
   },
   addNodeView() {
     return ReactNodeViewRenderer(MentionNodeView);
+  },
+  addKeyboardShortcuts() {
+    return {
+      ...this.parent?.(),
+      Backspace: () => this.editor.commands.command(({ tr, state }) => {
+        const { empty, anchor } = state.selection;
+        if (!empty) return false;
+        let mentionPos = -1;
+        let mentionSize = 0;
+        state.doc.nodesBetween(anchor - 1, anchor, (node, pos) => {
+          if (node.type.name !== this.name) return;
+          mentionPos = pos;
+          mentionSize = node.nodeSize;
+          return false;
+        });
+        if (mentionPos < 0) return false;
+        tr.insertText(this.options.deleteTriggerWithBackspace ? "" : "@", mentionPos, mentionPos + mentionSize);
+        return true;
+      })
+    };
   }
 });
 

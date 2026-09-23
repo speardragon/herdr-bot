@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import { getSchema } from "@tiptap/core";
+import { Window } from "happy-dom";
 import {
   prioritizeEveryone,
   projectMentionMembers,
@@ -64,6 +65,33 @@ test("editor mention JSON keeps only stable identity and label", async () => {
     assert.deepEqual(JSON.parse(JSON.stringify(mention.toJSON())), { type: "mention", attrs: { id: "reviewer", label: "Reviewer" } });
   } finally {
     await server.close();
+  }
+});
+
+test("Backspace replaces a mention with its @ trigger without persisting trigger metadata", async () => {
+  const browser = new Window({ url: "http://localhost" });
+  const previous = { window: globalThis.window, document: globalThis.document, KeyboardEvent: globalThis.KeyboardEvent };
+  Object.assign(globalThis, { window: browser, document: browser.document, KeyboardEvent: browser.KeyboardEvent });
+  const server = await createServer({ configFile: "renderer/vite.config.ts", server: { middlewareMode: true } });
+  try {
+    const { createPromptEditorExtensions } = await server.ssrLoadModule("/src/recovered/features/conversation/workspace/rich-text-editor.tsx");
+    const { Editor } = await import("@tiptap/core");
+    const editor = new Editor({
+      extensions: createPromptEditorExtensions(""),
+      content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "mention", attrs: { id: "reviewer", label: "Reviewer" } }] }] },
+      injectCSS: false,
+    });
+    try {
+      editor.commands.setTextSelection(2);
+      editor.commands.keyboardShortcut("Backspace");
+      assert.deepEqual(JSON.parse(JSON.stringify(editor.getJSON())), { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "@" }] }] });
+    } finally {
+      editor.destroy();
+    }
+  } finally {
+    await server.close();
+    Object.assign(globalThis, previous);
+    await browser.happyDOM.abort();
   }
 });
 
