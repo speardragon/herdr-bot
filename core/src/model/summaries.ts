@@ -1,4 +1,5 @@
 import type { BotOnboarding } from "../bots/onboarding.ts";
+import type { ReasoningEffort } from "../bots/launch-args.ts";
 import type { BotRuntime } from "../herdr/types.ts";
 import type { BotProfile } from "../store/profile-store.ts";
 import type { RoomConfig } from "../store/room-store.ts";
@@ -16,6 +17,8 @@ export interface HerdrBotFacts {
   readonly cwd: string | null;
   readonly adopted: boolean;
   readonly permissionMode: string;
+  readonly model: string | null;
+  readonly reasoningEffort: ReasoningEffort | null;
   /** Present only while/after a quick-created bot is being onboarded; null for every other bot. */
   readonly onboarding: BotOnboarding | null;
 }
@@ -118,7 +121,7 @@ export function botSummary(args: {
     isGroup: false,
     memberIds: [],
     conversationPartnerIds: [],
-    herdrBot: { kind: profile.kind, status: runtime.status, paneId: runtime.paneId ?? profile.herdr.paneId, cwd: profile.cwd, adopted: profile.adopted, permissionMode: profile.permissionMode, onboarding: profile.onboarding ?? null },
+    herdrBot: { kind: profile.kind, status: runtime.status, paneId: runtime.paneId ?? profile.herdr.paneId, cwd: profile.cwd, adopted: profile.adopted, permissionMode: profile.permissionMode, model: profile.model, reasoningEffort: profile.reasoningEffort, onboarding: profile.onboarding ?? null },
   };
 }
 

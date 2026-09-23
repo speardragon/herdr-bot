@@ -1,6 +1,7 @@
 import { readdirSync, rmSync } from "node:fs";
 import { hostPaths } from "../config.ts";
 import type { BotOnboarding, OnboardingStage } from "../bots/onboarding.ts";
+import { REASONING_EFFORTS, type ReasoningEffort } from "../bots/launch-args.ts";
 import { readJsonFile, writeJsonFileAtomic } from "./json-file.ts";
 
 export type PermissionMode = "ask" | "auto";
@@ -21,6 +22,8 @@ export interface BotProfile {
   readonly kind: string;
   readonly cwd: string;
   readonly permissionMode: PermissionMode;
+  readonly model: string | null;
+  readonly reasoningEffort: ReasoningEffort | null;
   readonly avatarShape: string | null;
   readonly avatarColor: string | null;
   readonly adopted: boolean;
@@ -51,6 +54,14 @@ function stringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+function modelOrNull(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function reasoningEffortOrNull(value: unknown): ReasoningEffort | null {
+  return typeof value === "string" && REASONING_EFFORTS.some((effort) => effort === value) ? value as ReasoningEffort : null;
+}
+
 function projectHerdrRef(value: unknown): BotHerdrRef {
   const record = isRecord(value) ? value : {};
   return { paneId: stringOrNull(record.paneId), workspaceId: stringOrNull(record.workspaceId), sessionId: stringOrNull(record.sessionId) };
@@ -69,6 +80,8 @@ export function projectBotProfile(value: unknown): BotProfile | null {
     kind: value.kind,
     cwd: value.cwd,
     permissionMode: value.permissionMode,
+    model: modelOrNull(value.model),
+    reasoningEffort: reasoningEffortOrNull(value.reasoningEffort),
     avatarShape: stringOrNull(value.avatarShape),
     avatarColor: stringOrNull(value.avatarColor),
     adopted: value.adopted === true,

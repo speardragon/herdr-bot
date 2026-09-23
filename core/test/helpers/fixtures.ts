@@ -9,6 +9,8 @@ export function sampleProfile(overrides: Partial<BotProfile> = {}): BotProfile {
     kind: "claude",
     cwd: "/tmp/repo",
     permissionMode: "ask",
+    model: null,
+    reasoningEffort: null,
     avatarShape: null,
     avatarColor: null,
     adopted: false,

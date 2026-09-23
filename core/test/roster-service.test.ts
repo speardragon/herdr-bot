@@ -49,6 +49,33 @@ test("createBot spawns into a new workspace for a new cwd, then a tab for the ne
   }
 });
 
+test("createBot persists launch selections and passes them to herdr", async () => {
+  const h = harness();
+  try {
+    const bot = await h.service.createBot({ id: "model-bot", name: "Model bot", kind: "codex", permissionMode: "auto", model: "  gpt-5.4  ", reasoningEffort: "xhigh" });
+    assert.equal(bot.model, "gpt-5.4");
+    assert.equal(bot.reasoningEffort, "xhigh");
+    assert.equal(h.profiles.get(bot.id)?.model, "gpt-5.4");
+    assert.deepEqual(h.fake.readLog().find((argv) => argv[0] === "agent" && argv[1] === "start"), [
+      "agent", "start", "model-bot", "--kind", "codex", "--pane", "w1:p1", "--", "-s", "workspace-write", "-a", "on-request", "--model", "gpt-5.4", "--config", 'model_reasoning_effort="xhigh"',
+    ]);
+  } finally {
+    h.temp.cleanup();
+  }
+});
+
+test("createBot rejects invalid launch selections before making a pane", async () => {
+  const h = harness();
+  try {
+    await assert.rejects(h.service.createBot({ id: "empty", name: "Empty", model: "   " }), (error: unknown) => error instanceof RosterError && error.code === "invalid_launch_options");
+    await assert.rejects(h.service.createBot({ id: "unsupported", name: "Unsupported", kind: "gemini", reasoningEffort: "high" }), (error: unknown) => error instanceof RosterError && error.code === "invalid_launch_options");
+    await assert.rejects(h.service.createBot({ id: "unknown-effort", name: "Unknown effort", kind: "codex", reasoningEffort: "ultra" as never }), (error: unknown) => error instanceof RosterError && error.code === "invalid_launch_options");
+    assert.equal(h.fake.readLog().some((argv) => argv[0] === "workspace" && argv[1] === "create"), false);
+  } finally {
+    h.temp.cleanup();
+  }
+});
+
 test("provisionReservedBot spawns a reserved profile, then reuses the named agent on a repeat call", async () => {
   const h = harness();
   try {
@@ -147,6 +174,8 @@ test("adopting a running agent renames it and marks the profile adopted; delete 
     assert.equal(bot.adopted, true);
     assert.equal(bot.kind, "grok");
     assert.equal(bot.cwd, "/work/x");
+    assert.equal(bot.model, null);
+    assert.equal(bot.reasoningEffort, null);
     assert.equal(h.fake.readState().agents[0]?.name, "scout");
     assert.equal((await h.service.listAdoptable()).length, 0);
     assert.equal(h.service.resolveBotByPane("w7:p3")?.id, "scout");

@@ -166,6 +166,8 @@ export class BotOnboardingService {
       kind: this.#deps.config.defaultKind,
       cwd: this.#deps.config.defaultCwd,
       permissionMode: "ask",
+      model: null,
+      reasoningEffort: null,
       avatarShape: null,
       avatarColor: null,
       adopted: false,

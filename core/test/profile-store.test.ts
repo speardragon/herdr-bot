@@ -47,3 +47,19 @@ test("projectBotProfile round-trips an onboarding block and drops a malformed on
   assert.equal(projectBotProfile({ ...sampleProfile(), onboarding: { requestId: "r-1", locale: "ko", stage: "nope", error: null } })?.onboarding, undefined);
   assert.equal(projectBotProfile(sampleProfile())?.onboarding, undefined);
 });
+
+test("older bot profiles load with null launch selections", () => {
+  const { model: _model, reasoningEffort: _reasoningEffort, ...old } = sampleProfile({ id: "old", name: "Old" });
+  const bot = projectBotProfile(old);
+  assert.equal(bot?.model, null);
+  assert.equal(bot?.reasoningEffort, null);
+});
+
+test("projectBotProfile trims models and drops invalid launch selections", () => {
+  assert.deepEqual(
+    { model: projectBotProfile({ ...sampleProfile(), model: "  gpt-5.4  " })?.model, reasoningEffort: projectBotProfile({ ...sampleProfile(), reasoningEffort: "xhigh" })?.reasoningEffort },
+    { model: "gpt-5.4", reasoningEffort: "xhigh" },
+  );
+  assert.equal(projectBotProfile({ ...sampleProfile(), model: "   ", reasoningEffort: "ultra" })?.model, null);
+  assert.equal(projectBotProfile({ ...sampleProfile(), reasoningEffort: "ultra" })?.reasoningEffort, null);
+});

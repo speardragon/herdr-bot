@@ -120,6 +120,7 @@ const ROSTER_ERROR_CODES: Readonly<Record<RosterErrorCode, ControlErrorCode>> = 
   bot_exists: "invalid_params",
   too_many_members: "invalid_params",
   unsupported_kind: "invalid_params",
+  invalid_launch_options: "invalid_params",
   invalid_bot_id: "invalid_params",
   bot_not_ready: "invalid_params",
 };

@@ -1,7 +1,7 @@
 import { basename } from "node:path";
 import type { HostConfig } from "../config.ts";
 import { buildIdentityBrief } from "../bots/prompts.ts";
-import { isSupportedKind, launchArgsFor } from "../bots/launch-args.ts";
+import { REASONING_EFFORTS, isSupportedKind, launchArgsFor, providerLaunchCapabilities, type AgentLaunchOptions, type ReasoningEffort } from "../bots/launch-args.ts";
 import { GROUP_MAX_MEMBERS, type GroupMember } from "../group/group-chat.ts";
 import type { HerdrCli } from "../herdr/cli.ts";
 import type { StatusMirror } from "../herdr/status-mirror.ts";
@@ -12,7 +12,7 @@ import type { BotProfile, PermissionMode, ProfileStore } from "../store/profile-
 import type { RoomConfig, RoomStore } from "../store/room-store.ts";
 import { WorkspaceRegistry } from "./workspace-registry.ts";
 
-export type RosterErrorCode = "invalid_bot_id" | "bot_exists" | "unknown_bot" | "unknown_room" | "too_many_members" | "unsupported_kind" | "herdr_error" | "bot_not_ready";
+export type RosterErrorCode = "invalid_bot_id" | "bot_exists" | "unknown_bot" | "unknown_room" | "too_many_members" | "unsupported_kind" | "invalid_launch_options" | "herdr_error" | "bot_not_ready";
 
 /** Outcome of provisioning a reserved (quick-created) bot's herdr agent. `needs_setup` means the pane
  * exists but its shell needs manual first-run setup in herdr before the agent can be prompted. */
@@ -38,6 +38,8 @@ export interface CreateBotArgs {
   readonly kind?: string;
   readonly cwd?: string;
   readonly permissionMode?: PermissionMode;
+  readonly model?: string | null;
+  readonly reasoningEffort?: ReasoningEffort | null;
   readonly avatarShape?: string | null;
   readonly avatarColor?: string | null;
   readonly adoptPaneId?: string;
@@ -59,6 +61,19 @@ export interface RosterServiceDeps {
 
 function toMember(profile: BotProfile): GroupMember {
   return { id: profile.id, name: profile.name, description: profile.description };
+}
+
+function normalizeLaunchOptions(kind: string, args: CreateBotArgs): AgentLaunchOptions {
+  const model = args.model == null ? null : typeof args.model === "string" ? args.model.trim() : "";
+  if (model === "") throw new RosterError("invalid_launch_options", "model must be a non-empty string");
+  const reasoningEffort = args.reasoningEffort ?? null;
+  if (reasoningEffort != null && !REASONING_EFFORTS.some((effort) => effort === reasoningEffort)) {
+    throw new RosterError("invalid_launch_options", `invalid reasoning effort "${reasoningEffort}"`);
+  }
+  const capabilities = providerLaunchCapabilities(kind);
+  if (model != null && !capabilities.model) throw new RosterError("invalid_launch_options", `${kind} does not support model selection`);
+  if (reasoningEffort != null && !capabilities.reasoning) throw new RosterError("invalid_launch_options", `${kind} does not support reasoning effort`);
+  return { model, reasoningEffort };
 }
 
 export class RosterService {
@@ -272,7 +287,10 @@ export class RosterService {
   async #startReservedAgent(profile: BotProfile): Promise<{ status: "started" | "needs_setup"; herdr: BotProfile["herdr"]; kind: string }> {
     const paneId = profile.herdr.paneId!;
     const workspaceId = profile.herdr.workspaceId;
-    const launchArgs = launchArgsFor(profile.kind, profile.permissionMode, this.#deps.config.cliPath);
+    const launchArgs = launchArgsFor(profile.kind, profile.permissionMode, this.#deps.config.cliPath, {
+      model: profile.model,
+      reasoningEffort: profile.reasoningEffort,
+    });
     try {
       const started = await this.#startAgentWithRetry({ name: profile.id, kind: profile.kind, paneId, agentArgs: launchArgs });
       return { status: "started", herdr: { paneId, workspaceId, sessionId: started.agent_session?.value ?? null }, kind: profile.kind };
@@ -296,12 +314,14 @@ export class RosterService {
     if (!isSupportedKind(kind)) throw new RosterError("unsupported_kind", `herdr does not support agent kind "${kind}"`);
     const cwd = args.cwd ?? this.#deps.config.defaultCwd;
     const permissionMode = args.permissionMode ?? "ask";
+    const launchOptions = normalizeLaunchOptions(kind, args);
     const location = await this.#locationFor(cwd, id);
-    const launchArgs = launchArgsFor(kind, permissionMode, this.#deps.config.cliPath);
+    const launchArgs = launchArgsFor(kind, permissionMode, this.#deps.config.cliPath, launchOptions);
     const sessionId = await this.#startAgent(id, kind, location.paneId, launchArgs);
     const now = this.#now();
     return {
       id, name: args.name.trim().length > 0 ? args.name.trim() : id, description: args.description ?? "", kind, cwd, permissionMode,
+      model: launchOptions.model, reasoningEffort: launchOptions.reasoningEffort,
       avatarShape: args.avatarShape ?? null, avatarColor: args.avatarColor ?? null, adopted: false,
       herdr: { paneId: location.paneId, workspaceId: location.workspaceId, sessionId },
       notifyOnUpdatesEnabled: true, isHiddenFromSidebar: false, createdAt: now, updatedAt: now,
@@ -371,6 +391,7 @@ export class RosterService {
     return {
       id, name: args.name.trim().length > 0 ? args.name.trim() : id, description: args.description ?? "", kind: info.agent ?? "unknown", cwd: info.cwd ?? this.#deps.config.defaultCwd,
       permissionMode: args.permissionMode ?? "ask", avatarShape: args.avatarShape ?? null, avatarColor: args.avatarColor ?? null, adopted: true,
+      model: null, reasoningEffort: null,
       herdr: { paneId: info.pane_id, workspaceId: info.workspace_id, sessionId: info.agent_session?.value ?? null },
       notifyOnUpdatesEnabled: true, isHiddenFromSidebar: false, createdAt: now, updatedAt: now,
     };
