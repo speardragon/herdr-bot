@@ -55,8 +55,8 @@ test("isPassContent accepts pass variants", () => {
 
 test("history formatting marks the viewer and honours the limit", () => {
   const history = [user("go"), said("reviewer", "on it"), said("fixer", "me too")];
-  assert.equal(formatGroupHistory(history, "reviewer"), "ray (user): go\nreviewer (you): on it\nfixer: me too");
-  assert.equal(formatGroupHistory(history, "reviewer", 1), "fixer: me too");
+  assert.equal(formatGroupHistory(history, "reviewer"), "ray (user): go\nreviewer (bot id: reviewer) (you): on it\nfixer (bot id: fixer): me too");
+  assert.equal(formatGroupHistory(history, "reviewer", 1), "fixer (bot id: fixer): me too");
   assert.equal(formatGroupHistory([], "x"), "(no messages yet)");
 });
 

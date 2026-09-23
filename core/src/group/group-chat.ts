@@ -91,7 +91,7 @@ export function isPassContent(content: string): boolean {
 
 export function formatGroupLine(message: GroupMessage, viewerId: string): string {
   if (message.speaker.kind === "user") return message.speaker.name ? `${message.speaker.name} (user): ${message.content}` : `User: ${message.content}`;
-  return `${message.speaker.name}${message.speaker.id === viewerId ? " (you)" : ""}: ${message.content}`;
+  return `${message.speaker.name} (bot id: ${message.speaker.id})${message.speaker.id === viewerId ? " (you)" : ""}: ${message.content}`;
 }
 
 export function formatGroupHistory(history: readonly GroupMessage[], viewerId: string, limit: number = GROUP_PROMPT_HISTORY_LIMIT): string {

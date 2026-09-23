@@ -30,6 +30,20 @@ export function buildIdentityBrief(args: { readonly bot: GroupMember; readonly u
   ].join("\n");
 }
 
+function crossChatInstructions(cliPath: string): string[] {
+  return [
+    "To contact another bot in that bot's DM:",
+    `  ${cliPath} message <bot-id> "<message>"`,
+    "To post to another room you belong to:",
+    `  ${cliPath} message <room-id> "<message>"`,
+    "Use say only for the chat whose turn is currently open. Use message only for a different DM or room.",
+    "Send cross-chat messages only when requested or useful to the task. Do not send acknowledgement-only messages back and forth.",
+    "When a user asks you to contact another bot, call message first. Only after it succeeds, say in your current chat that you sent the request and will report back when the answer arrives. End this turn; do not claim an answer yet.",
+    "When another bot asks you to work, do the work, then send the result back to the requesting bot's id with message. A say in your own DM does not reach the requester.",
+    "When you receive a result from a bot you contacted, summarize the received result to the user with say. Do not send the result back to that bot again.",
+  ];
+}
+
 function roomTag(room: RoomIdentity, peers: readonly GroupMember[]): string {
   const withPeers = peers.length > 0 ? ` - with ${peers.map((peer) => peer.name).join(", ")}` : "";
   return `${ROOM_TAG_PREFIX}"${room.name}"${withPeers}]`;
@@ -55,6 +69,8 @@ export function buildRoomTurnPrompt(args: {
   const { room, member, peers, newMessages, cliPath } = args;
   return [
     roomTag(room, peers),
+    ...crossChatInstructions(cliPath),
+    "Use say for this room.",
     ...(room.description.trim().length > 0 ? [`Room goal: ${room.description.trim()}`] : []),
     newMessages.length === 0 ? "No new messages in the room since your last turn." : `New messages in the room (oldest first):\n${formatGroupHistory(newMessages, member.id)}`,
     ...turnInstructions(room.id, member, cliPath),
@@ -71,6 +87,8 @@ export function buildDmTurnPrompt(args: {
   const { bot, chatId, userName, newMessages, cliPath } = args;
   return [
     `${DM_TAG} Direct chat between ${userName} and you (${bot.name}).`,
+    ...crossChatInstructions(cliPath),
+    "Use say only for this DM turn.",
     newMessages.length === 0 ? "No new messages." : `New messages (oldest first):\n${formatGroupHistory(newMessages, bot.id)}`,
     ...turnInstructions(chatId, bot, cliPath),
   ].join("\n");
