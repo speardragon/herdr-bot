@@ -6,6 +6,7 @@ import type { PermissionMode } from "../store/profile-store.ts";
 import type { AgentSummary } from "../model/summaries.ts";
 import { COORDINATOR_INVALID_ARGS, COORDINATOR_UNKNOWN_METHOD, COORDINATOR_UNSUPPORTED, type CoordinatorReplyOutcome } from "./frames.ts";
 import { listDirectories } from "../services/directory-browser.ts";
+import { listBotModels } from "../bots/model-catalog.ts";
 
 type Args = Record<string, unknown>;
 type Handler = (host: Host, args: Args) => Promise<unknown> | unknown;
@@ -258,6 +259,7 @@ const METHOD_TABLE: Readonly<Record<string, Handler>> = {
   "herdrBot.focus": herdrBotFocus,
   "herdrBot.defaults": herdrBotDefaults,
   "herdrBot.listDirectories": (_host, args) => listDirectories(optStr(args, "path") ?? ""),
+  "herdrBot.listModels": (_host, args) => listBotModels(str(args, "kind")),
 };
 
 function ok(value: unknown): CoordinatorReplyOutcome {

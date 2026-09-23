@@ -266,3 +266,16 @@ test("herdrBot.listDirectories resolves relative to the coordinator, for the wor
     await h.cleanup();
   }
 });
+
+test("herdrBot.listModels forwards kind to the model catalog and returns its ModelCatalogResult", async () => {
+  const h = await harness();
+  try {
+    // "claude" never spawns a process (see model-catalog.test.ts): a safe kind to exercise the wiring
+    // itself against the real listBotModels, without this dispatcher test depending on a provider CLI.
+    const result = await h.call("herdrBot.listModels", { kind: "claude" });
+    assert.equal(result.source, "latest-alias");
+    assert.deepEqual(result.models.map((m: { id: string }) => m.id), ["opus", "sonnet", "haiku"]);
+  } finally {
+    await h.cleanup();
+  }
+});
