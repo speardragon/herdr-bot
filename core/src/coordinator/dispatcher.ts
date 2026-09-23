@@ -1,4 +1,5 @@
 import type { Host } from "../host.ts";
+import type { ReasoningEffort } from "../bots/launch-args.ts";
 import { isValidRequestId } from "../bots/onboarding.ts";
 import { RosterError } from "../services/roster-service.ts";
 import type { PermissionMode } from "../store/profile-store.ts";
@@ -72,6 +73,8 @@ async function createAgent(host: Host, args: Args): Promise<unknown> {
     ...(optStr(args, "description") == null ? {} : { description: optStr(args, "description")! }),
     ...(optStr(bot, "kind") == null ? {} : { kind: optStr(bot, "kind")! }),
     ...(optStr(bot, "cwd") == null ? {} : { cwd: optStr(bot, "cwd")! }),
+    ...(bot.model == null ? {} : { model: str(bot, "model") }),
+    ...(bot.reasoningEffort == null ? {} : { reasoningEffort: str(bot, "reasoningEffort") as ReasoningEffort }),
     ...(mode == null ? {} : { permissionMode: mode }),
     ...(optStr(bot, "adoptPaneId") == null ? {} : { adoptPaneId: optStr(bot, "adoptPaneId")! }),
     avatarShape: optStr(args, "avatarShape") ?? null,

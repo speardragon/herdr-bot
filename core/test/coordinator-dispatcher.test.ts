@@ -4,6 +4,8 @@ import { createHost } from "../src/host.ts";
 import { resolveConfig } from "../src/config.ts";
 import { createHerdrCli } from "../src/herdr/cli.ts";
 import { createCoordinatorDispatcher } from "../src/coordinator/dispatcher.ts";
+import { createControlHandler } from "../src/control/handlers.ts";
+import { ControlError } from "../src/control/protocol.ts";
 import { installFakeHerdr } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
 import { greetingText } from "../src/bots/onboarding.ts";
@@ -39,6 +41,33 @@ test("createAgent / createGroup / listAgents / updateAgent / deleteAgents round-
     assert.deepEqual(await h.call("setGroupMembers", { id: group.agent.id, memberAgentIds: [] }).then((s: { memberIds: string[] }) => s.memberIds), []);
     assert.deepEqual(await h.call("deleteAgents", { ids: [group.agent.id, "reviewer"] }), { deletedIds: [group.agent.id, "reviewer"] });
     assert.deepEqual(await h.call("listAgents"), []);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("createAgent passes model and reasoning selections to the launched bot", async () => {
+  const h = await harness();
+  try {
+    const created = await h.call("createAgent", { name: "Reviewer", herdrBot: { id: "reviewer", kind: "codex", cwd: "/tmp/repo", model: "gpt-5.4", reasoningEffort: "high" } });
+    assert.equal(created.agent.herdrBot.model, "gpt-5.4");
+    assert.equal(created.agent.herdrBot.reasoningEffort, "high");
+    const launch = h.fake.readLog().find((argv) => argv[0] === "agent" && argv[1] === "start" && argv[2] === "reviewer");
+    assert.deepEqual(launch?.slice(-4), ["--model", "gpt-5.4", "--config", 'model_reasoning_effort="high"']);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("bot.create control request passes launch selections and rejects unsupported providers", async () => {
+  const h = await harness();
+  try {
+    const control = createControlHandler(h.host);
+    const created = await control("bot.create", { id: "reviewer", name: "Reviewer", kind: "codex", cwd: "/tmp/repo", model: "gpt-5.4", reasoningEffort: "max" }) as { herdrBot: { model: string; reasoningEffort: string } };
+    assert.equal(created.herdrBot.model, "gpt-5.4");
+    assert.equal(created.herdrBot.reasoningEffort, "max");
+    await assert.rejects(control("bot.create", { id: "unsupported", name: "Unsupported", kind: "gemini", reasoningEffort: "high" }),
+      (error: unknown) => error instanceof ControlError && error.code === "invalid_params");
   } finally {
     await h.cleanup();
   }

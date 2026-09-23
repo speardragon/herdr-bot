@@ -1,4 +1,5 @@
 import type { Host } from "../host.ts";
+import type { ReasoningEffort } from "../bots/launch-args.ts";
 import { entryText, projectAuthor } from "../model/entries.ts";
 import { RosterError, type RosterErrorCode } from "../services/roster-service.ts";
 import type { AgentSummary } from "../model/summaries.ts";
@@ -64,6 +65,8 @@ async function botCreate(host: Host, params: Params): Promise<unknown> {
     ...(optionalString(params, "description") == null ? {} : { description: optionalString(params, "description")! }),
     ...(optionalString(params, "kind") == null ? {} : { kind: optionalString(params, "kind")! }),
     ...(optionalString(params, "cwd") == null ? {} : { cwd: optionalString(params, "cwd")! }),
+    ...(params.model == null ? {} : { model: requireString(params, "model") }),
+    ...(params.reasoningEffort == null ? {} : { reasoningEffort: requireString(params, "reasoningEffort") as ReasoningEffort }),
     ...(permissionMode(params.permissionMode) == null ? {} : { permissionMode: permissionMode(params.permissionMode)! }),
   });
   host.chat.emitRoster();

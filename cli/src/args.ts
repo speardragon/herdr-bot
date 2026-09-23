@@ -1,3 +1,5 @@
+import { REASONING_EFFORTS, type ReasoningEffort } from "../../core/src/bots/launch-args.ts";
+
 export type CliOutput = "json" | "transcript";
 
 export type CliCommand =
@@ -7,7 +9,11 @@ export type CliCommand =
 
 export type CliParse = CliCommand | { readonly error: string };
 
-const USAGE = "usage: herdr-bot <say|pass|read|rooms|whoami|send|bot|room|status|serve|install-shim> ...";
+const USAGE = "usage: herdr-bot <say|pass|read|rooms|whoami|send|bot|room|status|serve|install-shim> ...\nexample: herdr-bot bot create reviewer --cwd /work/repo --kind codex --model gpt-5.4 --reasoning high";
+
+function parseReasoningEffort(value: string): ReasoningEffort | null {
+  return REASONING_EFFORTS.includes(value as ReasoningEffort) ? value as ReasoningEffort : null;
+}
 
 function flags(argv: readonly string[]): { positional: string[]; options: Record<string, string> } {
   const positional: string[] = [];
@@ -41,11 +47,14 @@ function parseBot(argv: readonly string[]): CliParse {
     case "create": {
       const id = positional[0];
       if (id == null) return { error: "bot create needs <id>" };
-      return control("bot.create", withOptional({ id, name: options.name ?? id }, options, { kind: "kind", cwd: "cwd", permission: "permissionMode", description: "description" }));
+      if ("reasoning" in options && parseReasoningEffort(options.reasoning!) == null) return { error: `--reasoning must be one of: ${REASONING_EFFORTS.join(", ")}` };
+      if ("model" in options && (options.model!.trim().length === 0 || options.model!.startsWith("--"))) return { error: "--model needs a non-empty value" };
+      return control("bot.create", withOptional({ id, name: options.name ?? id }, options, { kind: "kind", cwd: "cwd", permission: "permissionMode", description: "description", model: "model", reasoning: "reasoningEffort" }));
     }
     case "adopt": {
       const [paneId, id] = positional;
       if (paneId == null || id == null) return { error: "bot adopt needs <paneId> and <id>" };
+      if ("model" in options || "reasoning" in options) return { error: "bot adopt does not accept --model or --reasoning" };
       return control("bot.adopt", withOptional({ paneId, id, name: options.name ?? id }, options, { description: "description" }));
     }
     case "list": return control("bot.list", {});

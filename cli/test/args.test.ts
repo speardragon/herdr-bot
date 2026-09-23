@@ -30,9 +30,20 @@ test("bot and room admin commands", () => {
   assert.deepEqual(parseCliArgs(["bot", "create", "--name", "x"], env), { error: "bot create needs <id>" });
 });
 
+test("bot create accepts working directory and launch selections", () => {
+  assert.deepEqual(parseCliArgs(["bot", "create", "reviewer", "--cwd", "/work/repo", "--kind", "codex", "--model", "gpt-5.4", "--reasoning", "high"], env),
+    { kind: "control", method: "bot.create", params: { id: "reviewer", name: "reviewer", cwd: "/work/repo", kind: "codex", model: "gpt-5.4", reasoningEffort: "high" }, output: "json" });
+  assert.deepEqual(parseCliArgs(["bot", "create", "reviewer", "--reasoning", "ultra"], env),
+    { error: "--reasoning must be one of: low, medium, high, xhigh, max" });
+  assert.deepEqual(parseCliArgs(["bot", "create", "reviewer", "--model", "--reasoning", "high"], env),
+    { error: "--model needs a non-empty value" });
+  assert.ok("error" in parseCliArgs(["bot", "adopt", "w7:p3", "scout", "--model", "gpt-5.4"], env));
+  assert.ok("error" in parseCliArgs(["bot", "adopt", "w7:p3", "scout", "--reasoning", "high"], env));
+});
+
 test("serve and install-shim are local commands; unknown commands error", () => {
   assert.deepEqual(parseCliArgs(["serve"], env), { kind: "serve" });
   assert.deepEqual(parseCliArgs(["install-shim"], env), { kind: "install-shim" });
-  assert.deepEqual(parseCliArgs([], env), { error: "usage: herdr-bot <say|pass|read|rooms|whoami|send|bot|room|status|serve|install-shim> ..." });
+  assert.deepEqual(parseCliArgs([], env), { error: "usage: herdr-bot <say|pass|read|rooms|whoami|send|bot|room|status|serve|install-shim> ...\nexample: herdr-bot bot create reviewer --cwd /work/repo --kind codex --model gpt-5.4 --reasoning high" });
   assert.deepEqual(parseCliArgs(["dance"], env), { error: 'unknown command "dance"' });
 });
