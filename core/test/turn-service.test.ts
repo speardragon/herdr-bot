@@ -253,6 +253,28 @@ test("mentions limit responders, busy bots get a notice, and DM turns run a sing
   }
 });
 
+test("bot A and bot B exchange DM messages, and bot B also posts to their shared room", async () => {
+  const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [] });
+  try {
+    // Hop 1: bot A messages bot B's DM.
+    h.turns.handleMessage("w1:p-a", "b", "Please review change 42");
+    await h.runQueue.enqueue("b", async () => undefined);
+    assert.equal((h.chat.transcript("b").last()?.author as { id?: string } | undefined)?.id, "a");
+
+    // Hop 2: bot B replies back into bot A's DM.
+    h.turns.handleMessage("w1:p-b", "a", "Review complete");
+    await h.runQueue.enqueue("a", async () => undefined);
+    assert.equal((h.chat.transcript("a").last()?.author as { id?: string } | undefined)?.id, "b");
+
+    // Hop 3: bot B separately posts to the room it shares with bot A.
+    h.turns.handleMessage("w1:p-b", "room-1", "Review complete, posting to the room");
+    await h.runQueue.enqueue("room-1", async () => undefined);
+    assert.equal((h.chat.transcript("room-1").last()?.author as { id?: string } | undefined)?.id, "b");
+  } finally {
+    await h.cleanup();
+  }
+});
+
 test("handleSay enforces pane identity and membership; late says are appended", async () => {
   const h = await harness({ agents: [agent("a")], workspaces: [] });
   try {
