@@ -52,7 +52,11 @@ export function resolveConfig(env: NodeJS.ProcessEnv = process.env): HostConfig 
     home,
     herdrBin: nonEmpty(env.HERDR_BIN_PATH) ?? "herdr",
     herdrSession,
-    herdrSocketPath: nonEmpty(env.HERDR_SOCKET_PATH) ?? herdrSessionSocketPath(herdrSession),
+    // Deliberately NOT `HERDR_SOCKET_PATH`: herdr injects that into every pane it manages, pointing at
+    // the session the *terminal* lives in (usually `default`). An app launched from such a terminal
+    // would then subscribe to a session that has none of the bots' panes -- every per-pane
+    // subscription refused with pane_not_found, retried forever, and no live status events at all.
+    herdrSocketPath: nonEmpty(env.HERDR_BOT_SOCKET_PATH) ?? herdrSessionSocketPath(herdrSession),
     controlSocketPath: join(home, "host.sock"),
     cliPath: join(home, "bin", "herdr-bot"),
     userName: nonEmpty(env.HERDR_BOT_USER_NAME) ?? defaultUserName(),
