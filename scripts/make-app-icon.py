@@ -5,9 +5,12 @@ Run by hand after changing the source artwork; needs Pillow (`pip install pillow
 
     python3 scripts/make-app-icon.py && iconutil -c icns desktop/build/herdr-bot.iconset -o desktop/build/icon.icns
 
-The source is the artwork's rounded square sitting on a backdrop with a wide outer margin.
-`L, T, R, B` / `RADIUS` are that square's measured edges and corner radius (found by scanning in
-from all four sides for the strongest luminance step); re-measure if the source image changes.
+The source is a flat black canvas with the white ram-head glyph placed off-centre inside it and a
+wide margin of bare black all around. `L, T, R, B` is a square crop centred on the glyph's own
+bounding box (found by scanning for the brightness bbox) with roughly a 12% margin on each side --
+the glyph fills the same ~80% of the final badge as the previous artwork did. `RADIUS`/`INSET` are
+scaled from that crop's size using the same ratios the previous artwork used; re-measure both the
+bbox and the ratios if the source image changes.
 
 A too-thin INSET here previously left a fringe of the photographed backdrop visible once the icon
 was actually rendered by Finder/Dock at smaller sizes -- each mip level halves the inset in device
@@ -23,9 +26,9 @@ from PIL import Image, ImageDraw, ImageFilter
 HERE = Path(__file__).resolve().parent.parent / "desktop" / "build"
 SRC = HERE / "icon-source.jpg"
 ISET = HERE / "herdr-bot.iconset"
-L, T, R, B = 79, 51, 1343, 1317          # right/bottom exclusive
-RADIUS = 198
-INSET = 14                                # eat the anti-aliased rim AND survive downscaling to 16x16
+L, T, R, B = 323, 274, 1179, 1130         # right/bottom exclusive
+RADIUS = 134
+INSET = 10                                 # eat the anti-aliased rim AND survive downscaling to 16x16
 FEATHER = 3                               # px, blur the mask edge so it fades rather than cuts
 CANVAS = 1024
 BODY = 824                                # Apple's macOS icon grid: 100px margin each side
