@@ -1,0 +1,28 @@
+/* herdr-bot: avatar editor card after the Grok Bot reference (see view.tsx). Positioned absolutely
+ * against .sand-agent-settings__editor-anchor (settings/view.css), so it floats over the fields.
+ * Just the colour palette now -- shapes, the Generate/Upload tabs, and Reset were dropped; picking a
+ * colour applies immediately, so there is nothing left to confirm or reset from here. */
+.sand-avatar-editor {
+  position: absolute; top: 14px; left: 0; right: 0; z-index: 2;
+  display: flex; flex-direction: column;
+  color: var(--cursor-text-primary);
+  background: var(--cursor-bg-elevated);
+  border: 1px solid var(--cursor-stroke-secondary); border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .14);
+  outline: none;
+}
+.sand-avatar-editor__header { padding: 8px 10px 0; }
+.sand-avatar-editor__label { color: var(--cursor-text-secondary); font-size: 12px; font-weight: 600; line-height: 16px; }
+
+/* 11 colour dots wrapping 6 + 5 and centred (flex-wrap + centre, so the orphan row centres too). This
+ * box is border-box (global reset), so max-width has to cover its own 16px*2 padding on top of a row
+ * of six 28px dots (6 * 28 + 5 * 8 = 208px content) to land on 6 + 5 rather than 5 + 5 + 1 -- measured,
+ * not assumed. The current colour gets a gapped ring: a surface-coloured halo, then the stroke. */
+.sand-avatar-editor__colors { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 8px; max-width: 240px; margin: 0 auto; padding: 16px; }
+.sand-avatar-editor__color {
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--sand-avatar-swatch); cursor: pointer;
+}
+.sand-avatar-editor__color[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--cursor-bg-elevated), 0 0 0 3.5px var(--cursor-text-tertiary); }
+.sand-avatar-editor__color:disabled { cursor: default; opacity: .6; }
+.sand-avatar-editor__error { padding: 0 16px 12px; color: var(--cursor-text-danger, #c21d2e); font-size: 12px; }

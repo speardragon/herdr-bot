@@ -13,6 +13,24 @@ import blueBotAvatarImage from "../../../../assets/persona-avatars/blue-bot.png"
 import violetBotAvatarImage from "../../../../assets/persona-avatars/violet-bot.png";
 import magentaBotAvatarImage from "../../../../assets/persona-avatars/magenta-bot.png";
 import grayBotAvatarImage from "../../../../assets/persona-avatars/gray-bot.png";
+// herdr-bot: small (160px), always-inlined-as-data-URI copies of the same 11 images, used ONLY as
+// CSS mask-image sources (agent-settings hero edit overlay). Electron loads the renderer over
+// file://, and Chromium treats file:// image resources as tainted for pixel-level compositing --
+// masking a full-size `?inline`-free import (a plain file:// URL) silently renders nothing at all,
+// the same way canvas.toDataURL() on a file:// <img> throws "Tainted canvases may not be exported."
+// The `?inline` suffix forces Vite to always emit a base64 data: URI in the JS bundle regardless of
+// its normal size-based inlining threshold, so these are never file:// resources to begin with.
+import blackBotAvatarMask from "../../../../assets/persona-avatars/masks/black-bot-mask.png?inline";
+import brownBotAvatarMask from "../../../../assets/persona-avatars/masks/brown-bot-mask.png?inline";
+import redBotAvatarMask from "../../../../assets/persona-avatars/masks/red-bot-mask.png?inline";
+import orangeBotAvatarMask from "../../../../assets/persona-avatars/masks/orange-bot-mask.png?inline";
+import yellowBotAvatarMask from "../../../../assets/persona-avatars/masks/yellow-bot-mask.png?inline";
+import greenBotAvatarMask from "../../../../assets/persona-avatars/masks/green-bot-mask.png?inline";
+import cyanBotAvatarMask from "../../../../assets/persona-avatars/masks/cyan-bot-mask.png?inline";
+import blueBotAvatarMask from "../../../../assets/persona-avatars/masks/blue-bot-mask.png?inline";
+import violetBotAvatarMask from "../../../../assets/persona-avatars/masks/violet-bot-mask.png?inline";
+import magentaBotAvatarMask from "../../../../assets/persona-avatars/masks/magenta-bot-mask.png?inline";
+import grayBotAvatarMask from "../../../../assets/persona-avatars/masks/gray-bot-mask.png?inline";
 
 // @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2302348 (Iee avatar dispatcher; Mac SHA256 ef4e9831b65d39633f09c9ad0c083b98b7ebf52e3bb558182a3dcd717...)
 // @evidence recovered/frontend/app/assets/index-UbX-y3il.js#byteOffset=2925837 (Iee avatar dispatcher; Windows SHA256 80464803b50f478598080bdc1b91da3996c6b74168e2351ea26f620f2ec62ba5)
@@ -110,6 +128,43 @@ const PERSONA_AVATAR_IMAGES: PersonaAvatarImageMap = {
   magenta: magentaBotAvatarImage,
   gray: grayBotAvatarImage
 };
+
+/** herdr-bot: the exact image URL AgentAvatar itself would render for these props -- a custom photo
+ * (dataUrl) first, else the persona-color image, else null when AgentAvatar would fall through to
+ * the drawn SVG mark instead (no image). Exported so a caller that needs the raw image URL (the
+ * agent-settings hero's edit overlay, masked to the image's own silhouette) doesn't re-implement
+ * AgentAvatar's own dispatch order. */
+export function resolveAgentAvatarImageSrc({ agentId, dataUrl, color }: { agentId: string; dataUrl?: string | null; color?: string | null }): string | null {
+  if (typeof dataUrl === "string" && dataUrl.length > 0) return dataUrl;
+  return personaAvatarImageSrc(PERSONA_AVATAR_IMAGES, resolvePersonaColor(agentId, color));
+}
+
+const PERSONA_AVATAR_MASK_IMAGES: PersonaAvatarImageMap = {
+  black: blackBotAvatarMask,
+  brown: brownBotAvatarMask,
+  red: redBotAvatarMask,
+  orange: orangeBotAvatarMask,
+  yellow: yellowBotAvatarMask,
+  green: greenBotAvatarMask,
+  cyan: cyanBotAvatarMask,
+  blue: blueBotAvatarMask,
+  violet: violetBotAvatarMask,
+  magenta: magentaBotAvatarMask,
+  gray: grayBotAvatarMask
+};
+
+/**
+ * A version of `resolveAgentAvatarImageSrc` safe to use as a CSS `mask-image` source. A custom photo
+ * (`dataUrl`) is only returned when it is already a `data:` URI -- anything else (a future file-based
+ * path) could be file:// and silently mask to nothing, so this returns `null` instead and the caller
+ * falls back to an unmasked overlay. The persona-color case always returns one of the small
+ * always-inlined mask images above, never the full-size file-based one `resolveAgentAvatarImageSrc`
+ * uses for the visible `<img>`.
+ */
+export function resolveAgentAvatarMaskSrc({ agentId, dataUrl, color }: { agentId: string; dataUrl?: string | null; color?: string | null }): string | null {
+  if (typeof dataUrl === "string" && dataUrl.length > 0) return dataUrl.startsWith("data:") ? dataUrl : null;
+  return personaAvatarImageSrc(PERSONA_AVATAR_MASK_IMAGES, resolvePersonaColor(agentId, color));
+}
 
 function PersonaMark({ agentId, color, shape, size, sizePx, state, isStatic, paused, isFollowingPointer, followTarget, emphasis, spinSignal }: { agentId: string; color: string; shape: string; state: PersonaState; size?: AgentAvatarSize } & Pick<AgentAvatarProps, "isStatic" | "paused" | "isFollowingPointer" | "followTarget" | "emphasis" | "spinSignal"> & { sizePx: number }) {
   const imageSrc = personaAvatarImageSrc(PERSONA_AVATAR_IMAGES, color);

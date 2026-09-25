@@ -116,12 +116,19 @@ export function createAvatarEditorProductionAdapter(options: AvatarEditorProduct
     },
     setScope(next) {
       if (disposed) return;
+      // herdr-bot: avatarDataUrl/avatarShape/avatarColor are deliberately NOT part of this comparison.
+      // The controller this adapter builds is itself the thing that commits colour/shape/photo changes
+      // (controller.ts stageCharacter/commitStagedCharacter) and feeds them back into the caller's
+      // `agents` state for other UI to read (ProductionRenderer's controller-subscribe effect). If those
+      // fields were compared here, that feedback would round-trip into a `setScope` call that sees them
+      // "changed" and tears down + recreates the very controller that just committed -- disposing it out
+      // from under an in-flight click and racing the next one against a stale rebuild. Only identity
+      // (account, agent id, group-ness) should ever force a rebuild; a same-agent avatar field change
+      // is either this controller's own doing (already correct, no rebuild needed) or an external one
+      // this adapter doesn't need to react to live.
       if (scope.accountKey === next.accountKey
         && scope.agent?.id === next.agent?.id
-        && scope.agent?.isGroup === next.agent?.isGroup
-        && scope.agent?.avatarDataUrl === next.agent?.avatarDataUrl
-        && scope.agent?.avatarShape === next.agent?.avatarShape
-        && scope.agent?.avatarColor === next.agent?.avatarColor) return;
+        && scope.agent?.isGroup === next.agent?.isGroup) return;
       rebuild(next);
     },
     reset() {
