@@ -38,6 +38,15 @@ export class SayInbox {
     return this.#turns.has(key(chatId, botId));
   }
 
+  /** The chat whose turn this bot is currently taking (the one a blocked prompt belongs to), if any. */
+  openChatFor(botId: string): string | null {
+    for (const turnKey of this.#turns.keys()) {
+      const [chatId, owner] = turnKey.split(" ");
+      if (owner === botId && chatId != null) return chatId;
+    }
+    return null;
+  }
+
   accept(chatId: string, botId: string, text: string): SayMode {
     const record = this.#turns.get(key(chatId, botId));
     if (record == null) return "late";
