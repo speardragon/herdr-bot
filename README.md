@@ -1,64 +1,74 @@
 # herdr-bot
 
-herdr 위에서 돌아가는 코딩 에이전트(claude / codex / grok …)들을 **봇**으로 묶어, 단체방에서 사용자와 봇들이 대화하며 일을 끝내는 앱. UI는 grok-bot 0.18의 리액트 렌더러를 기반으로 하고(별도 플랜), 이 저장소의 `core/`는 헤드리스 호스트, `cli/`는 봇과 사람이 쓰는 `herdr-bot` 명령이다.
+[한국어](README.ko.md)
 
-## 요구사항
+A macOS app for talking to the agents running in herdr the way you talk to a [Grok Bot](https://x.ai/bot).
 
-- herdr ≥ 0.9.0 (실행 중), Node ≥ 24
-- 봇으로 쓸 에이전트 CLI가 로그인된 상태 (claude, codex, grok …)
+![A chat where a bot asks a question and offers choices](docs/images/chat.png)
 
-## 앱 (macOS)
+Grok Bot is a messenger for treating bots like teammates and handing work to more than one of them. herdr-bot brings that feel onto herdr. Each bot is an agent inside a herdr pane (claude, codex, grok…), and a message in the chat becomes that agent's prompt.
+
+There is no cloud computer, and no sign-in or billing inside the app. It uses the agent CLIs you have already logged into, and the herdr that is already running. This is not Grok Bot. It is a local app that takes Grok Bot's way of talking as its reference.
+
+## The app
+
+### Hand off work in a messenger
+
+The sidebar stacks each bot's face, last line, time, and unread mark. In the thread a bot may ask first, or offer answers you can pick. The composer below attaches files and `@`-mentions the bots in that room. Enter sends. Shift+Enter breaks the line. A mention chip always shows that bot's current avatar, not a snapshot from when the message was sent — edit a bot's avatar later and every past mention of it picks up the change, including after you close and reopen the chat.
+
+### Narrow it down to icons
+
+![A collapsed sidebar: avatars, plus a new-bot button and settings](docs/images/rail.png)
+
+Drag the sidebar between 240px and 400px. Push past the minimum and it snaps to an avatar rail. Pull back out and the list returns. ⌘B toggles the same rail. Under the rail there is only New bot and Settings.
+
+### Make a bot, or adopt one that is already up
+
+![A menu for a new Bot, a group chat, or an existing bot](docs/images/new-chat.png)
+
+`+` starts a new Bot or a group chat. A new Bot can launch a fresh herdr agent, or adopt an agent already running in that session. A group holds up to six bots in one room. Launch settings — provider, model, reasoning effort — only apply when herdr-bot starts the agent itself; an adopted process was already running before herdr-bot knew about it, so those fields are disabled for it and cannot be set or changed after the fact.
+
+### Settings are language and appearance
+
+![Settings for language and appearance](docs/images/settings.png)
+
+Korean is the default. English is available. Light and dark are saved. There is no Plugin menu and no account screen. Outside tools stay with each agent's own CLI and MCP setup.
+
+## What you can do
+
+- **Direct chats.** Every bot has a thread. What you send goes to that bot's herdr agent.
+- **Groups.** Bots answer in a round robin. `@name` calls only that bot. One burst is at most 3 rounds and 10 turns.
+- **Personas.** Edit a bot's name and what it is for. Open a room's name to add or remove members. Chats can be pinned.
+- **The herdr session.** Bots come up in the `herdr-bot` session by default. See their panes with `herdr session attach herdr-bot`. Set `HERDR_BOT_SESSION=default` to use the main session.
+
+## Getting started
+
+herdr 0.9.0 or newer must be running, and Node must be 24 or newer. The agent CLIs you want as bots need to be logged in already.
 
 ```bash
 npm install
-npm run renderer:build
-npm run desktop:start          # 개발 실행 (~/.herdr-bot 사용)
-npm run desktop:dev:fake       # 가짜 herdr로 UI만 시험
-npm run desktop:package        # .build/desktop/mac-arm64/herdr-bot.app
+npm run desktop:start
 ```
 
-- `+` → **Bot**: herdr에 새 에이전트를 띄우거나(Start) 이미 떠 있는 에이전트를 채택(Adopt). 채택한 에이전트는 herdr-bot이 띄운 게 아니므로, 모델·추론 수준 같은 실행 설정을 지정하거나 나중에 바꿀 수 없다(해당 항목은 비활성으로 표시된다).
-- `+` → **Room**: 봇을 골라 단체방을 만든다. 방에 쓰면 봇들이 라운드로빈으로 답하고, `@id`로 특정 봇만 부를 수 있다.
-- 봇 이름을 누르면 이름·페르소나를 수정하고, 방 이름을 누르면 멤버를 초대하거나 제외할 수 있다.
-- 설정은 사이드바 하단에서 연다. 한국어가 기본이며 English와 라이트/다크 모드를 선택할 수 있다. 앱 자체 로그인과 Plugin 메뉴는 제공하지 않는다. 외부 도구는 각 에이전트의 기존 CLI/MCP 환경을 사용한다.
-- `@` 목록에는 현재 방의 봇만 표시된다. 방향키와 Enter/Tab으로 선택하고 Escape로 닫는다. 일반 입력에서 Enter는 전송, Shift+Enter는 줄바꿈이다. 멘션 칩은 전송 시점의 스냅샷이 아니라 항상 그 봇의 현재 아바타를 보여주므로, 나중에 아바타를 바꾸면 채팅을 다시 열었을 때도 과거 멘션들이 전부 새 아바타로 바뀌어 보인다.
-- 봇은 전용 세션 `herdr-bot`에 뜬다(없으면 앱이 헤드리스로 띄운다). 봇 pane을 보려면 터미널에서 `herdr session attach herdr-bot`. 메인 세션에 두고 싶으면 `HERDR_BOT_SESSION=default`.
+`npm run desktop:dev:fake` runs the UI against a fake herdr. `npm run desktop:package` builds the app bundle.
 
-### 앱 아이콘
-
-`desktop/build/icon.icns`(패키징)와 `icon.png`(패키징하지 않고 실행할 때의 Dock·창 아이콘)는
-`desktop/build/icon-source.jpg`에서 만든다. 원본은 둥근 사각형 로고가 바탕색 위에 여백을 두고
-놓인 그림이라, 바탕을 지우고 로고만 잘라 macOS 아이콘 격자(1024 캔버스 안에 824 본체, 사방 100px
-여백)에 맞춘다. 아트워크 자체의 모서리 곡률은 그대로 둔다.
+From the terminal only:
 
 ```bash
-pip install pillow
-python3 scripts/make-app-icon.py
-iconutil -c icns desktop/build/herdr-bot.iconset -o desktop/build/icon.icns
-rm -rf desktop/build/herdr-bot.iconset
-```
-
-UI는 grok-bot 0.18 재구성 렌더러를 포크한 것이다(`renderer/UPSTREAM.md`). 원본 번들의 에셋(아이콘·이모지 데이터 등)은 포함하지 않으며 개인 용도 빌드다.
-
-## 빠른 시작 (헤드리스)
-
-```bash
-npm install
-node cli/src/main.ts serve                 # 호스트 (herdr pane 안에서 실행)
+node cli/src/main.ts serve
 node cli/src/main.ts bot create reviewer --name Reviewer --kind claude --cwd ~/repo
-node cli/src/main.ts room create "auth 리팩터링" --members reviewer
-node cli/src/main.ts send <room-id> "로그인 버그 원인부터 정리해줘"
+node cli/src/main.ts room create "auth refactor" --members reviewer
+node cli/src/main.ts send <room-id> "Start with the cause of the login bug"
 node cli/src/main.ts read <room-id>
 ```
 
-## 동작 원리
+## How a message becomes work
 
-- 봇 = herdr가 pane 안에서 감지하는 이름 붙은 에이전트. 스폰(`herdr agent start`)하거나 이미 떠 있는 에이전트를 채택(`herdr agent rename`). 모든 herdr 호출은 `herdr --session <HERDR_BOT_SESSION> …`으로 전용 세션을 향하고, 채택 대상도 그 세션의 에이전트다.
-- 방에 사용자가 말하면 호스트가 grok-bot식 라운드로빈(최대 3라운드·10발언, @멘션이면 그 봇만)을 돌린다. 각 턴은 `herdr agent prompt <bot> … --wait`.
-- 봇이 방에 말하는 방법은 herdr-bot CLI(`say` / `message`)뿐이다. 터미널 출력은 방에 보이지 않는다.
-- 상태 저장: `~/.herdr-bot/` (`HERDR_BOT_HOME`으로 변경). 트랜스크립트는 JSONL.
+A bot is a named agent that herdr recognizes inside a pane. Launching one calls `herdr agent start`. Adopting one that is already up calls `herdr agent rename`. Every call goes to that session with `herdr --session <HERDR_BOT_SESSION>`.
 
-`say`와 `message`는 다르다. `say`는 방금 자신에게 프롬프트를 보낸, 지금 열려 있는 턴의 채팅에만 답한다. 반면 `message`는 다른 채팅으로 향한다. 자신의 턴은 다른 곳에서 진행 중이지만 다른 봇의 DM으로 작업을 넘기거나, 방에 결과를 올리고 싶을 때 쓴다. 단 봇은 자신이 이미 멤버로 속한 방에만 `message`할 수 있고, 그렇지 않으면 호출은 `not_a_member`로 실패하며 어떤 트랜스크립트에도 아무것도 기록되지 않는다.
+When a message lands in a room, the host runs the turns. Each turn is `herdr agent prompt <bot> … --wait`. The only way a bot speaks in a chat is the herdr-bot CLI (`say` / `message`). Output printed in the terminal never shows up in the chat.
+
+`say` and `message` answer different questions: `say` always replies in the chat whose turn is currently open — the one that just prompted the bot. `message` reaches into a different chat, for a bot that wants to hand work to another bot's DM or post into a room while its own turn is elsewhere. A bot can `message` a room only if it is already a member of that room; messaging a room it does not belong to fails with `not_a_member` and nothing is added to any transcript.
 
 ```bash
 herdr-bot bot create reviewer --cwd /work/repo --kind codex --model gpt-5.4 --reasoning high
@@ -66,20 +76,33 @@ herdr-bot message researcher "Please inspect the failing parser test."
 herdr-bot message room-release "Parser review is complete."
 ```
 
-## 환경변수
+Transcripts are JSONL under `~/.herdr-bot/`. Move them with `HERDR_BOT_HOME`.
 
-| 변수 | 기본 | 의미 |
+## Environment
+
+| Variable | Default | Meaning |
 |---|---|---|
-| `HERDR_BOT_HOME` | `~/.herdr-bot` | 상태 루트 |
-| `HERDR_BIN_PATH` | `herdr` | herdr 바이너리 |
-| `HERDR_BOT_SESSION` | `herdr-bot` | 봇이 뜨는 herdr 세션. `default`면 메인 세션 |
-| `HERDR_SOCKET_PATH` | 세션의 `herdr.sock`(`~/.config/herdr/sessions/<세션>/herdr.sock`, `default`는 `~/.config/herdr/herdr.sock`) | herdr 이벤트 구독용 |
-| `HERDR_BOT_USER_NAME` | OS 사용자명 | 방에서 보이는 사용자 이름 |
-| `HERDR_BOT_TURN_TIMEOUT_MS` | `180000` | 봇 한 턴 최대 대기 |
-| `HERDR_BOT_DEFAULT_KIND` / `HERDR_BOT_DEFAULT_CWD` | `claude` / `$HOME` | 봇 생성 기본값 |
+| `HERDR_BOT_HOME` | `~/.herdr-bot` | State root |
+| `HERDR_BIN_PATH` | `herdr` | herdr binary |
+| `HERDR_BOT_SESSION` | `herdr-bot` | herdr session the bots run in. `default` uses the main session |
+| `HERDR_BOT_SOCKET_PATH` | the session's `herdr.sock` | herdr event subscription. `HERDR_SOCKET_PATH`, which a pane injects, points at that pane's session and is ignored |
+| `HERDR_BOT_USER_NAME` | the OS user name | Name shown in a room |
+| `HERDR_BOT_TURN_TIMEOUT_MS` | `180000` | How long to wait for one bot turn |
+| `HERDR_BOT_DEFAULT_KIND` / `HERDR_BOT_DEFAULT_CWD` | `claude` / `$HOME` | Defaults when creating a bot |
 
-## 개발
+## Development
 
 ```bash
-npm run check      # typecheck + node --test
+npm run check
+```
+
+The UI is a fork of the grok-bot 0.18 renderer. What was kept and what changed is in `renderer/UPSTREAM.md`. This is a personal build. Icons and emoji data from the original bundle are not included.
+
+The app icons (`desktop/build/icon.icns`, `icon.png`) are made from `desktop/build/icon-source.jpg`. The background is removed, the logo is cropped, and it is fitted to the macOS icon grid (a 1024 canvas, an 824 mark, 100px of margin on every side).
+
+```bash
+pip install pillow
+python3 scripts/make-app-icon.py
+iconutil -c icns desktop/build/herdr-bot.iconset -o desktop/build/icon.icns
+rm -rf desktop/build/herdr-bot.iconset
 ```
