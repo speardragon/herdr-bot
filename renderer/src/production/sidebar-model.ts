@@ -38,6 +38,58 @@ export function pinnedTileColumns(sidebarWidth: number): 2 | 3 | 4 {
   return 2;
 }
 
+export interface SidebarResizeState {
+  expandedWidth: number;
+  isCollapsed: boolean;
+}
+
+export interface SidebarResizeBounds {
+  minExpandedWidth: number;
+  maxExpandedWidth: number;
+}
+
+/**
+ * Past the expanded minimum, how far the pointer must travel before the rail snaps.
+ * Closing asks for a longer inward travel than opening asks outward: the column holds
+ * at `minExpandedWidth` until the pointer is `SIDEBAR_COLLAPSE_MARGIN` inside that
+ * edge, and a collapsed rail opens once the pointer is `SIDEBAR_EXPAND_MARGIN` outside it.
+ */
+export const SIDEBAR_COLLAPSE_MARGIN = 80;
+export const SIDEBAR_EXPAND_MARGIN = 16;
+
+/**
+ * Live sidebar drag. The column follows the pointer between the expanded minimum and
+ * maximum, then holds at the minimum while the pointer travels through
+ * `SIDEBAR_COLLAPSE_MARGIN` before snapping to the icon rail. Widening a collapsed rail
+ * waits for `SIDEBAR_EXPAND_MARGIN` past the minimum, then opens at the pointer. A
+ * fractional pointer width is rounded: a half-pixel column blurs the chat border and text.
+ */
+export function resizeSidebarLayout(
+  current: SidebarResizeState,
+  pointerWidth: number,
+  bounds: SidebarResizeBounds,
+  margins: { readonly collapse: number; readonly expand: number } = { collapse: SIDEBAR_COLLAPSE_MARGIN, expand: SIDEBAR_EXPAND_MARGIN }
+): SidebarResizeState {
+  const width = Math.round(pointerWidth);
+  if (!Number.isFinite(width)) return current;
+  const collapseAt = bounds.minExpandedWidth - margins.collapse;
+  const expandAt = bounds.minExpandedWidth + margins.expand;
+  if (!current.isCollapsed) {
+    if (width < collapseAt) return { ...current, isCollapsed: true };
+    const expandedWidth = Math.max(bounds.minExpandedWidth, Math.min(bounds.maxExpandedWidth, width));
+    if (current.expandedWidth === expandedWidth) return current;
+    return { expandedWidth, isCollapsed: false };
+  }
+  if (width < expandAt) return current;
+  return { expandedWidth: Math.min(bounds.maxExpandedWidth, width), isCollapsed: false };
+}
+
+/** A drag that ends on the icon rail keeps the width from before the gesture. */
+export function commitSidebarResize(origin: SidebarResizeState, pending: SidebarResizeState): SidebarResizeState {
+  if (!pending.isCollapsed || pending.expandedWidth === origin.expandedWidth) return pending;
+  return { ...pending, expandedWidth: origin.expandedWidth };
+}
+
 /**
  * Which side of a pinned drop target the dragged chat lands on. The expanded sidebar lays pinned
  * chats out as a row-major 2-column grid of tiles, so "before" means the pointer is in the target's

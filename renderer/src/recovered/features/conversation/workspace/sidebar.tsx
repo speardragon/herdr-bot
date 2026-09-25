@@ -115,7 +115,6 @@ function rowStampAt(agent: SidebarAgent): number {
 
 function statusDotLabel(tone: SidebarDotTone): string {
   switch (tone) {
-    case "idle": return t("Idle", "대기 중");
     case "working": return t("Working");
     case "done": return t("Done", "작업 완료");
     case "blocked": return t("Blocked", "확인 필요");
@@ -146,22 +145,25 @@ function renderPreviewStatus({ ariaLabel, marker, presence }: { readonly ariaLab
 }
 
 export function AgentSidebarHeader({ onBroadcast, onNewChat, onOpenNetwork, onOpenSearch, isCollapsed = false }: Pick<ConversationSidebarProps, "onBroadcast" | "onNewChat" | "onOpenNetwork" | "onOpenSearch"> & { isCollapsed?: boolean }) {
+  // herdr-bot: the collapsed rail keeps this empty header so the first avatar clears the
+  // traffic lights. The new-bot control moves to the settings footer (ProductionRenderer).
+  if (isCollapsed) return <header className="sand-agents-sidebar__header" />;
   const hasCollaborationActions = onBroadcast != null || onOpenNetwork != null;
   return (
     <>
       <header className="sand-agents-sidebar__header">
-        <div className={isCollapsed ? "sand-agents-sidebar__rail-new" : "sand-agents-sidebar__new-actions"}>
-          {!isCollapsed && hasCollaborationActions ? <>
+        <div className="sand-agents-sidebar__new-actions">
+          {hasCollaborationActions ? <>
             <SandIconButton aria-label="Broadcast to agents" className="sand-agents-sidebar__broadcast" icon="megaphone" label="Broadcast to agents" onClick={onBroadcast} size="sm" />
             {onOpenNetwork == null ? null : <SandIconButton aria-label={AGENT_NETWORK_TRIGGER.ariaLabel} className={AGENT_NETWORK_TRIGGER.className} icon={AGENT_NETWORK_TRIGGER.icon} label={AGENT_NETWORK_TRIGGER.ariaLabel} onClick={onOpenNetwork} size="sm" />}
           </> : null}
           {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js bytes 2358208-2358400 */}
           {/* u0n: exact New chat button aria label, DOM class, native button semantics, and callback seam. */}
-          <SandIconButton aria-label={t("New")} className="sand-agents-sidebar__new" icon="plus" label={t("New")} onClick={onNewChat} size="sm" shape={isCollapsed ? "circle" : "square"} title={t("New chat")} />
+          <SandIconButton aria-label={t("New")} className="sand-agents-sidebar__new" icon="plus" label={t("New")} onClick={onNewChat} size="sm" title={t("New chat")} />
         </div>
       </header>
       {/* @evidence src/app/dist/renderer/assets/index-UbX-y3il.js#byteOffset=2605212 (a0n search control; sibling of the header) */}
-      {!isCollapsed && onOpenSearch != null ? <SandButton aria-label={t("Search")} className="sand-agents-sidebar__search" onClick={onOpenSearch.onClick} onKeyDown={onOpenSearch.onKeyDown} size="md" variant="secondary"><SandIcon name="search" size="md" />{t("Search")}</SandButton> : null}
+      {onOpenSearch != null ? <SandButton aria-label={t("Search")} className="sand-agents-sidebar__search" onClick={onOpenSearch.onClick} onKeyDown={onOpenSearch.onKeyDown} size="md" variant="secondary"><SandIcon name="search" size="md" />{t("Search")}</SandButton> : null}
     </>
   );
 }
