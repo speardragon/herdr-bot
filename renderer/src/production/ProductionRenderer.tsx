@@ -46,6 +46,7 @@ import { createUrlCardProvider } from "../recovered/features/conversation/cards/
 import { createLocalToolPermissionStore } from "../recovered/features/permissions/local-tool/store";
 import { createLocalToolPermissionScopeGate } from "./local-tool-permission-scope";
 import { createTranscriptPaginationController, mergeOlderTranscriptEntries } from "../recovered/features/conversation/workspace/pagination";
+import { withTranscriptTimeSeparators } from "./transcript-time-separators";
 import { createRoutinesController } from "../recovered/features/automations/routines/controller";
 import { mountRoutinesInfoPane } from "../recovered/features/automations/routines/view";
 import { createAgentSettingsController, projectAgentSettingsAgent } from "../recovered/features/agent-info/settings/model";
@@ -1691,6 +1692,28 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       ? mergeOlderTranscriptEntries(liveEntries, transcriptPaginationSnapshot.entries)
       : liveEntries,
     [activeAgentId, liveEntries, transcriptAccountSlot, transcriptPaginationSnapshot.accountSlot, transcriptPaginationSnapshot.agentId, transcriptPaginationSnapshot.entries]
+  );
+  // herdr-bot (Task 10): "now" for the transcript's day/time separator labels -- refreshed on
+  // mount/agent switch (screen re-entry) and again at the next local midnight, so "오늘"/"어제"
+  // relabel without needing a live per-second ticker.
+  const [transcriptNowMs, setTranscriptNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    setTranscriptNowMs(Date.now());
+    let timer = -1;
+    const scheduleMidnightRecompute = () => {
+      const now = new Date();
+      const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5).getTime();
+      timer = window.setTimeout(() => {
+        setTranscriptNowMs(Date.now());
+        scheduleMidnightRecompute();
+      }, Math.max(nextMidnight - now.getTime(), 1000));
+    };
+    scheduleMidnightRecompute();
+    return () => window.clearTimeout(timer);
+  }, [activeAgentId]);
+  const displayEntries = useMemo(
+    () => withTranscriptTimeSeparators(entries, transcriptNowMs, locale),
+    [entries, transcriptNowMs, locale]
   );
   useEffect(() => {
     findInChatController.setScope(transcriptAccountSlot, activeAgentId.length > 0 ? activeAgentId : null);
@@ -3870,7 +3893,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           {showTranscriptLoadError
             ? <TranscriptLoadErrorSurface onRetry={() => void openAgent(activeAgent.id)} />
             : <ConversationTranscript
-                entries={entries}
+                entries={displayEntries}
                 resolveMentionIdentity={resolveMentionIdentity}
                 resolveNoticeTargetAvatar={resolveNoticeTargetAvatar}
                 hasOlder={transcriptPaginationSnapshot.hasOlder}
