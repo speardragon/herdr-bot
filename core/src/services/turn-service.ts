@@ -133,7 +133,25 @@ export class TurnService {
 
     const entry = this.#deps.chat.appendBot(chatId, { id: sender.id, name: sender.name }, body);
     void this.schedule(chatId);
+    this.#recordMessageSentNotice(sender.id, chatId, kind, targetBot);
     return { entryId: entry.id };
+  }
+
+  /**
+   * Records a `bot-message-sent` notice in the sender's SOURCE chat (Task 9), after `appendBot` above
+   * already delivered the real message to the target. The source is the chat whose turn the sender is
+   * currently taking (`inbox.openChatFor`), falling back to the sender's own DM when no turn is open.
+   * Never re-delivers the message: a failure here (unknown source chat, store error) is only logged.
+   */
+  #recordMessageSentNotice(senderId: string, targetChatId: string, targetKind: "bot" | "room", targetBot: GroupMember | null): void {
+    const sourceChatId = this.#deps.inbox.openChatFor(senderId) ?? senderId;
+    if (sourceChatId === targetChatId) return;
+    const targetName = targetKind === "bot" ? (targetBot?.name ?? targetChatId) : (this.#deps.chat.summary(targetChatId)?.name ?? targetChatId);
+    try {
+      this.#deps.chat.appendBotEvent(sourceChatId, { type: "bot-message-sent", targetChatId, targetName, targetKind });
+    } catch (error) {
+      log("turn", `failed to record a bot-message-sent notice in ${sourceChatId} for ${senderId} -> ${targetChatId}`, error instanceof Error ? error.message : String(error));
+    }
   }
 
   /**

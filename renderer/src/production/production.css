@@ -461,6 +461,10 @@ button, textarea, input { font: inherit; }
 
 /* herdr-bot: room member attribution on bot messages */
 
+/* herdr-bot (Task 9, plan bot-collaboration-and-launch-settings): the structured rename/cross-chat
+ * "message sent" notices (cards/notice/view.tsx). Centered like the shipped plain-notice row, but laid
+ * out as an inline flex row so the message-sent variant's target avatar sits next to its label. */
+.herdr-bot-system-notice { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 4px auto; padding: 4px 10px; border-radius: var(--cursor-radius-full, 999px); background: var(--cursor-bg-elevated); color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-xs); text-align: center; width: fit-content; max-width: 80%; }
 
 /* Tokens the recovered code references that the shipped palette never defines. The runtime theme
  * installer appends its own :root block after this stylesheet, so these only fill the gaps. */

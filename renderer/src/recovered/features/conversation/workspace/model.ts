@@ -272,12 +272,39 @@ export interface TranscriptThinking {
   timestampMs: number;
 }
 
+/**
+ * herdr-bot (Task 9, plan bot-collaboration-and-launch-settings): a structured system event a
+ * `notice` transcript entry may carry, mirroring core's `core/src/model/bot-system-events.ts`
+ * (kept as a separate local type -- this round-trips through JSON/IPC, so the projection boundary in
+ * production/model.ts validates it defensively rather than trusting the host's shape).
+ */
+export type BotSystemEvent =
+  | { readonly type: "bot-renamed"; readonly oldName: string; readonly newName: string }
+  | { readonly type: "bot-message-sent"; readonly targetChatId: string; readonly targetName: string; readonly targetKind: "bot" | "room" };
+
 export interface TranscriptNotice {
   kind: "notice";
   id: string;
   text: string;
   timestampMs: number;
+  /** Set only for a recognized, well-formed event; an unknown/malformed one (or an older plain
+   * notice) leaves this unset and the card falls back to `text`. */
+  event?: BotSystemEvent;
 }
+
+/** herdr-bot (Task 9): the target's live avatar shape for a `bot-message-sent` notice, resolved by id
+ * from the current roster (never a send-time snapshot) -- the same resolver ProductionRenderer.tsx
+ * already builds for @-mentions (resolveMentionIdentity), extended with the group/shared-room kind and
+ * memberIds the notice card's AgentAvatar needs. `null` when the target is no longer in the roster. */
+export interface NoticeTargetAvatar {
+  readonly kind: "agent" | "group" | "shared-room";
+  readonly dataUrl: string | null;
+  readonly color: string | null;
+  readonly shape: string | null;
+  readonly memberIds: readonly string[];
+}
+
+export type ResolveNoticeTargetAvatar = (id: string) => NoticeTargetAvatar | null;
 
 export interface TranscriptTimelineEvent {
   kind: "timeline-event";

@@ -12,6 +12,7 @@ import { HerdrError } from "../src/herdr/types.ts";
 import { installFakeHerdr, type FakeHerdrState } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
 import { sampleProfile } from "./helpers/fixtures.ts";
+import type { BotSystemEvent } from "../src/model/bot-system-events.ts";
 
 function harness(state: FakeHerdrState = { agents: [], workspaces: [] }) {
   const temp = makeTempHome();
@@ -22,8 +23,13 @@ function harness(state: FakeHerdrState = { agents: [], workspaces: [] }) {
   const cli = createHerdrCli(fake.binPath, fake.env);
   const mirror = new StatusMirror({ cli, socketPath: null, botIds: () => profiles.list().map((p) => p.id), onChange: () => undefined });
   const notices: string[] = [];
-  const service = new RosterService({ config, profiles, rooms, cli, mirror, now: () => 1_000, onNotice: (chatId, text) => notices.push(`${chatId}: ${text}`) });
-  return { temp, fake, config, profiles, rooms, cli, mirror, service, notices };
+  const botEvents: Array<{ chatId: string; event: BotSystemEvent }> = [];
+  const service = new RosterService({
+    config, profiles, rooms, cli, mirror, now: () => 1_000,
+    onNotice: (chatId, text) => notices.push(`${chatId}: ${text}`),
+    onBotEvent: (chatId, event) => botEvents.push({ chatId, event }),
+  });
+  return { temp, fake, config, profiles, rooms, cli, mirror, service, notices, botEvents };
 }
 
 test("createBot spawns into a new workspace for a new cwd, then a tab for the next bot", async () => {
@@ -221,6 +227,30 @@ test("updateProfile and rooms round-trip", async () => {
     h.service.deleteRoom(room.id);
     assert.equal(existsSync(`${h.temp.home}/rooms/${room.id}`), false);
     assert.deepEqual(h.service.memberIdFor("a"), { id: "a", name: "Ava", description: "helps" });
+  } finally {
+    h.temp.cleanup();
+  }
+});
+
+test("updateProfile fires onBotEvent(\"bot-renamed\") only when the name actually changes", async () => {
+  const h = harness();
+  try {
+    await h.service.createBot({ id: "a", name: "A" });
+    h.botEvents.length = 0;
+
+    // A real rename fires exactly one bot-renamed event, old/new names intact.
+    h.service.updateProfile("a", { name: "Ava" });
+    assert.deepEqual(h.botEvents, [{ chatId: "a", event: { type: "bot-renamed", oldName: "A", newName: "Ava" } }]);
+
+    // Resaving the identical name fires nothing.
+    h.botEvents.length = 0;
+    h.service.updateProfile("a", { name: "Ava" });
+    assert.deepEqual(h.botEvents, []);
+
+    // A label/description-only edit fires nothing.
+    h.botEvents.length = 0;
+    h.service.updateProfile("a", { description: "new bio", title: "lead" });
+    assert.deepEqual(h.botEvents, []);
   } finally {
     h.temp.cleanup();
   }

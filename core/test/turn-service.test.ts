@@ -16,6 +16,7 @@ import { ViewStateStore } from "../src/store/view-state-store.ts";
 import { startControlServer } from "../src/control/server.ts";
 import { ControlError } from "../src/control/protocol.ts";
 import { createControlHandler } from "../src/control/handlers.ts";
+import { setLogSink } from "../src/log.ts";
 import type { Host } from "../src/host.ts";
 import { installFakeHerdr, type FakeHerdrState } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
@@ -65,6 +66,81 @@ test("a bot can message another bot DM and wake the recipient", async () => {
     assert.equal((h.chat.transcript("a").last()?.author as { id?: string } | undefined)?.id, "b");
     assert.deepEqual(h.fake.readState().prompts?.map((prompt) => prompt.target), ["b", "a"]);
   } finally {
+    await h.cleanup();
+  }
+});
+
+test("a message to another bot's DM records a bot-message-sent notice in the sender's own DM (no open turn), and no notice lands in the target", async () => {
+  const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [] });
+  try {
+    h.turns.handleMessage("w1:p-a", "b", "Can you inspect the parser?");
+
+    const sourceEntries = h.chat.transcript("a").readAll();
+    assert.equal(sourceEntries.length, 1);
+    assert.equal(sourceEntries[0]?.kind, "notice");
+    assert.deepEqual(sourceEntries[0]?.event, { type: "bot-message-sent", targetChatId: "b", targetName: "B", targetKind: "bot" });
+    assert.equal(sourceEntries[0]?.content, "메시지 보냄: B");
+
+    const targetEntries = h.chat.transcript("b").readAll();
+    assert.equal(targetEntries.length, 1);
+    assert.equal(targetEntries[0]?.kind, "send-message");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("a message sent while a different chat's turn is open records the notice there, not in the sender's own DM", async () => {
+  const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [] }, ["a"]);
+  try {
+    const turn = h.inbox.open("room-1", "a");
+    h.turns.handleMessage("w1:p-a", "b", "found the bug");
+    turn.close();
+
+    assert.deepEqual(h.chat.transcript("room-1").readAll()[0]?.event, { type: "bot-message-sent", targetChatId: "b", targetName: "B", targetKind: "bot" });
+    assert.equal(h.chat.transcript("a").readAll().length, 0);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("a message to a room records the notice with the room's display name and targetKind \"room\"", async () => {
+  const h = await harness({ agents: [agent("a"), agent("outsider")], workspaces: [] }, ["a"]);
+  try {
+    h.turns.handleMessage("w1:p-a", "room-1", "status update");
+    assert.deepEqual(h.chat.transcript("a").readAll()[0]?.event, { type: "bot-message-sent", targetChatId: "room-1", targetName: "auth", targetKind: "room" });
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("a failed delivery (unknown chat, non-member, blank text) never records a bot-message-sent notice", async () => {
+  const h = await harness({ agents: [agent("a"), agent("outsider")], workspaces: [] }, ["a"]);
+  try {
+    assert.throws(() => h.turns.handleMessage("w1:p-outsider", "room-1", "hello"),
+      (error: unknown) => error instanceof ControlError && error.code === "not_a_member");
+    assert.equal(h.chat.transcript("outsider").readAll().length, 0);
+    assert.equal(h.chat.transcript("room-1").readAll().length, 0);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("a delivery that succeeds but whose source-chat notice write fails still returns the message entryId, logging instead of retrying", async () => {
+  const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [] });
+  try {
+    setLogSink(() => undefined);
+    // A turn "open" for a chat id that was never a real bot/room -- appendBotEvent on it throws
+    // unknown_chat, exercising the "notice write failed" branch without touching the message delivery.
+    const turn = h.inbox.open("phantom-chat", "a");
+    const result = h.turns.handleMessage("w1:p-a", "b", "still gets through");
+    turn.close();
+
+    assert.match(result.entryId, /^e\d+$/);
+    const targetEntries = h.chat.transcript("b").readAll();
+    assert.equal(targetEntries.length, 1);
+    assert.equal(targetEntries[0]?.id, result.entryId);
+  } finally {
+    setLogSink((line) => process.stderr.write(`${line}\n`));
     await h.cleanup();
   }
 });

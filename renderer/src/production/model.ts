@@ -20,6 +20,7 @@ import type { TranscriptThreadSummary } from "../recovered/features/conversation
 import { previewTextFromLastEntry } from "../recovered/features/conversation/workspace/sidebar-agent-preview-content";
 import { sortRecentChats } from "./sidebar-model";
 import { projectRuntimeStatus } from "./bot-activity";
+import { projectBotSystemEvent } from "./bot-system-event";
 import type { ReasoningEffort } from "./new-chat-dialog-model";
 
 export type { DeepLinkInfo } from "../recovered/features/deep-links/overlay/model";
@@ -393,7 +394,9 @@ export function projectTranscriptEntry(value: unknown, index: number, agentName:
   }
   if (value.kind === "notice") {
     const text = messageText(value);
-    return text == null ? null : { kind: "notice", id, text, timestampMs };
+    if (text == null) return null;
+    const event = projectBotSystemEvent(value.event);
+    return { kind: "notice", id, text, timestampMs, ...(event == null ? {} : { event }) };
   }
   const message = isRecord(value.message) ? value.message : null;
   if (value.kind === "send-message" && message?.type === "permission-request") {

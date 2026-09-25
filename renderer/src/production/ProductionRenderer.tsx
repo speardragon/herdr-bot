@@ -3,7 +3,7 @@ import type { CoordinatorPortBridge, CursorAuthStatus, DesktopAutoReviewInstruct
 import computerEntrypoint from "../recovered/features/computer/overlay/entrypoint";
 import { ConversationComposer } from "../recovered/features/conversation/workspace/composer";
 import { commitComposerAttachments, stageComposerFiles } from "../recovered/features/conversation/workspace/desktop";
-import type { ComposerDraft, ConversationTranscriptEntry, DraftAttachment, TranscriptMessage } from "../recovered/features/conversation/workspace/model";
+import type { ComposerDraft, ConversationTranscriptEntry, DraftAttachment, NoticeTargetAvatar, TranscriptMessage } from "../recovered/features/conversation/workspace/model";
 import { createComposerDraftPersistence, createComposerDraftStateStore } from "../recovered/features/conversation/workspace/draft-state";
 import { createComposerSubmissionQueue, type ComposerSubmission, type ComposerSubmissionQueue } from "../recovered/features/conversation/workspace/submission";
 import { createSendJournalApprovalLifecycle } from "../recovered/features/conversation/workspace/send-journal-approval-lifecycle";
@@ -1461,6 +1461,21 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       color: agent.avatarColor ?? null,
       shape: agent.avatarShape ?? null,
       dataUrl: agent.avatarDataUrl ?? null
+    };
+  }, [agents]);
+  // herdr-bot (Task 9, plan bot-collaboration-and-launch-settings): the same live-roster lookup as
+  // resolveMentionIdentity above, extended with the group/shared-room kind + memberIds a
+  // `bot-message-sent` notice's AgentAvatar needs (ConversationAgentHeader's avatarKind computation is
+  // the existing pattern this mirrors). Always the CURRENT roster entry, never a send-time snapshot.
+  const resolveNoticeTargetAvatar = useCallback((id: string): NoticeTargetAvatar | null => {
+    const agent = agents.find((candidate) => candidate.id === id);
+    if (agent == null) return null;
+    return {
+      kind: agent.isSharedRoom === true ? "shared-room" : agent.isGroup === true ? "group" : "agent",
+      dataUrl: agent.avatarDataUrl ?? null,
+      color: agent.avatarColor ?? null,
+      shape: agent.avatarShape ?? null,
+      memberIds: agent.memberIds ?? []
     };
   }, [agents]);
   const editorProviders = useMemo(() => {
@@ -3857,6 +3872,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
             : <ConversationTranscript
                 entries={entries}
                 resolveMentionIdentity={resolveMentionIdentity}
+                resolveNoticeTargetAvatar={resolveNoticeTargetAvatar}
                 hasOlder={transcriptPaginationSnapshot.hasOlder}
                 isLoadingOlder={transcriptPaginationSnapshot.isLoadingOlder}
                 isAgentRunning={activeAgent.isRunning}

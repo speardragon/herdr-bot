@@ -7,6 +7,7 @@ import type { HerdrCli } from "../herdr/cli.ts";
 import type { StatusMirror } from "../herdr/status-mirror.ts";
 import { HerdrError, type HerdrAgentInfo } from "../herdr/types.ts";
 import { log } from "../log.ts";
+import type { BotSystemEvent } from "../model/bot-system-events.ts";
 import { isValidBotId, makeRoomId, suggestBotId } from "../model/ids.ts";
 import type { BotProfile, PermissionMode, ProfileStore } from "../store/profile-store.ts";
 import type { RoomConfig, RoomStore } from "../store/room-store.ts";
@@ -53,6 +54,10 @@ export interface RosterServiceDeps {
   readonly mirror: StatusMirror;
   readonly now?: () => number;
   readonly onNotice?: (chatId: string, text: string) => void;
+  /** Fired once, after a successful `updateProfile` save whose `name` actually changed (Task 9). Wired
+   * in host.ts to `chat.appendBotEvent`, so both a UI settings edit and the bot's own `profile update`
+   * CLI command record the same "이름 변경됨" notice in the bot's DM. */
+  readonly onBotEvent?: (chatId: string, event: BotSystemEvent) => void;
   /** Called once a bot or room is fully removed, so callers can evict any per-chat caches (transcript, view state, run queue). */
   readonly onChatRemoved?: (chatId: string) => void;
   /** Injectable so tests do not wait through real retry backoff. Defaults to a real setTimeout-based sleep. */
@@ -126,6 +131,7 @@ export class RosterService {
       updatedAt: this.#now(),
     };
     this.#deps.profiles.save(next);
+    if (current.name !== next.name) this.#deps.onBotEvent?.(id, { type: "bot-renamed", oldName: current.name, newName: next.name });
     return next;
   }
 

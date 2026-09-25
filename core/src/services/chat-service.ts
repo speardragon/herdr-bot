@@ -3,6 +3,7 @@ import type { GroupMessage } from "../group/group-chat.ts";
 import type { StatusMirror } from "../herdr/status-mirror.ts";
 import type { HostEvents } from "../host-events.ts";
 import { ONBOARDING_ORIGIN } from "../bots/onboarding.ts";
+import { botSystemNoticeEntry, type BotSystemEvent } from "../model/bot-system-events.ts";
 import { botMessageEntry, noticeEntry, toGroupMessage, toggleReaction, userMessageEntry, type Author } from "../model/entries.ts";
 import { isRoomId } from "../model/ids.ts";
 import { botSummary, roomSummary, type AgentSummary } from "../model/summaries.ts";
@@ -66,6 +67,16 @@ export class ChatService {
   appendNotice(chatId: string, content: string): StoredEntry {
     this.#requireChat(chatId);
     return this.#append(chatId, noticeEntry({ content, timestampMs: this.#now() }), false);
+  }
+
+  /**
+   * A structured system notice (bot rename, cross-chat message delivery -- Task 9). Follows the exact
+   * same `#append(..., false)` path as `appendNotice`: never counted toward the unread-bot-message
+   * badge (only a `send-message` entry is "incoming" -- see the comment in `#append`).
+   */
+  appendBotEvent(chatId: string, event: BotSystemEvent): StoredEntry {
+    this.#requireChat(chatId);
+    return this.#append(chatId, botSystemNoticeEntry(event, this.#now()), false);
   }
 
   /**
