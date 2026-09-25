@@ -92,7 +92,7 @@ import type { SettingsSectionId } from "../recovered/features/settings/overlay/v
 import type { SettingsComputerMount } from "../recovered/features/settings/overlay/computer";
 import "../recovered/features/settings/overlay/view.css";
 import { WindowChrome } from "../recovered/features/window-chrome/view";
-import { createRootShellNavigationState, recordRootShellAgentSelection, resolveAdjacentAgentId, resolveIndexedAgentId, resolveRootShellNavigation, RootShellEmptyWorkspace, RootShellLoading } from "../recovered/features/window-chrome/root-shell-state";
+import { createRootShellNavigationState, recordRootShellAgentSelection, resolveAdjacentAgentId, resolveIndexedAgentId, resolveRootShellNavigation, RootShellLoading } from "../recovered/features/window-chrome/root-shell-state";
 import { createGlobalKeyboardShortcutController, createRootShellShortcutActions } from "../recovered/features/window-chrome/global-keyboard-shortcuts";
 import { WindowStatusBadge } from "../recovered/features/window-chrome/status-badge";
 import { RootShellNotificationHost } from "../recovered/features/window-chrome/notification-host";
@@ -112,6 +112,7 @@ import { commandPaletteRootCommands, type CommandPaletteComputerUpdateAction, ty
 import { paletteVisibleCommands } from "./command-palette-row-model";
 import { CoordinatorCallError, createCoordinatorClient, type ProductionCoordinatorClient } from "./coordinator-client";
 import { UI_TEXT } from "./evidence";
+import { FirstBotPanel } from "./FirstBotPanel";
 import { LocalSettings } from "./LocalSettings";
 import { t, useLocale } from "./locale";
 import { composerPlaceholder } from "./composer-placeholder";
@@ -3048,6 +3049,29 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     }
   }, [client, locale, openAgent, refreshRoster]);
 
+  // herdr-bot: the very first bot ever -- no roster to search/pick from, so this bypasses the "+"
+  // combobox (newChatDraft/NewChatHeader) entirely rather than repurposing it for a case it was never
+  // designed for. Its own pending/error state, not newChatPending/newChatError, so it can never be
+  // clobbered by (or clobber) an unrelated "+" draft.
+  const [firstBotPending, setFirstBotPending] = useState(false);
+  const [firstBotError, setFirstBotError] = useState<string | null>(null);
+  const createFirstBot = useCallback(async (input: { readonly name?: string; readonly avatarColor: string }) => {
+    if (client == null || firstBotPending) return;
+    setFirstBotPending(true);
+    setFirstBotError(null);
+    try {
+      const result = await client.call("herdrBot.quickCreateBot", { requestId: makeClientNonce(), locale, avatarColor: input.avatarColor, ...(input.name == null ? {} : { name: input.name }) });
+      const created = result && typeof result === "object" && "agent" in result ? (result as { agent: unknown }).agent : result;
+      const projected = projectRendererAgent(created);
+      await refreshRoster();
+      if (projected != null) { await openAgent(projected.id); return; }
+    } catch (error) {
+      setFirstBotError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setFirstBotPending(false);
+    }
+  }, [client, firstBotPending, locale, openAgent, refreshRoster]);
+
   const createGroupFromDraft = useCallback(async () => {
     const activeDraft = newChatDraftRef.current;
     if (client == null || activeDraft == null || newChatPendingRef.current) return;
@@ -3811,7 +3835,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           onOpenAdvancedSetup={openNewChatDialogFromHeader}
           onOpenBot={openBotFromDraft}
           pending={newChatPending}
-        /></main> : showRootEmptyWorkspace ? <RootShellEmptyWorkspace isVisible /> : activeAgent == null ? null : <div style={{ display: "flex", flex: "1 1 auto", flexDirection: "column", minHeight: 0, minWidth: 0 }}>
+        /></main> : showRootEmptyWorkspace ? <FirstBotPanel error={firstBotError} onCreate={(input) => void createFirstBot(input)} onOpenAdvancedSetup={openNewChatDialog} pending={firstBotPending} /> : activeAgent == null ? null : <div style={{ display: "flex", flex: "1 1 auto", flexDirection: "column", minHeight: 0, minWidth: 0 }}>
           <main className="sand-chat-stage">
           <ConversationAgentHeader
             agent={activeAgent}
