@@ -9,6 +9,8 @@ import { installFakeHerdr } from "./helpers/fake-herdr-state.ts";
 import { startFakeHerdrSocket } from "./helpers/fake-herdr-socket.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
 import { waitFor } from "./helpers/wait-for.ts";
+import { parseBlockedPrompt } from "../src/herdr/blocked-prompt.ts";
+import { ASK_MULTI_SELECT_SCREEN, ASK_REVIEW_SCREEN, ASK_SINGLE_SCREEN, BASH_PERMISSION_SCREEN } from "./helpers/prompt-screens.ts";
 
 const agent = (name: string, status: "idle" | "working" | "blocked", pane: string) => ({ name, agent: "claude", agent_status: status, pane_id: pane, tab_id: "w1:t1", workspace_id: "w1", cwd: "/tmp" });
 
@@ -273,13 +275,15 @@ test("pane_not_found falls back to a global-only subscription and gates pane rec
     assert.ok(socket.subscriptions.length > afterProbe);
     assert.ok(socket.subscriptions.at(-1)?.some((s) => s.pane_id === "w1:p2"));
 
-    // The two "pane w1:p2 not found" rejections (initial attempt and the 30s probe) are each a fresh
-    // transition -- a successful global-only reconnect happened in between them, which resets the dedup
-    // state -- so both must warn. Recovery (the pane subscription actually succeeding) logs exactly once.
+    // The pane stayed missing across both attempts (the initial one and the 30s probe), and the
+    // global-only reconnect in between is a fallback, not a recovery -- so the rejection is reported
+    // once and the probe that repeats it is counted instead of reprinted. Recovery (the pane
+    // subscription actually succeeding) then logs exactly once, carrying that count.
     await waitFor(() => lines.filter((line) => line.includes("recovered")).length >= 1, { message: `expected a "recovered" log line, got: ${JSON.stringify(lines)}` });
     const rejectionLines = lines.filter((line) => line.includes("pane w1:p2 not found"));
-    assert.equal(rejectionLines.length, 2, `expected both rejections to warn independently, got: ${JSON.stringify(lines)}`);
+    assert.equal(rejectionLines.length, 1, `a pane that is still missing must not reprint every probe, got: ${JSON.stringify(lines)}`);
     assert.equal(lines.filter((line) => line.includes("recovered")).length, 1);
+    assert.match(lines.find((line) => line.includes("recovered"))!, /"suppressedRepeats":1/);
 
     mirror.stop();
     await mirror.refresh(); // drain any in-flight/orphan `agent list` child before temp.cleanup() removes its state file
@@ -333,6 +337,146 @@ test("a stale connection's close does not clobber a newer one, and stop() silenc
     await settle(80);
     assert.equal(socket.subscriptions.length, subscriptionsAtStop, "stop() must leave no reconnect timers behind");
   } finally {
+    await socket.close().catch(() => undefined);
+    temp.cleanup();
+  }
+});
+
+test("a blocked bot's prompt is read, parsed, published with the status change, and cleared when it unblocks", async () => {
+  const temp = makeTempHome();
+  try {
+    const fake = installFakeHerdr(temp.home, { agents: [agent("reviewer", "idle", "w1:p2")], workspaces: [] });
+    const cli = createHerdrCli(fake.binPath, fake.env);
+    const changes: { status: string; prompt: string | null }[] = [];
+    let suppressed = false;
+    const mirror = new StatusMirror({
+      cli,
+      socketPath: null,
+      botIds: () => ["reviewer"],
+      onChange: (_botId, runtime) => changes.push({ status: runtime.status, prompt: runtime.prompt?.question ?? null }),
+      readPrompt: (botId) => cli.agentRead(botId, 80, "detection").then(parseBlockedPrompt),
+      isPromptReadSuppressed: () => suppressed,
+    });
+    await mirror.refresh();
+    assert.equal(mirror.get("reviewer").prompt, null);
+
+    fake.writeState({ ...fake.readState(), agents: [agent("reviewer", "blocked", "w1:p2")], screens: { reviewer: ASK_SINGLE_SCREEN } });
+    await mirror.refresh();
+    const blocked = mirror.get("reviewer");
+    assert.equal(blocked.status, "blocked");
+    assert.equal(blocked.prompt?.kind, "question");
+    assert.equal(blocked.prompt?.question, "Which color do you prefer?");
+    // The change event already carries the prompt: no blocked-without-card flash.
+    assert.deepEqual(changes.at(-1), { status: "blocked", prompt: "Which color do you prefer?" });
+
+    // Same status, next question of the same form -> a new change (the card must follow the pane).
+    fake.writeState({ ...fake.readState(), screens: { reviewer: ASK_MULTI_SELECT_SCREEN } });
+    await mirror.refresh();
+    assert.deepEqual(changes.at(-1), { status: "blocked", prompt: "Which toppings?" });
+    const changeCount = changes.length;
+    await mirror.refresh();
+    assert.equal(changes.length, changeCount, "an unchanged screen is not re-published");
+
+    // While an answer is being typed the previous prompt is kept instead of re-reading the half-edited screen.
+    suppressed = true;
+    fake.writeState({ ...fake.readState(), screens: { reviewer: ASK_REVIEW_SCREEN } });
+    await mirror.refresh();
+    assert.equal(mirror.get("reviewer").prompt?.question, "Which toppings?");
+    suppressed = false;
+    await mirror.refresh();
+    assert.equal(mirror.get("reviewer").prompt?.question, "Ready to submit your answers?");
+
+    fake.writeState({ ...fake.readState(), agents: [agent("reviewer", "working", "w1:p2")] });
+    await mirror.refresh();
+    assert.deepEqual(changes.at(-1), { status: "working", prompt: null });
+    assert.equal(mirror.get("reviewer").prompt, null);
+  } finally {
+    temp.cleanup();
+  }
+});
+
+test("a failed screen read keeps the previous prompt and does not abort the refresh", async () => {
+  const temp = makeTempHome();
+  try {
+    const fake = installFakeHerdr(temp.home, { agents: [agent("reviewer", "blocked", "w1:p2")], workspaces: [], screens: { reviewer: BASH_PERMISSION_SCREEN } });
+    const cli = createHerdrCli(fake.binPath, fake.env);
+    let failReads = false;
+    const mirror = new StatusMirror({
+      cli,
+      socketPath: null,
+      botIds: () => ["reviewer"],
+      onChange: () => undefined,
+      readPrompt: (botId) => failReads ? Promise.reject(new Error("pane went away")) : cli.agentRead(botId, 80, "detection").then(parseBlockedPrompt),
+    });
+    await mirror.refresh();
+    assert.equal(mirror.get("reviewer").prompt?.kind, "permission");
+    failReads = true;
+    await mirror.refresh();
+    assert.equal(mirror.get("reviewer").status, "blocked");
+    assert.equal(mirror.get("reviewer").prompt?.kind, "permission");
+  } finally {
+    temp.cleanup();
+  }
+});
+
+// A pane herdr no longer knows (its window was closed, or the app is pointed at the wrong session)
+// fails every probe cycle forever. The global-only subscription that succeeds in between each probe
+// is NOT a recovery, so it must not reset the "already reported this" memory -- otherwise the same
+// "pane <id> not found" line prints every couple of minutes for as long as the app runs.
+test("a pane that stays missing is reported once, then counted silently until pane subscriptions recover", async () => {
+  const temp = makeTempHome();
+  const socket = await startFakeHerdrSocket(join(temp.home, "h.sock"));
+  const lines: string[] = [];
+  setLogSink((line) => lines.push(line));
+  try {
+    const fake = installFakeHerdr(temp.home, { agents: [agent("reviewer", "idle", "w5:p1")], workspaces: [] });
+    socket.missingPanes.add("w5:p1");
+    let clock = 0;
+    const mirror = new StatusMirror({
+      cli: createHerdrCli(fake.binPath, fake.env),
+      socketPath: socket.path,
+      botIds: () => ["reviewer"],
+      onChange: () => undefined,
+      pollIntervalMs: 60_000,
+      debounceMs: 10,
+      resubscribeMs: 15,
+      now: () => clock,
+    });
+    mirror.start();
+    await mirror.refresh();
+    const notFound = () => lines.filter((line) => line.includes("w5:p1 not found"));
+    await waitFor(() => notFound().length >= 1, { message: `expected the first pane_not_found to be reported, got: ${JSON.stringify(lines)}` });
+    assert.equal(notFound().length, 1);
+
+    // Drive several more probe cycles: each one fails the same way with a successful global-only
+    // subscription in between. None of them may add another line.
+    for (const at of [130_000, 260_000, 390_000]) {
+      clock = at;
+      await mirror.refresh();
+      await settle(60);
+    }
+    assert.ok(socket.subscriptions.filter((subs) => subs.some((sub) => sub.pane_id === "w5:p1")).length >= 2, "the mirror must keep probing the pane");
+    assert.equal(notFound().length, 1, `a still-missing pane must not keep logging, got: ${JSON.stringify(lines)}`);
+
+    // Once the pane is back, one "recovered" line closes it out and carries how many were suppressed.
+    socket.missingPanes.delete("w5:p1");
+    clock = 520_000;
+    await mirror.refresh();
+    await waitFor(() => lines.some((line) => line.includes("pane subscriptions recovered")), { message: `expected a recovery line, got: ${JSON.stringify(lines)}` });
+    assert.match(lines.find((line) => line.includes("pane subscriptions recovered"))!, /"suppressedRepeats":[1-9]/);
+
+    // And a later disappearance is a fresh transition that reports again.
+    socket.missingPanes.add("w5:p1");
+    socket.dropClients();
+    await settle(50); // the drop is observed a tick later; advance the clock only once it has landed
+    clock = 650_000;
+    await mirror.refresh();
+    await waitFor(() => notFound().length >= 2, { message: `expected a fresh report after recovery, got lines ${JSON.stringify(lines)} subs ${JSON.stringify(socket.subscriptions.slice(-4))}` });
+
+    mirror.stop();
+    await mirror.refresh();
+  } finally {
+    setLogSink((line) => process.stderr.write(`${line}\n`));
     await socket.close().catch(() => undefined);
     temp.cleanup();
   }

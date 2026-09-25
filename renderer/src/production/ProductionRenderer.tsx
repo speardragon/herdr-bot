@@ -54,7 +54,8 @@ import { AgentSettingsPanel } from "../recovered/features/agent-info/settings/vi
 import { GroupMembersPane } from "../recovered/features/agent-info/group-members/view";
 import { createAvatarEditorProductionAdapter } from "../recovered/features/agent-info/avatar-editor/production-adapter";
 import { AvatarEditorView } from "../recovered/features/agent-info/avatar-editor/view";
-import { AgentAvatar } from "../recovered/features/conversation/workspace/agent-avatar";
+import { applyAvatarCharacter, avatarCharacterChanged } from "./apply-avatar-character";
+import { AgentAvatar, resolveAgentAvatarMaskSrc } from "../recovered/features/conversation/workspace/agent-avatar";
 import type { MentionIdentity } from "../recovered/features/conversation/workspace/mention-chip";
 import { createPluginAuthProductionAdapter } from "../recovered/features/plugins/overlay/production-adapter";
 import { projectGroupMemberAgent } from "../recovered/features/agent-info/group-members/model";
@@ -120,7 +121,7 @@ import { composerPlaceholder } from "./composer-placeholder";
 import { groupInfoPaneChrome, initialGroupInfoPage, type GroupInfoPage } from "./group-info-pane-model";
 import { GroupHeroAvatar } from "../recovered/features/agent-info/settings/group-hero-avatar";
 import "./minimal.css";
-import { movePinnedAgent, projectSidebarOrder, sortRecentChats } from "./sidebar-model";
+import { commitSidebarResize, movePinnedAgent, projectSidebarOrder, resizeSidebarLayout, sortRecentChats } from "./sidebar-model";
 import { SignOutDialog } from "../recovered/features/account/session/sign-out";
 import { FeedbackDialog, type FeedbackCode } from "../recovered/features/feedback/overlay/view";
 import { UpdateRequired } from "../recovered/features/update/required/view";
@@ -147,6 +148,7 @@ import { createStrictModeDisposalGuard, type StrictModeDisposable } from "./stri
 import { MessageReactionAction, ReactionPills } from "../recovered/features/conversation/cards/transcript-card/reaction-picker";
 import type { TranscriptMessageReactionSlotProps } from "../recovered/features/conversation/cards/transcript-card/message-actions";
 import { LocalToolPermissionDock, type LocalToolPermissionRequest } from "../recovered/features/permissions/local-tool/view";
+import { PromptEntryCard, type PendingPromptAnswer } from "./PendingPromptCard";
 import { NewChatHeader, type NewChatHeaderBot } from "./NewChatHeader";
 import { createNewChatDraft, defaultGroupName, pruneDraftMembers, selectedMembers, type NewChatDraft } from "./new-chat-model";
 import { NewChatDialog, type AdoptableAgent, type BotDefaults, type CreateBotRequest, type CreateRoomRequest, type DirectoryListing, type ModelCatalogResult } from "./NewChatDialog";
@@ -1339,22 +1341,22 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   const sidebarLayout = useSyncExternalStore(uiLayoutStore.sidebarLayout.subscribe, uiLayoutStore.sidebarLayout.get, uiLayoutStore.sidebarLayout.get);
   const [sidebarResizePreview, setSidebarResizePreview] = useState<SidebarLayoutState | null>(null);
   const sidebarResizePreviewRef = useRef<SidebarLayoutState | null>(null);
+  const sidebarResizeOriginRef = useRef<SidebarLayoutState | null>(null);
   const resizeSidebar = useCallback((expandedWidth: number) => {
-    const base = sidebarResizePreviewRef.current ?? uiLayoutStore.sidebarLayout.get();
-    const next = {
-      ...base,
-      // Round: a fractional width puts the whole chat column on a half-pixel grid, which blurs
-      // its borders and text.
-      expandedWidth: Math.round(Math.max(SIDEBAR_LAYOUT_BOUNDS.minExpandedWidth, Math.min(SIDEBAR_LAYOUT_BOUNDS.maxExpandedWidth, expandedWidth)))
-    };
+    if (sidebarResizeOriginRef.current == null) sidebarResizeOriginRef.current = uiLayoutStore.sidebarLayout.get();
+    const base = sidebarResizePreviewRef.current ?? sidebarResizeOriginRef.current;
+    const next = resizeSidebarLayout(base, expandedWidth, SIDEBAR_LAYOUT_BOUNDS);
+    if (next === base) return;
     sidebarResizePreviewRef.current = next;
     setSidebarResizePreview(next);
   }, [uiLayoutStore]);
   const finishSidebarResize = useCallback(() => {
     const pending = sidebarResizePreviewRef.current;
+    const origin = sidebarResizeOriginRef.current;
     sidebarResizePreviewRef.current = null;
+    sidebarResizeOriginRef.current = null;
     setSidebarResizePreview(null);
-    if (pending != null) uiLayoutStore.setSidebarLayout(pending);
+    if (pending != null) uiLayoutStore.setSidebarLayout(origin == null ? pending : commitSidebarResize(origin, pending));
   }, [uiLayoutStore]);
   const renderedSidebarLayout = sidebarResizePreview ?? sidebarLayout;
   const activeDraftSnapshotStore = useMemo(
@@ -1577,8 +1579,34 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
         avatarColor: activeAgent.avatarColor
       }
     });
-    setAvatarEditorOpen(false);
-  }, [account?.kind, activeAgent?.avatarColor, activeAgent?.avatarDataUrl, activeAgent?.avatarShape, activeAgent?.id, activeAgent?.isGroup, avatarEditorAdapter, client, pinnedAccountKey]);
+    // herdr-bot: avatarColor/avatarShape/avatarDataUrl are intentionally NOT deps here (see
+    // production-adapter.ts setScope) -- only switching agents should rebuild/close the editor. An
+    // avatarColor change picked from inside it (the controller-sync effect below) must not feed back
+    // into tearing the same controller down and closing the card it just applied the colour from.
+  }, [account?.kind, activeAgent?.id, activeAgent?.isGroup, avatarEditorAdapter, client, pinnedAccountKey]);
+  useEffect(() => { setAvatarEditorOpen(false); }, [activeAgent?.id]);
+  // herdr-bot: the avatar editor's controller persists colour picks straight to the coordinator
+  // (controller.ts stageCharacter/commitStagedCharacter) without going through `agents` state, so
+  // nothing else on screen -- sidebar rows, pinned tiles, this same hero -- would reflect the new
+  // colour until the next full roster refresh. Once that RPC succeeds (persistedCharacter or
+  // hasExistingAvatar actually changes -- unlike renameAgent above, there is nothing to apply before
+  // the round trip, since the controller itself owns the request), mirror it into `agents`.
+  useEffect(() => {
+    const controller = avatarEditorSnapshot.controller;
+    if (controller == null) return;
+    let previous = controller.getSnapshot();
+    return controller.subscribe(() => {
+      const next = controller.getSnapshot();
+      const nextSnapshot = { avatarColor: next.persistedCharacter.avatarColor, avatarShape: next.persistedCharacter.avatarShape, hasExistingAvatar: next.hasExistingAvatar };
+      const changed = avatarCharacterChanged(
+        { avatarColor: previous.persistedCharacter.avatarColor, avatarShape: previous.persistedCharacter.avatarShape, hasExistingAvatar: previous.hasExistingAvatar },
+        nextSnapshot,
+      );
+      previous = next;
+      if (!changed) return;
+      setAgents((agents) => applyAvatarCharacter(agents, next.agentId, nextSnapshot));
+    });
+  }, [avatarEditorSnapshot.controller]);
   const asyncTasksAccountSlot = account?.kind === "logged-in" ? pinnedAccountKey : null;
   useEffect(() => {
     if (asyncTasksProvider == null || client == null || asyncTasksAccountSlot == null) {
@@ -1873,6 +1901,18 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     store={localToolPermissionStore}
     transportState={transport === "down" ? "down" : "connected"}
   />;
+  // herdr-bot: answering a blocked bot's approval/question card (transcript entry kind "prompt",
+  // rendered inline by PromptEntryCard via renderPromptEntry below).
+  const answerPendingPrompt = useCallback(async (botId: string, signature: string, answer: PendingPromptAnswer) => {
+    if (client == null) throw new Error("coordinator is unavailable for herdrBot.answerPrompt");
+    const summary = await client.call("herdrBot.answerPrompt", { id: botId, signature, ...answer });
+    // The reply is the bot's fresh summary; apply it the same way the agent-upserted push does.
+    const projected = projectRendererAgent(summary);
+    if (projected != null) setAgents((current) => sortRecentChats([projected, ...current.filter((agent) => agent.id !== projected.id)]));
+  }, [client]);
+  const openPendingPromptInHerdr = useCallback((botId: string) => {
+    void client?.call("herdrBot.focus", { id: botId }).catch(() => undefined);
+  }, [client]);
   const transcriptCardSecretEntries = useMemo(
     () => transcriptCardEntries.filter((entry): entry is SecretRequestEntry => entry.message.type === "secret-request"),
     [transcriptCardEntries]
@@ -2362,8 +2402,6 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
   }, [ackChatLoadedThrough, client]);
 
   const openAgent = useCallback(async (agentId: string) => {
-    const accountScopeGeneration = accountScopeGenerationRef.current;
-    const transportScopeGeneration = transportScopeGenerationRef.current;
     if (accountRef.current?.kind !== "logged-in") return;
     setTranscriptLoadError((current) => current?.agentId === agentId ? null : current);
     const hasLoadedEntries = entriesByAgentRef.current[agentId] != null;
@@ -2380,9 +2418,23 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       if (hasLoadedEntries) void resyncCachedChat(agentId);
       return;
     }
-    // herdr-bot: bump the request generation only once a fetch is really issued. The auto-open effect
-    // re-enters openAgent while the first fetch is in flight and returns early; bumping there made the
-    // in-flight reply look stale, so switching chats left the transcript empty and load-pending.
+    // herdr-bot: on launch the restored selection opens its chat before the coordinator port is
+    // serving. The ready/"connected" handlers bump transportScopeGeneration at exactly that moment,
+    // so a generation captured here-and-now was always stale by the time the reply arrived and the
+    // loaded page was thrown away in silence -- the first chat stayed empty until the next click.
+    // Wait for the port (a no-op once up), then capture the generations the reply is checked against.
+    try {
+      await client.ready;
+    } catch {
+      selectionStore.settle(agentId);
+      return;
+    }
+    if (accountRef.current?.kind !== "logged-in") return;
+    const accountScopeGeneration = accountScopeGenerationRef.current;
+    const transportScopeGeneration = transportScopeGenerationRef.current;
+    // Bump the request generation only once a fetch is really issued. The auto-open effect re-enters
+    // openAgent while the first fetch is in flight and returns early; bumping there made the in-flight
+    // reply look stale, so switching chats left the transcript empty and load-pending.
     const requestGeneration = ++openAgentRequestGenerationRef.current;
     const agentName = agentsRef.current.find((agent) => agent.id === agentId)?.name ?? UI_TEXT.title;
     try {
@@ -3771,11 +3823,15 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       failureCode: rosterAccessReadiness.rosterFailureCode
     });
   }, [connectionController, rosterAccessReadiness.hasReachedBox, rosterAccessReadiness.isPrivacyBlocked, rosterAccessReadiness.rosterFailureCode]);
-  const rosterListStatus = rosterAccessReadiness.isLoaded
-    ? agents.length === 0
-      ? <RosterStatus kind="empty" />
-      : null
-    : null;
+  // showRootEmptyWorkspace's own draft row (see the sidebar prop below) already says there are no
+  // bots yet -- "아직 만든 봇이 없습니다." under it would be redundant.
+  const rosterListStatus = showRootEmptyWorkspace
+    ? null
+    : rosterAccessReadiness.isLoaded
+      ? agents.length === 0
+        ? <RosterStatus kind="empty" />
+        : null
+      : null;
   const groupInfoPaneRoute = projectGroupInfoPaneRoute({
     agent: activeAgent ?? null,
     accountKey: account?.kind === "logged-in" ? pinnedAccountKey : null,
@@ -3852,9 +3908,14 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
                 onReorderPinnedAgents. Sections stay unwired here (sections={undefined}; no
                 onMoveAgentToSection/onRenameSection/...), so no per-section groups or section menus
                 render -- plan §2.2's "no section priority" call still stands for those. */}
-            <ConversationSidebar activeAgentId={newChatDraft == null ? activeAgentId : ""} agents={sidebarAgents} draftRow={newChatDraft == null ? undefined : { id: newChatDraft.requestId, name: t("New chat") }} isHostReachable={transport === "connected"} isPreviewEnabled={false} sections={undefined} sidebarLayout={renderedSidebarLayout} onResize={resizeSidebar} onResizeEnd={finishSidebarResize} onToggleSectionCollapsed={(sectionId, collapsed) => sidebarCollapseStore.setSectionCollapsed(sectionId, collapsed)} listStatus={rosterListStatus} pinnedAgentIds={pinnedAgentIds} onNewChat={startNewChatDraft} onOpenSearch={sidebarSearchTrigger} onOpenAgent={(agentId) => newChatDraft == null ? void openAgent(agentId) : openBotFromDraft(agentId)} onOpenProfile={sidebarProfileAction.onSelect} onRenameAgent={(agentId, name) => void renameAgent(agentId, name)} onReorderPinnedAgents={reorderPinnedAgents} onRequestDeleteAgent={(agent) => setDeleteAgent({ id: agent.id, name: agent.name, isGroup: agent.isGroup })} onTogglePin={toggleAgentPin} />
+            <ConversationSidebar activeAgentId={newChatDraft == null ? activeAgentId : ""} agents={sidebarAgents} draftRow={newChatDraft != null ? { id: newChatDraft.requestId, name: t("New chat") } : showRootEmptyWorkspace ? { id: "first-bot", name: t("Create your first Bot", "첫 Bot 만들기") } : undefined} isHostReachable={transport === "connected"} isPreviewEnabled={false} sections={undefined} sidebarLayout={renderedSidebarLayout} onResize={resizeSidebar} onResizeEnd={finishSidebarResize} onToggleSectionCollapsed={(sectionId, collapsed) => sidebarCollapseStore.setSectionCollapsed(sectionId, collapsed)} listStatus={rosterListStatus} pinnedAgentIds={pinnedAgentIds} onNewChat={startNewChatDraft} onOpenSearch={sidebarSearchTrigger} onOpenAgent={(agentId) => newChatDraft == null ? void openAgent(agentId) : openBotFromDraft(agentId)} onOpenProfile={sidebarProfileAction.onSelect} onRenameAgent={(agentId, name) => void renameAgent(agentId, name)} onReorderPinnedAgents={reorderPinnedAgents} onRequestDeleteAgent={(agent) => setDeleteAgent({ id: agent.id, name: agent.name, isGroup: agent.isGroup })} onTogglePin={toggleAgentPin} />
           </div>
-          <div className="hb-settings-footer"><SandButton leadingIcon="settings" onClick={() => setOverlay("settings")} variant="secondary">{t("Settings")}</SandButton></div>
+          <div className={renderedSidebarLayout.isCollapsed ? "hb-settings-footer hb-settings-footer--rail" : "hb-settings-footer"}>
+            {renderedSidebarLayout.isCollapsed ? <SandIconButton aria-label={t("New")} icon="plus" label={t("New")} onClick={startNewChatDraft} shape="circle" size="sm" title={t("New chat")} /> : null}
+            {renderedSidebarLayout.isCollapsed
+              ? <SandIconButton aria-label={t("Settings")} icon="settings" label={t("Settings")} onClick={() => setOverlay("settings")} shape="circle" size="sm" title={t("Settings")} />
+              : <SandButton leadingIcon="settings" onClick={() => setOverlay("settings")} variant="secondary">{t("Settings")}</SandButton>}
+          </div>
         </div>
         {workspaceRoute === "org-chart" ? <main className="sand-chat-stage"><Suspense fallback={null}><OrgChartWorkspaceView
           agents={orgChartAgents}
@@ -3898,7 +3959,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
                 resolveNoticeTargetAvatar={resolveNoticeTargetAvatar}
                 hasOlder={transcriptPaginationSnapshot.hasOlder}
                 isLoadingOlder={transcriptPaginationSnapshot.isLoadingOlder}
-                isAgentRunning={activeAgent.isRunning}
+                isAgentRunning={activeAgent.isRunning || (activeAgent.onboarding != null && activeAgent.onboarding.stage !== "ready" && activeAgent.onboarding.stage !== "failed")}
                 isTransportDown={transport === "down"}
                 loadOlder={loadOlderTranscript}
                 onCancelQueuedSend={cancelQueuedSend}
@@ -3909,6 +3970,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
                 onResendFailedSend={(entry) => void resendFailedSend(entry)}
                 renderMessageReactionActions={renderReactionActions}
                 renderComputerHandoff={(entry) => renderComputerHandoffEntry(entry, computer)}
+                renderPromptEntry={(entry) => <PromptEntryCard entry={entry} key={entry.id} onAnswer={answerPendingPrompt} onOpenInHerdr={openPendingPromptInHerdr} showAgentName={activeAgent.isGroup} />}
                 renderMessageReactionPills={renderReactionPills}
                 resolveAttachmentMedia={resolveAttachmentMedia}
                 readAttachmentBytes={(path, maxBytes) => bridge.readAttachmentBytes(path, maxBytes)}
@@ -3926,7 +3988,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           </main>
           <div className="sand-chat-input-dock">
             {localToolPermissionDock}
-            <ConversationComposer acceptedSendGeneration={composerClearGeneration} disabled={busy || client == null} draft={draft} editorProviders={editorProviders} notice={notice ?? (activeAgent.onboarding != null && activeAgent.onboarding.stage !== "ready" && activeAgent.onboarding.stage !== "failed" ? t("Setting up this bot…", "이 봇을 설정하는 중…") : null)} onChange={(value) => composerDraftStore.setDraft(activeAgent.id, value)} onClearReplyTarget={clearReplyTarget} onRemoveAttachment={removeAttachment} onStageFiles={stageFiles} onSubmit={submit} placeholder={composerPlaceholder(activeAgent.name, locale)} replyTarget={replyTarget} scopeKey={`${transcriptAccountSlot ?? "signed-out"}:${activeAgent.id}`} sendDisabled={activeAgent.onboarding != null && activeAgent.onboarding.stage !== "ready"} transcribeAudio={transcribeAudio} />
+            <ConversationComposer acceptedSendGeneration={composerClearGeneration} disabled={busy || client == null} draft={draft} editorProviders={editorProviders} notice={notice} onChange={(value) => composerDraftStore.setDraft(activeAgent.id, value)} onClearReplyTarget={clearReplyTarget} onRemoveAttachment={removeAttachment} onStageFiles={stageFiles} onSubmit={submit} placeholder={composerPlaceholder(activeAgent.name, locale)} replyTarget={replyTarget} scopeKey={`${transcriptAccountSlot ?? "signed-out"}:${activeAgent.id}`} sendDisabled={activeAgent.onboarding != null && activeAgent.onboarding.stage !== "ready"} transcribeAudio={transcribeAudio} />
           </div>
         </div>}
         {/* herdr-bot: the 4 asides below used to render as position:absolute overlay siblings *after*
@@ -3948,8 +4010,8 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
                 old "봇 아바타 변경" button); the editor opens inline right under it. */}
             <AgentSettingsPanel
               avatar={<AgentAvatar agentId={activeAgent.id} name={activeAgent.name} dataUrl={activeAgent.avatarDataUrl} shape={activeAgent.avatarShape} color={activeAgent.avatarColor} size="xl" isStatic />}
+              avatarImageSrc={resolveAgentAvatarMaskSrc({ agentId: activeAgent.id, dataUrl: activeAgent.avatarDataUrl, color: activeAgent.avatarColor })}
               avatarEditor={avatarEditorSnapshot.status === "ready" && avatarEditorSnapshot.controller != null ? <AvatarEditorView
-                agentIsGroup={activeAgent.isGroup}
                 controller={avatarEditorSnapshot.controller}
                 onClose={() => {
                   setAvatarEditorOpen(false);

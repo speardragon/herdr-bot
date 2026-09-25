@@ -1,6 +1,8 @@
 import { execFile } from "node:child_process";
 import { HerdrError, projectHerdrAgentInfo, type HerdrAgentInfo, type HerdrAgentStatus } from "./types.ts";
 
+export type HerdrReadSource = "visible" | "recent" | "recent-unwrapped" | "detection";
+
 export interface HerdrSessionInfo {
   readonly name: string;
   readonly running: boolean;
@@ -15,7 +17,13 @@ export interface HerdrCli {
   agentPrompt(args: { target: string; text: string; wait: boolean; until?: readonly HerdrAgentStatus[]; timeoutMs?: number }): Promise<HerdrAgentInfo | null>;
   agentRename(target: string, name: string | null): Promise<void>;
   agentFocus(target: string): Promise<void>;
-  agentRead(target: string, lines: number): Promise<string>;
+  /** `--source detection` is the plain-text bottom buffer herdr's own agent-state rules match against;
+   * `visible` is the rendered viewport. Default stays `visible` for the existing callers. */
+  agentRead(target: string, lines: number, source?: HerdrReadSource): Promise<string>;
+  /** Logical key names as herdr validates them: digits, "enter", "tab", "esc", "ctrl+c", … */
+  agentSendKeys(target: string, keys: readonly string[]): Promise<void>;
+  /** Raw text into a pane (no Enter appended) -- for typing into a form field the agent is showing. */
+  paneSendText(paneId: string, text: string): Promise<void>;
   workspaceList(): Promise<{ workspace_id: string; label: string }[]>;
   workspaceCreate(args: { cwd: string; label: string }): Promise<{ workspaceId: string; rootPaneId: string }>;
   tabCreate(args: { workspaceId: string; cwd: string; label: string }): Promise<{ tabId: string; rootPaneId: string }>;
@@ -137,8 +145,8 @@ function agentPromptArgv(args: { target: string; text: string; wait: boolean; un
   ];
 }
 
-type AgentMethods = Pick<HerdrCli, "agentList" | "agentGet" | "agentStart" | "agentPrompt" | "agentRename" | "agentFocus" | "agentRead">;
-type WorkspaceMethods = Pick<HerdrCli, "workspaceList" | "workspaceCreate" | "tabCreate" | "paneClose" | "notify">;
+type AgentMethods = Pick<HerdrCli, "agentList" | "agentGet" | "agentStart" | "agentPrompt" | "agentRename" | "agentFocus" | "agentRead" | "agentSendKeys">;
+type WorkspaceMethods = Pick<HerdrCli, "workspaceList" | "workspaceCreate" | "tabCreate" | "paneClose" | "paneSendText" | "notify">;
 
 function createAgentMethods(runner: RawHerdrRunner): AgentMethods {
   return {
@@ -162,10 +170,14 @@ function createAgentMethods(runner: RawHerdrRunner): AgentMethods {
     async agentFocus(target) {
       await runJson(runner, ["agent", "focus", target]);
     },
-    async agentRead(target, lines) {
-      const { stdout, stderr, code } = await runner(["agent", "read", target, "--source", "visible", "--lines", String(lines)]);
+    async agentRead(target, lines, source = "visible") {
+      const { stdout, stderr, code } = await runner(["agent", "read", target, "--source", source, "--lines", String(lines)], { timeoutMs: 10_000 });
       if (code !== 0) throw errorFromStderr(stderr, "agent read failed");
       return stdout;
+    },
+    async agentSendKeys(target, keys) {
+      if (keys.length === 0) return;
+      await runJson(runner, ["agent", "send-keys", target, ...keys], { timeoutMs: 10_000 });
     },
   };
 }
@@ -192,6 +204,9 @@ function createWorkspaceMethods(runner: RawHerdrRunner): WorkspaceMethods {
     },
     async paneClose(paneId) {
       await runJson(runner, ["pane", "close", paneId]);
+    },
+    async paneSendText(paneId, text) {
+      await runJson(runner, ["pane", "send-text", paneId, text], { timeoutMs: 10_000 });
     },
     async notify(title, body) {
       await runJson(runner, ["notification", "show", title, "--body", body]);

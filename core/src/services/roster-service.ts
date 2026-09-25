@@ -9,6 +9,7 @@ import { HerdrError, type HerdrAgentInfo } from "../herdr/types.ts";
 import { log } from "../log.ts";
 import type { BotSystemEvent } from "../model/bot-system-events.ts";
 import { isValidBotId, makeRoomId, suggestBotId } from "../model/ids.ts";
+import { randomAvatarColor } from "../model/avatar-colors.ts";
 import type { BotProfile, PermissionMode, ProfileStore } from "../store/profile-store.ts";
 import type { RoomConfig, RoomStore } from "../store/room-store.ts";
 import { WorkspaceRegistry } from "./workspace-registry.ts";
@@ -65,7 +66,7 @@ export interface RosterServiceDeps {
 }
 
 function toMember(profile: BotProfile): GroupMember {
-  return { id: profile.id, name: profile.name, description: profile.description };
+  return { id: profile.id, name: profile.name, description: profile.description, ...(profile.title == null || profile.title.trim().length === 0 ? {} : { title: profile.title.trim() }) };
 }
 
 function normalizeLaunchOptions(kind: string, args: CreateBotArgs): AgentLaunchOptions {
@@ -118,7 +119,7 @@ export class RosterService {
     this.#deps.onChatRemoved?.(id);
   }
 
-  updateProfile(id: string, patch: { readonly name?: string; readonly description?: string; readonly title?: string; readonly notifyOnUpdatesEnabled?: boolean; readonly isHiddenFromSidebar?: boolean }): BotProfile | null {
+  updateProfile(id: string, patch: { readonly name?: string; readonly description?: string; readonly title?: string; readonly notifyOnUpdatesEnabled?: boolean; readonly isHiddenFromSidebar?: boolean; readonly avatarShape?: string | null; readonly avatarColor?: string | null }): BotProfile | null {
     const current = this.#deps.profiles.get(id);
     if (current == null) return null;
     const next: BotProfile = {
@@ -128,6 +129,10 @@ export class RosterService {
       ...(patch.title == null ? {} : { title: patch.title.trim() }),
       ...(patch.notifyOnUpdatesEnabled == null ? {} : { notifyOnUpdatesEnabled: patch.notifyOnUpdatesEnabled }),
       ...(patch.isHiddenFromSidebar == null ? {} : { isHiddenFromSidebar: patch.isHiddenFromSidebar }),
+      // Unlike the fields above, null is a meaningful value here (reset to the default persona mark),
+      // so presence in the patch -- not nullishness -- decides whether it is applied.
+      ...("avatarShape" in patch ? { avatarShape: patch.avatarShape ?? null } : {}),
+      ...("avatarColor" in patch ? { avatarColor: patch.avatarColor ?? null } : {}),
       updatedAt: this.#now(),
     };
     this.#deps.profiles.save(next);
@@ -258,12 +263,6 @@ export class RosterService {
     return { status: result.status, profile: this.#saveProvisioned(id, merged) };
   }
 
-  /** Sends the identity brief and reports whether herdr confirmed it -- unlike the fire-and-forget
-   * `#sendBrief`, so the onboarding sequence can hold back the greeting when the brief did not land. */
-  async briefReservedBot(profile: BotProfile): Promise<boolean> {
-    return (await this.#promptBrief(profile)).ok;
-  }
-
   /** Persists a provisioning step's profile, but never resurrects a profile deleted mid-provision. */
   #saveProvisioned(id: string, profile: BotProfile): BotProfile {
     if (this.#deps.profiles.get(id) == null) throw new RosterError("unknown_bot", `bot "${id}" was removed during provisioning`);
@@ -328,7 +327,7 @@ export class RosterService {
     return {
       id, name: args.name.trim().length > 0 ? args.name.trim() : id, description: args.description ?? "", kind, cwd, permissionMode,
       model: launchOptions.model, reasoningEffort: launchOptions.reasoningEffort,
-      avatarShape: args.avatarShape ?? null, avatarColor: args.avatarColor ?? null, adopted: false,
+      avatarShape: args.avatarShape ?? null, avatarColor: args.avatarColor ?? randomAvatarColor(), adopted: false,
       herdr: { paneId: location.paneId, workspaceId: location.workspaceId, sessionId },
       notifyOnUpdatesEnabled: true, isHiddenFromSidebar: false, createdAt: now, updatedAt: now,
     };
@@ -396,7 +395,7 @@ export class RosterService {
     const now = this.#now();
     return {
       id, name: args.name.trim().length > 0 ? args.name.trim() : id, description: args.description ?? "", kind: info.agent ?? "unknown", cwd: info.cwd ?? this.#deps.config.defaultCwd,
-      permissionMode: args.permissionMode ?? "ask", avatarShape: args.avatarShape ?? null, avatarColor: args.avatarColor ?? null, adopted: true,
+      permissionMode: args.permissionMode ?? "ask", avatarShape: args.avatarShape ?? null, avatarColor: args.avatarColor ?? randomAvatarColor(), adopted: true,
       model: null, reasoningEffort: null,
       herdr: { paneId: info.pane_id, workspaceId: info.workspace_id, sessionId: info.agent_session?.value ?? null },
       notifyOnUpdatesEnabled: true, isHiddenFromSidebar: false, createdAt: now, updatedAt: now,

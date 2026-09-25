@@ -5,8 +5,10 @@ import { botMessageEntry } from "../src/model/entries.ts";
 import { OFFLINE_RUNTIME, type BotRuntime } from "../src/herdr/types.ts";
 import type { StoredEntry } from "../src/store/transcript-store.ts";
 import { sampleProfile, sampleRoom } from "./helpers/fixtures.ts";
+import { parseBlockedPrompt } from "../src/herdr/blocked-prompt.ts";
+import { ASK_SINGLE_SCREEN } from "./helpers/prompt-screens.ts";
 
-const RUNTIME: BotRuntime = { status: "idle", paneId: "w1:p2", workspaceId: "w1", sessionId: "s1", kind: "claude" };
+const RUNTIME: BotRuntime = { status: "idle", paneId: "w1:p2", workspaceId: "w1", sessionId: "s1", kind: "claude", prompt: null };
 const VIEW = { lastViewedAt: 10, lastActivityAt: 20, isManuallyUnread: false, lastReadSeq: 0, lastIncomingSeq: 3, lastMessageAt: 20 };
 const LAST: StoredEntry = { ...botMessageEntry({ content: "hello there", author: { id: "reviewer", name: "Reviewer" }, timestampMs: 20 }), seq: 3, id: "e3" } as StoredEntry;
 
@@ -50,4 +52,13 @@ test("room summary is a group with member ids and turn activity", () => {
   assert.equal(summary.hasUnread, false);
   assert.equal(summary.lastReadSeq, 3);
   assert.equal(summary.herdrBot, null);
+});
+
+test("bot summary carries the blocked prompt on herdrBot.prompt and drops it when not blocked", () => {
+  const prompt = parseBlockedPrompt(ASK_SINGLE_SCREEN)!;
+  const blocked = botSummary({ profile: sampleProfile(), runtime: { ...RUNTIME, status: "blocked", prompt }, last: null, view: VIEW, isTurnActive: false });
+  assert.equal(blocked.herdrBot?.prompt?.question, "Which color do you prefer?");
+  assert.deepEqual(blocked.awaitingUserResponse, { reason: "approval" });
+  const idle = botSummary({ profile: sampleProfile(), runtime: RUNTIME, last: null, view: VIEW, isTurnActive: false });
+  assert.equal(idle.herdrBot?.prompt, null);
 });

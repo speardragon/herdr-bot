@@ -27,7 +27,7 @@ const env = {
   ...process.env,
   HERDR_BOT_HOME: home,
   HERDR_BIN_PATH: fakeBin,
-  HERDR_SOCKET_PATH: join(home, "no-herdr.sock"),
+  HERDR_BOT_SOCKET_PATH: join(home, "no-herdr.sock"),
   FAKE_HERDR_STATE: statePath,
   FAKE_HERDR_LOG: join(home, "fake-herdr-log.jsonl"),
   HERDR_BOT_USER_NAME: process.env.HERDR_BOT_USER_NAME ?? "ray",

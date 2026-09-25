@@ -13,6 +13,7 @@ import { installFakeHerdr, type FakeHerdrState } from "./helpers/fake-herdr-stat
 import { makeTempHome } from "./helpers/temp-home.ts";
 import { sampleProfile } from "./helpers/fixtures.ts";
 import type { BotSystemEvent } from "../src/model/bot-system-events.ts";
+import { AVATAR_COLORS } from "../src/model/avatar-colors.ts";
 
 function harness(state: FakeHerdrState = { agents: [], workspaces: [] }) {
   const temp = makeTempHome();
@@ -40,6 +41,7 @@ test("createBot spawns into a new workspace for a new cwd, then a tab for the ne
     assert.equal(first.herdr.paneId, "w1:p1");
     assert.equal(first.herdr.workspaceId, "w1");
     assert.equal(first.cwd, "/tmp/repo");
+    assert.ok(AVATAR_COLORS.includes(first.avatarColor as (typeof AVATAR_COLORS)[number]));
     const second = await h.service.createBot({ id: "fixer", name: "Fixer", kind: "codex", permissionMode: "auto" });
     assert.equal(second.herdr.paneId, "w1:p100");
     const log = h.fake.readLog().map((argv) => argv.join(" "));
@@ -77,6 +79,16 @@ test("createBot rejects invalid launch selections before making a pane", async (
     await assert.rejects(h.service.createBot({ id: "unsupported", name: "Unsupported", kind: "gemini", reasoningEffort: "high" }), (error: unknown) => error instanceof RosterError && error.code === "invalid_launch_options");
     await assert.rejects(h.service.createBot({ id: "unknown-effort", name: "Unknown effort", kind: "codex", reasoningEffort: "ultra" as never }), (error: unknown) => error instanceof RosterError && error.code === "invalid_launch_options");
     assert.equal(h.fake.readLog().some((argv) => argv[0] === "workspace" && argv[1] === "create"), false);
+  } finally {
+    h.temp.cleanup();
+  }
+});
+
+test("createBot preserves an explicitly selected avatar color", async () => {
+  const h = harness();
+  try {
+    const bot = await h.service.createBot({ id: "green-bot", name: "Green", avatarColor: "green" });
+    assert.equal(bot.avatarColor, "green");
   } finally {
     h.temp.cleanup();
   }

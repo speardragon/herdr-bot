@@ -27,7 +27,7 @@ test("resolveConfig honours env overrides and ignores garbage numbers", () => {
   const config = resolveConfig({
     HERDR_BOT_HOME: "/tmp/hb",
     HERDR_BIN_PATH: "/opt/herdr",
-    HERDR_SOCKET_PATH: "/tmp/h.sock",
+    HERDR_BOT_SOCKET_PATH: "/tmp/h.sock",
     HERDR_BOT_USER_NAME: "ray",
     HERDR_BOT_TURN_TIMEOUT_MS: "abc",
     HERDR_BOT_DEFAULT_KIND: "codex",
@@ -47,4 +47,15 @@ test("hostPaths lays out bots, rooms, and state", () => {
   assert.equal(hostPaths.roomTranscript("/h", "room-x-1a2b"), "/h/rooms/room-x-1a2b/transcript.jsonl");
   assert.equal(hostPaths.viewState("/h"), "/h/state/view-state.json");
   assert.equal(hostPaths.workspaces("/h"), "/h/state/workspaces.json");
+});
+
+// herdr injects HERDR_SOCKET_PATH into every pane it manages, pointing at the session that terminal
+// lives in -- usually `default`, which holds none of the bots' panes. Honouring it (as the config once
+// did) made an app launched from a herdr pane subscribe to the wrong session: every per-pane
+// subscription came back pane_not_found and retried forever, so no live status ever arrived.
+test("resolveConfig ignores herdr's injected HERDR_SOCKET_PATH and stays on its own session's socket", () => {
+  const config = resolveConfig({ HERDR_SOCKET_PATH: "/Users/x/.config/herdr/herdr.sock", HERDR_ENV: "1", HERDR_PANE_ID: "w3M:p2" });
+  assert.equal(config.herdrSocketPath, join(homedir(), ".config", "herdr", "sessions", "herdr-bot", "herdr.sock"));
+  const overridden = resolveConfig({ HERDR_SOCKET_PATH: "/Users/x/.config/herdr/herdr.sock", HERDR_BOT_SOCKET_PATH: "/tmp/mine.sock" });
+  assert.equal(overridden.herdrSocketPath, "/tmp/mine.sock", "the app's own override still wins");
 });

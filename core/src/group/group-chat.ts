@@ -2,6 +2,8 @@ export interface GroupMember {
   readonly id: string;
   readonly name: string;
   readonly description: string;
+  /** The optional label under the bot's name in Agent Settings (e.g. "리서치, 마케팅"); absent for rooms' view of peers. */
+  readonly title?: string;
 }
 
 export type GroupSpeaker =

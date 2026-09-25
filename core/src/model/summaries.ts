@@ -1,5 +1,6 @@
 import type { BotOnboarding } from "../bots/onboarding.ts";
 import type { ReasoningEffort } from "../bots/launch-args.ts";
+import type { BlockedPrompt } from "../herdr/blocked-prompt.ts";
 import type { BotRuntime } from "../herdr/types.ts";
 import type { BotProfile } from "../store/profile-store.ts";
 import type { RoomConfig } from "../store/room-store.ts";
@@ -21,6 +22,9 @@ export interface HerdrBotFacts {
   readonly reasoningEffort: ReasoningEffort | null;
   /** Present only while/after a quick-created bot is being onboarded; null for every other bot. */
   readonly onboarding: BotOnboarding | null;
+  /** The approval/question form the bot's pane is showing while `status` is "blocked" (answered via
+   * the `herdrBot.answerPrompt` RPC); null otherwise. */
+  readonly prompt: BlockedPrompt | null;
 }
 
 /** Field set read by the grok-bot renderer's projectRendererAgent(). */
@@ -121,7 +125,7 @@ export function botSummary(args: {
     isGroup: false,
     memberIds: [],
     conversationPartnerIds: [],
-    herdrBot: { kind: profile.kind, status: runtime.status, paneId: runtime.paneId ?? profile.herdr.paneId, cwd: profile.cwd, adopted: profile.adopted, permissionMode: profile.permissionMode, model: profile.model, reasoningEffort: profile.reasoningEffort, onboarding: profile.onboarding ?? null },
+    herdrBot: { kind: profile.kind, status: runtime.status, paneId: runtime.paneId ?? profile.herdr.paneId, cwd: profile.cwd, adopted: profile.adopted, permissionMode: profile.permissionMode, model: profile.model, reasoningEffort: profile.reasoningEffort, onboarding: profile.onboarding ?? null, prompt: runtime.prompt },
   };
 }
 

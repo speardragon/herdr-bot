@@ -309,13 +309,13 @@ button, textarea, input { font: inherit; }
   padding: 0 var(--cursor-spacing-3) 0 40px;
   color: var(--cursor-text-primary);
   font: inherit;
-  font-size: 14px;
+  font-size: 16px;
   background: transparent;
   border: 0;
   border-bottom: .5px solid var(--cursor-stroke-tertiary);
   outline: none;
 }
-.sand-command-palette > input::placeholder { color: var(--cursor-text-tertiary); }
+.sand-command-palette > input::placeholder { color: var(--cursor-text-quaternary, var(--cursor-text-tertiary)); }
 .sand-command-palette__search-icon,
 .sand-command-palette__back {
   position: absolute;
@@ -495,10 +495,20 @@ button, textarea, input { font: inherit; }
 /* 2. Sidebar header controls sit right, clear of the macOS traffic lights at (16,15). */
 .sand-agents-sidebar__header { justify-content: flex-end; }
 
-/* 3. The whole sidebar column is chrome-coloured (plugins + account rows included); the aside
- *    no longer paints its own border so there is a single edge. */
-.sand-sidebar-column { min-height: 0; background: var(--cursor-bg-chrome); border-right: 1px solid var(--cursor-stroke-tertiary); }
+/* 3. The whole sidebar column is chrome-coloured (plugins + account rows included); the aside's own
+ *    border only ever covered its own box (not the settings footer below it), so the edge is drawn
+ *    on the column instead -- one line for the full height, a soft one since the chrome-vs-elevated
+ *    background contrast against the chat area already does most of the separating. */
+.sand-sidebar-column { min-height: 0; background: var(--cursor-bg-chrome); border-right: 1px solid var(--cursor-stroke-quaternary); }
 .sand-sidebar-column .sand-agents-sidebar { border-right: 0; }
+/* The rail's new-bot and settings controls are SandIconButtons, whose size atomics pin them
+ * to 24px with a four-fold :not(#\#) boost. Match that boost so the two stacked circles
+ * read at the same scale as the avatar column instead of shrinking inside the 88px rail. */
+.hb-settings-footer.hb-settings-footer--rail > button:not(#\#):not(#\#):not(#\#):not(#\#) {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+}
 
 /* 4. The chat title lives in the chat header; drop the duplicate titlebar label. The transport dot
  *    is shown only while connecting or down (the sidebar unread dots share the class, hence the
@@ -520,9 +530,26 @@ button, textarea, input { font: inherit; }
 .sand-virtual-transcript { padding: 24px 24px 8px; }
 .sand-chat-input-dock { padding: 8px 24px 18px; }
 
-/* 6. Recovered transcript chrome carried dark-theme literals; use theme tokens. */
-.sand-message-typing { background: var(--cursor-bg-secondary); }
-.sand-message-typing__dot { background: var(--cursor-text-tertiary); }
+/* 6. Recovered transcript chrome carried dark-theme literals; use theme tokens. Both dot rows (the
+ * inline streaming placeholder and the end-of-transcript "bot is working" row -- also shown while a
+ * new bot is still being set up, in place of the old header "설정 중…" label) get a staggered bounce
+ * instead of sitting static, so message loading reads as active rather than stalled. */
+.sand-message-typing,
+.sand-typing-indicator { background: var(--cursor-bg-secondary); }
+.sand-message-typing__dot,
+.sand-typing-indicator span { background: var(--cursor-text-tertiary); animation: hb-typing-bounce 1.2s ease-in-out infinite; }
+.sand-message-typing__dot:nth-child(2),
+.sand-typing-indicator span:nth-child(2) { animation-delay: .15s; }
+.sand-message-typing__dot:nth-child(3),
+.sand-typing-indicator span:nth-child(3) { animation-delay: .3s; }
+@keyframes hb-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: .45; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sand-message-typing__dot,
+  .sand-typing-indicator span { animation: none; opacity: .8; }
+}
 .sand-transcript-time-separator { color: var(--cursor-text-tertiary); }
 .sand-message-hover-actions__button { color: var(--cursor-text-secondary); background: var(--cursor-bg-elevated); border-color: var(--cursor-stroke-secondary); }
 .sand-message-hover-actions__button:focus-visible { color: var(--cursor-text-primary); background: var(--cursor-bg-secondary); outline-color: var(--sand-border-accent); }
@@ -550,9 +577,15 @@ button, textarea, input { font: inherit; }
 }
 /* herdr-bot: tighten a non-pinned row's own hit area -- less horizontal breathing room around the
  * whole clickable button, and less gap between the avatar and the name+preview column next to it.
- * Only the row's own left/right inset changes (top/bottom stay 8px); pinned tiles set their own
- * padding/gap (sand-agent-item--tile, higher specificity) and are unaffected. */
-.sand-agent-item { gap: 6px; padding: 2px; }
+ * Pinned tiles set their own padding/gap (sand-agent-item--tile, higher specificity) and are
+ * unaffected.
+ *
+ * The right inset is intentionally larger than the other three: the CSS box is perfectly symmetric
+ * at an even 2px, but the avatar (an organic drawn/photo shape that never fills its own 44px square)
+ * leaves visible background around itself before the row edge, while the trailing time/unread-dot
+ * are tight, edge-hugging shapes with no such built-in slack -- so an even padding still reads as
+ * "no padding on the right". The extra 4px on that side is what actually balances the two visually. */
+.sand-agent-item { gap: 6px; padding: 2px 6px 2px 2px; }
 
 /* herdr-bot: `.sand-agents-list` (view.css) is `overflow: auto` with NO `scrollbar-gutter`, so once
  * the roster overflows, a classic (non-overlay) scrollbar reserves ~15px of layout width right where
@@ -603,10 +636,15 @@ button, textarea, input { font: inherit; }
  * still took up inline layout space next to the visible one, pushing it off-centre. Stack them. */
 .sand-prompt-send > span { position: relative; display: inline-block; width: 16px; height: 16px; }
 .sand-prompt-send > span > .ui-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+/* min-height (34px) has to equal padding-top + line-height + padding-bottom, or a single-line
+ * placeholder/typed line sits off-centre (the browser stacks block content from the top, so any
+ * leftover slack between the content's own height and min-height lands entirely below it). 4px
+ * left/right (the requested value) + 7px top/bottom is the only split that both keeps the box at
+ * 34px and centers a 20px line inside it: 7 + 20 + 7 = 34. */
 .sand-prompt-field {
   min-height: 34px;
   padding: 7px 4px;
-  font-size: var(--cursor-font-size-base);
+  font-size: var(--cursor-font-size-lg);
   line-height: 20px;
 }
 /* Tiptap renders each line as a <p>; with no reset it keeps the browser's default paragraph

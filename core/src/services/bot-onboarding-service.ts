@@ -1,12 +1,11 @@
 import type { HostConfig } from "../config.ts";
-import { buildGreetingPrompt, isValidRequestId, reservedBotId, type BotOnboarding, type OnboardingStage, type QuickCreateRequest } from "../bots/onboarding.ts";
-import { buildDmTurnPrompt } from "../bots/prompts.ts";
+import { greetingText, isValidRequestId, reservedBotId, type BotOnboarding, type OnboardingStage, type QuickCreateRequest } from "../bots/onboarding.ts";
 import { log } from "../log.ts";
-import type { TurnOutcome } from "../group/orchestrator.ts";
 import type { ChatService } from "./chat-service.ts";
 import { RosterError, type RosterService } from "./roster-service.ts";
 import type { TurnService } from "./turn-service.ts";
 import type { BotProfile, ProfileStore } from "../store/profile-store.ts";
+import { randomAvatarColor } from "../model/avatar-colors.ts";
 
 export interface BotOnboardingDeps {
   readonly config: HostConfig;
@@ -15,14 +14,6 @@ export interface BotOnboardingDeps {
   readonly chat: ChatService;
   readonly turns: TurnService;
   readonly now?: () => number;
-}
-
-function greetingError(outcome: TurnOutcome): string {
-  switch (outcome) {
-    case "blocked": return "the bot is waiting for an approval or login in its herdr pane; resolve it there, then retry setup";
-    case "offline": return "the bot's herdr agent went offline before it could greet you; retry setup";
-    default: return "the bot did not send its first greeting; retry setup";
-  }
 }
 
 /**
@@ -105,9 +96,10 @@ export class BotOnboardingService {
   async #provision(id: string, requestId: string, locale: "ko" | "en"): Promise<void> {
     try {
       if (this.#gone(id)) return;
-      // Spawn, brief, and greeting all run under one acquisition of the bot's execution lock so a
-      // user DM turn cannot slip a prompt in before the identity brief (or hit the still-spawning
-      // agent and report a spurious "offline"). deleteBot never takes the lock, so delete still wins.
+      // Provision under the bot lock so a user DM cannot race the still-spawning agent. The initial
+      // greeting is app-owned deterministic UI content, not an agent turn: terminal agents classify
+      // programmatic prompts as pasted content and may correctly refuse them as prompt injection.
+      // Writing the greeting directly removes that unreliable and unnecessary model round trip.
       await this.#deps.turns.withBotLock(id, async () => {
         if (this.#gone(id)) return;
         const provisioned = await this.#deps.roster.provisionReservedBot(id);
@@ -116,23 +108,8 @@ export class BotOnboardingService {
           this.#setStage(id, "failed", `finish first-run setup in the herdr pane (${provisioned.profile.herdr.paneId ?? "unknown"}), then retry`);
           return;
         }
-        this.#setStage(id, "briefing");
-        const briefed = await this.#deps.roster.briefReservedBot(this.#currentProfile(id));
-        if (this.#gone(id)) return;
-        if (!briefed) {
-          this.#setStage(id, "failed", "the bot did not confirm its setup briefing; retry setup");
-          return;
-        }
-        this.#setStage(id, "greeting");
-        const result = await this.#deps.turns.runGreetingTurn(id, this.#greetingPrompt(id, locale));
-        if (this.#gone(id)) return;
-        // The transcript key is the source of truth: if the greeting landed, a later CLI wait error
-        // (timeout/stalled) must NOT roll the bot back to a setup failure.
-        if (this.#deps.chat.findByOnboardingKey(id, requestId) != null) {
-          this.#setStage(id, "ready");
-          return;
-        }
-        this.#setStage(id, "failed", greetingError(result.outcome));
+        const profile = this.#currentProfile(id);
+        this.#deps.chat.appendOnboardingGreeting(id, { id, name: profile.name }, greetingText(locale), requestId);
       });
     } catch (error) {
       // The profile was removed mid-provision (stop/delete): do not resurrect it.
@@ -145,12 +122,6 @@ export class BotOnboardingService {
       }
       this.#setStage(id, "failed", error instanceof Error ? error.message : String(error));
     }
-  }
-
-  #greetingPrompt(id: string, locale: "ko" | "en"): string {
-    const profile = this.#currentProfile(id);
-    const dm = buildDmTurnPrompt({ bot: { id, name: profile.name, description: profile.description }, chatId: id, userName: this.#deps.config.userName, newMessages: [], cliPath: this.#deps.config.cliPath });
-    return `${dm}\n${buildGreetingPrompt(id, locale)}`;
   }
 
   #reservedProfile(id: string, request: QuickCreateRequest): BotProfile {
@@ -169,7 +140,7 @@ export class BotOnboardingService {
       model: null,
       reasoningEffort: null,
       avatarShape: null,
-      avatarColor: null,
+      avatarColor: request.avatarColor ?? randomAvatarColor(),
       adopted: false,
       herdr: { paneId: null, workspaceId: null, sessionId: null },
       notifyOnUpdatesEnabled: true,

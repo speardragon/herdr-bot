@@ -1,0 +1,147 @@
+/* herdr-bot: a blocked bot's approval / question form as an inline transcript card (entry kind
+ * "prompt"), sized like the bot's own bubbles: one rounded card with the question + close (Esc), a
+ * stacked list of lettered rows, a free-text field when the form takes one. Once answered the list
+ * collapses to the chosen row with a check. */
+/* Deliberately its own class, not `.sand-transcript-row` (production.css zeroes that one out --
+ * ordinary messages get their spacing from `.sand-message-action-anchor` instead, which this card
+ * has no equivalent of): without a bottom margin here the card sits flush against whatever follows
+ * it -- in particular the typing indicator that appears the moment an option is chosen. */
+.hb-prompt-row { display: flex; flex-direction: column; align-items: flex-start; margin: 0 0 22px; }
+
+.hb-prompt-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: min(100%, 700px);
+  padding: 10px 12px 12px;
+  color: var(--cursor-text-primary);
+  background: var(--sand-fill-bubble-agent, var(--cursor-bg-secondary));
+  border-radius: 18px;
+  font-size: var(--cursor-font-size-base, 14px);
+  line-height: 20px;
+}
+
+.hb-prompt-card__header { display: flex; align-items: flex-start; gap: 10px; }
+.hb-prompt-card__heading { display: flex; flex: 1 1 auto; flex-direction: column; gap: 1px; min-width: 0; }
+.hb-prompt-card__agent,
+.hb-prompt-card__title { color: var(--cursor-text-secondary); font-size: 12px; line-height: 16px; }
+.hb-prompt-card__question { margin: 0; font-size: inherit; font-weight: 600; line-height: inherit; overflow-wrap: anywhere; }
+.hb-prompt-card__progress { color: var(--cursor-text-tertiary); font-weight: 400; }
+.hb-prompt-card__close {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: -2px -4px 0 0;
+  padding: 0;
+  color: var(--cursor-text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.hb-prompt-card__close:hover { color: var(--cursor-text-primary); background: var(--cursor-bg-hover); }
+.hb-prompt-card__close:disabled { cursor: default; opacity: .5; }
+
+/* Permission cards show the command the agent wants to run; question cards show review bullets. */
+.hb-prompt-card__body { display: flex; flex-direction: column; gap: 1px; margin: 6px 0 0; color: var(--cursor-text-secondary); font-size: 12px; line-height: 17px; }
+.hb-prompt-card__body[data-mono="true"] { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; white-space: pre-wrap; }
+.hb-prompt-card__body[data-mono="true"] > span:first-child { color: var(--cursor-text-primary); }
+
+.hb-prompt-card__options {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  background: var(--cursor-bg-tertiary);
+  border: 1px solid var(--cursor-stroke-quaternary);
+  border-radius: 10px;
+}
+.hb-prompt-card__options > li + li { border-top: 1px solid var(--cursor-stroke-quaternary); }
+.hb-prompt-card__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  color: var(--cursor-text-primary);
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+.hb-prompt-card__option { cursor: pointer; }
+.hb-prompt-card__option:hover:not(:disabled) { background: var(--cursor-bg-hover); }
+.hb-prompt-card__option:focus-visible { outline: 2px solid var(--sand-border-accent, var(--cursor-text-accent)); outline-offset: -2px; }
+.hb-prompt-card__option:disabled { cursor: default; }
+.hb-prompt-card__row--settled { color: var(--cursor-text-secondary); }
+.hb-prompt-card__row--settled .hb-prompt-card__key { color: var(--cursor-text-tertiary); }
+.hb-prompt-card__key {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  color: var(--cursor-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  background: var(--cursor-bg-secondary);
+  border-radius: 5px;
+}
+.hb-prompt-card__checkbox {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: var(--cursor-text-invert);
+  font-size: 11px;
+  background: var(--cursor-bg-input);
+  border: 1px solid var(--cursor-stroke-quaternary);
+  border-radius: 4px;
+}
+.hb-prompt-card__checkbox[data-checked="true"] { background: var(--cursor-text-primary); border-color: var(--cursor-text-primary); }
+.hb-prompt-card__label { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.hb-prompt-card__label > small { color: var(--cursor-text-tertiary); font-size: 12px; line-height: 16px; }
+.hb-prompt-card__label--muted { color: var(--cursor-text-tertiary); }
+.hb-prompt-card__check { flex: 0 0 auto; color: var(--cursor-text-secondary); }
+
+.hb-prompt-card__text { display: flex; gap: 6px; margin: 8px 0 0; }
+.hb-prompt-card__text > input {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  min-width: 0;
+  height: 38px;
+  padding: 0 12px;
+  color: var(--cursor-text-primary);
+  font: inherit;
+  background: var(--cursor-bg-input);
+  border: 1px solid var(--cursor-stroke-quaternary);
+  border-radius: 10px;
+  outline: none;
+}
+.hb-prompt-card__text > input::placeholder { color: var(--cursor-text-tertiary); }
+.hb-prompt-card__text > input:focus { border-color: var(--cursor-stroke-primary); }
+.hb-prompt-card__text > button,
+.hb-prompt-card__actions > button {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 12px;
+  color: var(--cursor-text-invert);
+  font: inherit;
+  font-size: 13px;
+  background: var(--cursor-text-primary);
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.hb-prompt-card__text > button:disabled,
+.hb-prompt-card__actions > button:disabled { cursor: default; opacity: .4; }
+.hb-prompt-card__actions { display: flex; justify-content: flex-end; gap: 6px; margin: 8px 0 0; }
+.hb-prompt-card__actions > button { height: 32px; }
+.hb-prompt-card__actions > button[data-variant="secondary"] { color: var(--cursor-text-primary); background: var(--cursor-bg-tertiary); border: 1px solid var(--cursor-stroke-quaternary); }
+.hb-prompt-card__error { margin: 8px 0 0; color: var(--sand-text-danger, #d24848); font-size: 12px; line-height: 16px; }

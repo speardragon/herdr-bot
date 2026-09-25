@@ -75,3 +75,20 @@ test("bot relay prompt identifies the requester and explains both handoffs", () 
   assert.match(prompt, /summarize the received result to the user/);
   assert.equal(formatGroupLine({ speaker: { kind: "member", id: "bot-a", name: "Ava" }, content: "Done" }, "bot-a"), "Ava (bot id: bot-a) (you): Done");
 });
+
+test("every turn prompt restates the bot's current name, label and persona so a profile edit is noticed", () => {
+  const labeled = { id: "reviewer", name: "Ava", description: "terse senior reviewer", title: "리서치, 마케팅" };
+  const dm = buildDmTurnPrompt({ bot: labeled, chatId: "reviewer", userName: "ray", cliPath: cli, newMessages: [] });
+  assert.match(dm, /You are "Ava" — 리서치, 마케팅\. Your persona: terse senior reviewer/);
+  assert.match(dm, /differs from earlier turns/);
+  assert.match(dm, /profile update --name/);
+  assert.match(dm, /--label/);
+  assert.match(dm, /Wait for the command to succeed/);
+  const room = buildRoomTurnPrompt({ room: { id: "room-x-1", name: "x", description: "" }, member: labeled, peers: [fixer], newMessages: [], cliPath: cli });
+  assert.match(room, /You are "Ava" — 리서치, 마케팅\. Your persona: terse senior reviewer/);
+  // No label / persona: the line still names the bot and nothing dangles.
+  const bare = buildDmTurnPrompt({ bot: fixer, chatId: "fixer", userName: "ray", cliPath: cli, newMessages: [] });
+  assert.match(bare, /You are "Fixer"\.\n/);
+  assert.ok(!bare.includes("persona:"));
+  assert.ok(bare.includes('"title":"","description":""'));
+});

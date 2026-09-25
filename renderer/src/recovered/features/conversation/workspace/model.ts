@@ -2,6 +2,7 @@ import type { TranscriptCardEntry } from "../cards/transcript-card/protocol";
 import type { TimelineEventData } from "../cards/timeline-event-registry";
 import type { ToolResultCardSnapshot } from "../tool-results/model";
 import type { SendMessageTextAdjacency, SendMessageTextImage } from "../cards/transcript-card/send-message-text";
+import type { PendingPrompt } from "../../../../production/pending-prompt";
 
 export const COMPOSER_ATTACHMENT_LIMIT = 6;
 
@@ -306,6 +307,23 @@ export interface NoticeTargetAvatar {
 
 export type ResolveNoticeTargetAvatar = (id: string) => NoticeTargetAvatar | null;
 
+/** herdr-bot: a bot's blocked approval/question form as an inline card (host entry kind "prompt"). */
+export interface TranscriptPrompt {
+  kind: "prompt";
+  id: string;
+  botId: string;
+  botName: string;
+  prompt: PendingPrompt;
+  status: "pending" | "answered" | "resolved";
+  answer: TranscriptPromptAnswer | null;
+  timestampMs: number;
+}
+
+export type TranscriptPromptAnswer =
+  | { readonly kind: "option"; readonly key: string; readonly label: string }
+  | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "cancelled" };
+
 export interface TranscriptTimelineEvent {
   kind: "timeline-event";
   id: string;
@@ -360,4 +378,4 @@ export interface TranscriptPermissionRequest {
   isGroupStart?: boolean;
 }
 
-export type ConversationTranscriptEntry = TranscriptMessage | TranscriptToolCall | TranscriptThinking | TranscriptNotice | TranscriptTimelineEvent | TranscriptTimeSeparator | TranscriptUnreadDivider | TranscriptComputerHandoff | TranscriptLocalToolPermission | TranscriptPermissionRequest | TranscriptCardEntry;
+export type ConversationTranscriptEntry = TranscriptMessage | TranscriptToolCall | TranscriptThinking | TranscriptNotice | TranscriptPrompt | TranscriptTimelineEvent | TranscriptTimeSeparator | TranscriptUnreadDivider | TranscriptComputerHandoff | TranscriptLocalToolPermission | TranscriptPermissionRequest | TranscriptCardEntry;

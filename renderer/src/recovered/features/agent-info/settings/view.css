@@ -10,12 +10,33 @@
   color: inherit; background: transparent;
   border: 0; border-radius: 16px;
 }
-/* Only the bot hero (a button that opens the avatar editor) gets the tinted box; the group hero
- * (reference A) is a plain cluster on the pane background. */
-button.sand-agent-settings__hero { cursor: pointer; background: color-mix(in srgb, var(--cursor-bg-secondary) 55%, transparent); }
-button.sand-agent-settings__hero:hover { background: var(--cursor-bg-secondary); }
-.sand-agent-settings__hero-avatar { display: grid; place-items: center; width: 72px; height: 72px; }
-.sand-agent-settings__hero-avatar > :not(.sand-group-hero) { width: 100%; height: 100%; }
+button.sand-agent-settings__hero { cursor: pointer; }
+/* Zero-height, so opening the editor never shifts the fields; the -14px cancels the column gap this
+ * extra child would otherwise add on both sides. z-index lifts the card over the fields. */
+.sand-agent-settings__editor-anchor { position: relative; z-index: 2; align-self: stretch; height: 0; margin-top: -14px; }
+.sand-agent-settings__hero-avatar { position: relative; display: grid; place-items: center; width: 72px; height: 72px; }
+.sand-agent-settings__hero-avatar > :not(.sand-group-hero):not(.sand-agent-settings__hero-edit) { width: 100%; height: 100%; }
+
+/* herdr-bot: the bot hero's edit affordance -- no background box behind the avatar any more. Instead
+ * a translucent scrim + pencil icon draw directly ON the avatar image, masked to that image's own
+ * silhouette (mask-image set inline to the SAME image URL AgentAvatar rendered, via
+ * resolveAgentAvatarImageSrc) so the overlay only covers the avatar's drawn shape, never the
+ * transparent surround the image itself already has. Hidden until hover/focus so the avatar reads
+ * cleanly the rest of the time. When there is no resolvable image (the drawn-mark fallback --
+ * effectively unreachable now that every persona color has an image), no mask is set and the overlay
+ * covers the whole 72px box instead, still discoverable, just not shape-matched. */
+.sand-agent-settings__hero-edit {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgba(0, 0, 0, .45); border-radius: 12px;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  -webkit-mask-position: center; mask-position: center;
+  color: #fff; opacity: 0; pointer-events: none; transition: opacity .12s ease;
+}
+button.sand-agent-settings__hero:hover .sand-agent-settings__hero-edit,
+button.sand-agent-settings__hero:focus-visible .sand-agent-settings__hero-edit {
+  opacity: 1;
+}
 
 /* Group hero cluster (reference A): the "나" bubble top-centre, member avatars overlapping under it.
  * Members come later in DOM order so they paint over the bubble's lower edge, as in the reference. */

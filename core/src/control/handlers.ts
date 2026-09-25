@@ -62,6 +62,28 @@ function send(host: Host, params: Params): unknown {
   return { entryId: host.sendUserMessage(chatId, { content: requireString(params, "text") }).id };
 }
 
+function ownProfile(host: Host, params: Params, update = false): unknown {
+  const bot = host.roster.resolveBotByPane(requireString(params, "paneId"));
+  if (bot == null) throw new ControlError("unknown_pane", "this pane is not a herdr-bot bot");
+  let profile = bot;
+  if (update) {
+    const patch: { name?: string; title?: string; description?: string } = {};
+    for (const key of Object.keys(params)) {
+      if (!["paneId", "name", "title", "description"].includes(key)) throw new ControlError("invalid_params", `unsupported profile field "${key}"`);
+    }
+    for (const key of ["name", "title", "description"] as const) {
+      if (!(key in params)) continue;
+      const value = params[key];
+      if (typeof value !== "string" || (key === "name" && value.trim().length === 0)) throw new ControlError("invalid_params", `invalid profile ${key}`);
+      patch[key] = value;
+    }
+    if (Object.keys(patch).length === 0) throw new ControlError("invalid_params", "no profile fields provided");
+    profile = host.roster.updateProfile(bot.id, patch)!;
+    host.chat.emitUpsert(bot.id);
+  }
+  return { id: profile.id, name: profile.name, title: profile.title ?? "", description: profile.description };
+}
+
 async function botCreate(host: Host, params: Params): Promise<unknown> {
   const profile = await host.roster.createBot({
     ...(optionalString(params, "id") == null ? {} : { id: optionalString(params, "id")! }),
@@ -110,6 +132,8 @@ const METHOD_TABLE: Readonly<Record<string, Handler>> = {
   read,
   rooms,
   whoami,
+  "profile.get": (host, params) => ownProfile(host, params),
+  "profile.update": (host, params) => ownProfile(host, params, true),
   send,
   "bot.create": botCreate,
   "bot.adopt": botAdopt,

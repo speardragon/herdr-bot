@@ -46,8 +46,30 @@ async function harness(state: FakeHerdrState, roomMemberIds = state.agents.map((
     if (method === "say") return turns!.handleSay(String(params.paneId), String(params.chatId), String(params.text));
     throw new ControlError("unknown_method", method);
   });
-  return { temp, fake, chat, turns, profiles, inbox, runQueue, cleanup: async () => { await server.close(); temp.cleanup(); } };
+  return { temp, fake, chat, turns, profiles, inbox, runQueue, roster, cleanup: async () => { await server.close(); temp.cleanup(); } };
 }
+
+test("queued DM and room turns read the latest profile after acquiring the bot lock", async () => {
+  const h = await harness({ agents: [agent("a")], workspaces: [] });
+  try {
+    for (const chatId of ["a", "room-1"]) {
+      let release!: () => void;
+      const held = h.turns.withBotLock("a", () => new Promise<void>((resolve) => { release = resolve; }));
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      h.chat.appendUser(chatId, { content: "hello" });
+      const turn = h.turns.schedule(chatId);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      h.roster.updateProfile("a", { name: chatId, title: "", description: "latest focus" });
+      release();
+      await held;
+      await turn;
+      const text = h.fake.readState().prompts!.at(-1)!.text;
+      assert.ok(text.includes(JSON.stringify({ id: "a", name: chatId, title: "", description: "latest focus" })));
+    }
+  } finally {
+    await h.cleanup();
+  }
+});
 
 test("a bot can message another bot DM and wake the recipient", async () => {
   const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [] });

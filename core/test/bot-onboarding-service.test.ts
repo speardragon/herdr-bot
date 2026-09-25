@@ -3,19 +3,17 @@ import assert from "node:assert/strict";
 import { createHost } from "../src/host.ts";
 import { resolveConfig, type HostConfig } from "../src/config.ts";
 import { createHerdrCli, type HerdrCli } from "../src/herdr/cli.ts";
-import { HerdrError } from "../src/herdr/types.ts";
 import { ControlError } from "../src/control/protocol.ts";
-import { greetingText } from "../src/bots/onboarding.ts";
+import { greetingText, reservedBotId } from "../src/bots/onboarding.ts";
 import { RosterError } from "../src/services/roster-service.ts";
 import { entryText } from "../src/model/entries.ts";
 import { ProfileStore } from "../src/store/profile-store.ts";
-import { setLogSink } from "../src/log.ts";
 import { installFakeHerdr, type FakeHerdrState } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
 import { waitFor } from "./helpers/wait-for.ts";
 
 const REQ = "11111111-1111-1111-1111-111111111111";
-const ID = `bot-${REQ}`;
+const ID = reservedBotId(REQ);
 const GREETING = greetingText("ko");
 
 function greetingScript(say: string[] = [GREETING]): FakeHerdrState {
@@ -73,20 +71,6 @@ test("the same request UUID (double-click / retry) makes one profile and spawns 
   }
 });
 
-test("a brief that is not confirmed stops before the greeting: no say, stage failed", async () => {
-  setLogSink(() => undefined);
-  const h = await harness({ wrapCli: (base) => ({ ...base, async agentPrompt(args) { if (/You are/.test(args.text)) throw new HerdrError("timeout", "brief timed out"); return base.agentPrompt(args); } }) });
-  try {
-    h.host.onboarding.create({ requestId: REQ, locale: "ko" });
-    await h.host.onboarding.settled(ID);
-    assert.equal(h.stage(), "failed");
-    assert.equal(h.host.chat.transcript(ID).readAll().filter((e) => e.kind === "send-message").length, 0);
-  } finally {
-    setLogSink((line) => process.stderr.write(`${line}\n`));
-    await h.cleanup();
-  }
-});
-
 test("retry only runs on a failed, not-in-flight bot; a ready bot is a guarded error", async () => {
   const h = await harness();
   try {
@@ -128,45 +112,30 @@ test("a successful onboarding stores exactly one greeting and never a user messa
   }
 });
 
-test("a say that is not the expected greeting is rejected: stage failed, no entry stored", async () => {
-  setLogSink(() => undefined);
-  const h = await harness({ state: greetingScript(["definitely not the greeting"]) });
+test("onboarding writes the app-owned greeting without prompting the terminal agent", async () => {
+  const h = await harness();
   try {
     h.host.onboarding.create({ requestId: REQ, locale: "ko" });
     await h.host.onboarding.settled(ID);
-    assert.equal(h.stage(), "failed");
-    assert.equal(h.greetings().length, 0);
-    assert.equal(h.host.chat.transcript(ID).readAll().filter((e) => e.kind === "send-message").length, 0);
+    assert.equal(h.stage(), "ready");
+    const prompts = (h.fake.readState().prompts ?? []).filter((p) => p.target === ID);
+    assert.equal(prompts.length, 0, "the deterministic greeting must not depend on an agent accepting pasted instructions");
   } finally {
-    setLogSink((line) => process.stderr.write(`${line}\n`));
     await h.cleanup();
   }
 });
 
-test("an en greeting normalized to a straight apostrophe is accepted and stored canonically; a different text is rejected", async () => {
-  const ascii = greetingText("en").replace(/’/g, "'");
-  assert.notEqual(ascii, greetingText("en")); // sanity: it really differs only by the apostrophe form
-  const accept = await harness({ state: { agents: [], workspaces: [], onPrompt: { [ID]: { say: [ascii], sayOnce: true } } } });
+test("onboarding stores the canonical localized greeting regardless of agent prompt behavior", async () => {
+  const accept = await harness({ state: { agents: [], workspaces: [], onPrompt: { [ID]: { say: ["unexpected"], finalStatus: "blocked" } } } });
   try {
     accept.host.onboarding.create({ requestId: REQ, locale: "en" });
     await accept.host.onboarding.settled(ID);
     assert.equal(accept.stage(), "ready");
     assert.equal(accept.greetings().length, 1);
-    assert.equal(entryText(accept.greetings()[0]!), greetingText("en")); // the canonical (curly) form is stored
+    assert.equal(entryText(accept.greetings()[0]!), greetingText("en"));
+    assert.equal((accept.fake.readState().prompts ?? []).filter((p) => p.target === ID).length, 0);
   } finally {
     await accept.cleanup();
-  }
-
-  setLogSink(() => undefined);
-  const reject = await harness({ state: { agents: [], workspaces: [], onPrompt: { [ID]: { say: ["Hi there, something else entirely"], sayOnce: true } } } });
-  try {
-    reject.host.onboarding.create({ requestId: REQ, locale: "en" });
-    await reject.host.onboarding.settled(ID);
-    assert.equal(reject.stage(), "failed");
-    assert.equal(reject.greetings().length, 0);
-  } finally {
-    setLogSink((line) => process.stderr.write(`${line}\n`));
-    await reject.cleanup();
   }
 });
 
@@ -200,6 +169,28 @@ test("restart recovers to ready when the greeting is stored, and to failed when 
     assert.equal(recovered.chat.summary(ID)?.herdrBot?.onboarding?.stage, "ready");
     assert.equal(recovered.chat.transcript(ID).readAll().filter((e) => e.origin === "onboarding").length, 1);
     assert.equal(recovered.chat.summary(otherId)?.herdrBot?.onboarding?.stage, "failed");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("an avatarColor picked before the first bot exists persists on the reserved profile and its summary", async () => {
+  const h = await harness();
+  try {
+    h.host.onboarding.create({ requestId: REQ, locale: "ko", avatarColor: "blue" });
+    assert.equal(h.host.chat.summary(ID)?.avatarColor, "blue");
+    await h.host.onboarding.settled(ID);
+    assert.equal(h.host.chat.summary(ID)?.avatarColor, "blue");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("quick create assigns an avatar color when none is specified", async () => {
+  const h = await harness();
+  try {
+    h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    assert.match(h.host.chat.summary(ID)?.avatarColor ?? "", /^(brown|red|orange|yellow|green|cyan|blue|violet|magenta|gray)$/);
   } finally {
     await h.cleanup();
   }

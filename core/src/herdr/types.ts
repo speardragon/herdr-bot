@@ -1,3 +1,5 @@
+import type { BlockedPrompt } from "./blocked-prompt.ts";
+
 export type HerdrAgentStatus = "idle" | "working" | "blocked" | "done" | "unknown";
 export type BotRuntimeStatus = HerdrAgentStatus | "offline";
 
@@ -7,9 +9,12 @@ export interface BotRuntime {
   readonly workspaceId: string | null;
   readonly sessionId: string | null;
   readonly kind: string | null;
+  /** The approval/question form the pane is showing while `status` is "blocked"; null otherwise
+   * (also null while blocked if the screen could not be read yet). See blocked-prompt.ts. */
+  readonly prompt: BlockedPrompt | null;
 }
 
-export const OFFLINE_RUNTIME: BotRuntime = { status: "offline", paneId: null, workspaceId: null, sessionId: null, kind: null };
+export const OFFLINE_RUNTIME: BotRuntime = { status: "offline", paneId: null, workspaceId: null, sessionId: null, kind: null, prompt: null };
 
 export interface HerdrAgentInfo {
   readonly name: string | null;
@@ -48,8 +53,8 @@ export function projectHerdrAgentInfo(value: unknown): HerdrAgentInfo | null {
   };
 }
 
-export function runtimeFromAgentInfo(info: HerdrAgentInfo): BotRuntime {
-  return { status: info.agent_status, paneId: info.pane_id, workspaceId: info.workspace_id, sessionId: info.agent_session?.value ?? null, kind: info.agent };
+export function runtimeFromAgentInfo(info: HerdrAgentInfo, prompt: BlockedPrompt | null = null): BotRuntime {
+  return { status: info.agent_status, paneId: info.pane_id, workspaceId: info.workspace_id, sessionId: info.agent_session?.value ?? null, kind: info.agent, prompt: info.agent_status === "blocked" ? prompt : null };
 }
 
 export class HerdrError extends Error {

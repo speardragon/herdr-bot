@@ -1,4 +1,5 @@
 import type { GroupMessage } from "../group/group-chat.ts";
+import type { BlockedPrompt } from "../herdr/blocked-prompt.ts";
 import type { NewEntry, StoredEntry } from "../store/transcript-store.ts";
 
 export interface Author {
@@ -51,6 +52,25 @@ export function noticeEntry(args: { readonly content: string; readonly timestamp
   return { kind: "notice", content: args.content, timestampMs: args.timestampMs };
 }
 
+/** `superseded`: a ghost an earlier run stacked above a later card for the very same form (see
+ * PromptTracker.recover); the renderer drops it instead of showing a second, dead copy. */
+export type PromptEntryStatus = "pending" | "answered" | "resolved" | "superseded";
+
+export type PromptEntryAnswer =
+  | { readonly kind: "option"; readonly key: string; readonly label: string }
+  | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "cancelled" };
+
+/**
+ * A bot's approval/question form, stored in the chat whose turn raised it so it renders inline as a
+ * card (renderer PendingPromptCard). `pending` while the pane is still blocked on it; `answered` once
+ * the user picked from the card (`answer` says what); `resolved` when the pane moved on without an
+ * in-app answer (answered in herdr, or the form changed).
+ */
+export function promptEntry(args: { readonly author: Author; readonly prompt: BlockedPrompt; readonly timestampMs: number }): NewEntry {
+  return { kind: "prompt", author: args.author, prompt: args.prompt, status: "pending" satisfies PromptEntryStatus, timestampMs: args.timestampMs };
+}
+
 function projectReactions(value: unknown): Reaction[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => (isRecord(item) && typeof item.emoji === "string" && typeof item.by === "string" ? [{ emoji: item.emoji, by: item.by }] : []));
@@ -66,12 +86,13 @@ export function toggleReaction(entry: StoredEntry, emoji: string, by: string = R
 export function entryText(entry: StoredEntry): string | null {
   if ((entry.kind === "message" || entry.kind === "notice") && typeof entry.content === "string") return entry.content;
   if (entry.kind === "send-message" && isRecord(entry.message) && entry.message.type === "text" && typeof entry.message.content === "string") return entry.message.content;
+  if (entry.kind === "prompt" && isRecord(entry.prompt) && typeof entry.prompt.question === "string") return entry.prompt.question;
   return null;
 }
 
 export function toGroupMessage(entry: StoredEntry): GroupMessage | null {
   const content = entryText(entry);
-  if (content == null || entry.kind === "notice") return null;
+  if (content == null || entry.kind === "notice" || entry.kind === "prompt") return null;
   const author = projectAuthor(entry.author);
   if (entry.kind === "message") return { speaker: { kind: "user", ...(author == null ? {} : { name: author.name }) }, content };
   if (author == null) return null;

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { DesktopBridge } from "../recovered/contracts/desktop-bridge";
 import { OverlayDialog } from "../recovered/ui/overlay-primitives";
+import { SandSelect } from "../recovered/ui/sand-floating-primitives";
+import { SandIconButton } from "../recovered/ui/sand-kit-primitives";
 import { setLocale, t, useLocale } from "./locale";
 
 export function LocalSettings({ bridge, onClose }: { bridge: DesktopBridge; onClose(): void }) {
@@ -15,13 +17,12 @@ export function LocalSettings({ bridge, onClose }: { bridge: DesktopBridge; onCl
     return () => { active = false; unsubscribe(); };
   }, [bridge]);
   return <OverlayDialog open onClose={onClose} label={t("Settings")} panelStyle={{ width: "min(420px, calc(100vw - 32px))", padding: 24, background: "var(--cursor-bg-elevated)", color: "var(--cursor-text-primary)", border: "1px solid var(--cursor-stroke-secondary)", borderRadius: 16, boxShadow: "0 16px 64px #0005" }}>
-    <div className="hb-settings-heading"><h2>{t("Settings")}</h2><button onClick={onClose} aria-label={t("Close")} type="button">×</button></div>
-    <label className="hb-settings-row">{t("Language")}<select value={locale} onChange={(event) => setLocale(event.target.value === "en" ? "en" : "ko")}><option value="ko">한국어</option><option value="en">English</option></select></label>
-    <label className="hb-settings-row">{t("Appearance")}<select disabled={pending} value={theme} onChange={(event) => {
-      const next = event.target.value === "dark" ? "dark" : "light";
+    <div className="hb-settings-heading"><h2>{t("Settings")}</h2><SandIconButton aria-label={t("Close")} icon="close" label={t("Close")} onClick={onClose} size="sm" /></div>
+    <label className="hb-settings-row"><span>{t("Language")}</span><SandSelect ariaLabel={t("Language")} className="ui-select-trigger" onValueChange={(next) => setLocale(next)} options={[{ value: "ko" as const, label: "한국어" }, { value: "en" as const, label: "English" }]} value={locale} /></label>
+    <label className="hb-settings-row"><span>{t("Appearance")}</span><SandSelect ariaLabel={t("Appearance")} className="ui-select-trigger" disabled={pending} onValueChange={(next) => {
       setPending(true); setError("");
       void bridge.theme.set(next).then((state) => setTheme(state.resolved)).catch((cause: unknown) => setError(String(cause))).finally(() => setPending(false));
-    }}><option value="light">{t("Light")}</option><option value="dark">{t("Dark")}</option></select></label>
+    }} options={[{ value: "light" as const, label: t("Light") }, { value: "dark" as const, label: t("Dark") }]} value={theme} /></label>
     {error ? <p role="alert">{error}</p> : null}
   </OverlayDialog>;
 }

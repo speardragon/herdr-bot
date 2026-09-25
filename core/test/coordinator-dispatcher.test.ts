@@ -8,7 +8,14 @@ import { createControlHandler } from "../src/control/handlers.ts";
 import { ControlError } from "../src/control/protocol.ts";
 import { installFakeHerdr } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
-import { greetingText } from "../src/bots/onboarding.ts";
+import { greetingText, reservedBotId } from "../src/bots/onboarding.ts";
+import { ASK_MULTI_QUESTION_SCREEN, ASK_MULTI_SELECT_SCREEN, ASK_SINGLE_SCREEN, BASH_PERMISSION_SCREEN } from "./helpers/prompt-screens.ts";
+import { PromptError } from "../src/services/prompt-service.ts";
+
+/** Narrows a "prompt" transcript entry's loosely-typed fields for the restart-recovery tests below. */
+function filterPromptEntries(entries: readonly { kind: string }[]): { status: string; prompt: { question: string; signature: string } }[] {
+  return entries.filter((e): e is { kind: string; status: string; prompt: { question: string; signature: string } } => e.kind === "prompt") as { status: string; prompt: { question: string; signature: string } }[];
+}
 
 async function harness() {
   const temp = makeTempHome();
@@ -68,6 +75,31 @@ test("bot.create control request passes launch selections and rejects unsupporte
     assert.equal(created.herdrBot.reasoningEffort, "max");
     await assert.rejects(control("bot.create", { id: "unsupported", name: "Unsupported", kind: "gemini", reasoningEffort: "high" }),
       (error: unknown) => error instanceof ControlError && error.code === "invalid_params");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+// herdr-bot: the avatar editor (renderer avatar-editor/controller.ts) sends avatarShape/avatarColor
+// at the top level of updateAgent's args, not inside `profile` -- regression for a bug where the
+// dispatcher only ever read `profile`, so every colour pick silently no-op'd server-side and the next
+// roster push (which reads the untouched profile) reverted the UI back to the original colour.
+test("updateAgent persists top-level avatarShape/avatarColor, and \"\" resets them to null", async () => {
+  const h = await harness();
+  try {
+    await h.call("createAgent", { name: "Reviewer", description: "", herdrBot: { id: "reviewer", kind: "claude", permissionMode: "ask" } });
+    const recolored = await h.call("updateAgent", { id: "reviewer", avatarShape: "cloud", avatarColor: "black" });
+    assert.equal(recolored.avatarShape, "cloud");
+    assert.equal(recolored.avatarColor, "black");
+    assert.equal((await h.call("listAgents")).find((a: { id: string }) => a.id === "reviewer").avatarColor, "black", "the pick must be readable back from a fresh roster listing, not just the write's own response");
+
+    const recoloredAgain = await h.call("updateAgent", { id: "reviewer", avatarColor: "red" });
+    assert.equal(recoloredAgain.avatarColor, "red");
+    assert.equal(recoloredAgain.avatarShape, "cloud", "a colour-only patch must not clear a previously set shape");
+
+    const reset = await h.call("updateAgent", { id: "reviewer", avatarShape: "", avatarColor: "" });
+    assert.equal(reset.avatarShape, null);
+    assert.equal(reset.avatarColor, null);
   } finally {
     await h.cleanup();
   }
@@ -174,7 +206,7 @@ test("openAgentTail no longer marks a chat as read; herdrBot.markChatRead is the
 test("herdrBot.quickCreateBot reserves instantly and herdrBot.retryBotSetup reuses the same profile", async () => {
   const temp = makeTempHome();
   const requestId = "33333333-3333-3333-3333-333333333333";
-  const id = `bot-${requestId}`;
+  const id = reservedBotId(requestId);
   const fake = installFakeHerdr(temp.home, { agents: [], workspaces: [], onPrompt: { [id]: { say: [greetingText("en")], sayOnce: true } } });
   const config = resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BIN_PATH: fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" });
   const host = createHost(config, { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null, ensureSession: null });
@@ -210,8 +242,8 @@ test("herdrBot.quickCreateBot names the reserved bot from `name` when given, els
   const temp = makeTempHome();
   const untitledId = "44444444-4444-4444-4444-444444444444";
   const namedId = "55555555-5555-5555-5555-555555555555";
-  const untitledBotId = `bot-${untitledId}`;
-  const namedBotId = `bot-${namedId}`;
+  const untitledBotId = reservedBotId(untitledId);
+  const namedBotId = reservedBotId(namedId);
   const fake = installFakeHerdr(temp.home, {
     agents: [],
     workspaces: [],
@@ -237,6 +269,27 @@ test("herdrBot.quickCreateBot names the reserved bot from `name` when given, els
     // otherwise the background provision outlives cleanup and logs a spurious ENOENT.
     await host.onboarding.settled(untitledBotId);
     await host.onboarding.settled(namedBotId);
+  } finally {
+    await host.stop();
+    temp.cleanup();
+  }
+});
+
+test("herdrBot.quickCreateBot passes avatarColor through to the reserved profile's summary", async () => {
+  const temp = makeTempHome();
+  const requestId = "66666666-6666-6666-6666-666666666666";
+  const id = reservedBotId(requestId);
+  const fake = installFakeHerdr(temp.home, { agents: [], workspaces: [], onPrompt: { [id]: { say: [greetingText("ko")], sayOnce: true } } });
+  const config = resolveConfig({ HERDR_BOT_HOME: temp.home, HERDR_BIN_PATH: fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" });
+  const host = createHost(config, { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null, ensureSession: null });
+  await host.start();
+  const dispatch = createCoordinatorDispatcher(host);
+  try {
+    const created = await dispatch("herdrBot.quickCreateBot", { requestId, locale: "ko", avatarColor: "blue" });
+    assert.equal(created.status, "ok");
+    assert.equal((created as { status: "ok"; value: { agent: { avatarColor: string | null } } }).value.agent.avatarColor, "blue");
+    await host.onboarding.settled(id);
+    assert.equal(host.chat.summary(id)?.avatarColor, "blue");
   } finally {
     await host.stop();
     temp.cleanup();
@@ -277,5 +330,262 @@ test("herdrBot.listModels forwards kind to the model catalog and returns its Mod
     assert.deepEqual(result.models.map((m: { id: string }) => m.id), ["opus", "sonnet", "haiku"]);
   } finally {
     await h.cleanup();
+  }
+});
+
+test("herdrBot.answerPrompt presses the blocked form's keys through herdr and refuses stale or impossible answers", async () => {
+  const h = await harness();
+  try {
+    await h.call("createAgent", { name: "Reviewer", description: "", herdrBot: { id: "reviewer", kind: "claude", permissionMode: "ask" } });
+    const state = h.fake.readState();
+    const pane = state.agents.find((a) => a.name === "reviewer")!;
+    h.fake.writeState({ ...state, agents: state.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "blocked" } : a)), screens: { reviewer: ASK_SINGLE_SCREEN } });
+    await h.host.mirror.refresh();
+    const listed = (await h.call("listAgents")).find((a: { id: string }) => a.id === "reviewer");
+    const prompt = listed.herdrBot.prompt;
+    assert.equal(prompt.kind, "question");
+    assert.deepEqual(prompt.options.map((o: { key: string }) => o.key), ["1", "2", "3", "4"]);
+    assert.equal(prompt.freeTextKey, "4");
+
+    const answered = await h.call("herdrBot.answerPrompt", { id: "reviewer", signature: prompt.signature, action: "option", key: "2" });
+    assert.equal(answered.id, "reviewer", "returns the fresh summary");
+    assert.deepEqual(h.fake.readLog().filter((argv) => argv[1] === "send-keys").at(-1), ["agent", "send-keys", "reviewer", "2"]);
+
+    await h.call("herdrBot.answerPrompt", { id: "reviewer", signature: prompt.signature, action: "text", text: "todo\nlist.md" });
+    const typed = h.fake.readLog().filter((argv) => argv[1] === "send-keys" || argv[1] === "send-text").slice(-3);
+    assert.deepEqual(typed, [["agent", "send-keys", "reviewer", "4"], ["pane", "send-text", pane.pane_id, "todo list.md"], ["agent", "send-keys", "reviewer", "enter"]]);
+
+    await h.call("herdrBot.answerPrompt", { id: "reviewer", signature: prompt.signature, action: "cancel" });
+    assert.deepEqual(h.fake.readLog().filter((argv) => argv[1] === "send-keys").at(-1), ["agent", "send-keys", "reviewer", "esc"]);
+
+    const stale = await h.dispatch("herdrBot.answerPrompt", { id: "reviewer", signature: "other", action: "option", key: "1" });
+    assert.equal(stale.status === "failed" && stale.failure.code, "prompt_changed");
+    const missing = await h.dispatch("herdrBot.answerPrompt", { id: "reviewer", signature: prompt.signature, action: "option", key: "9" });
+    assert.equal(missing.status === "failed" && missing.failure.code, "invalid_answer");
+    const next = await h.dispatch("herdrBot.answerPrompt", { id: "reviewer", signature: prompt.signature, action: "next" });
+    assert.equal(next.status === "failed" && next.failure.code, "invalid_answer", "Next is only for multi-select questions");
+    const badAction = await h.dispatch("herdrBot.answerPrompt", { id: "reviewer", signature: prompt.signature, action: "shout" });
+    assert.equal(badAction.status === "failed" && badAction.failure.code, "invalid-args");
+
+    // The pane moved on (the mirror is stale): the live re-check refuses, and nothing is typed into the prompt box.
+    const keysBefore = h.fake.readLog().filter((argv) => argv[1] === "send-keys").length;
+    const now = h.fake.readState();
+    h.fake.writeState({ ...now, agents: now.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "idle" } : a)) });
+    const unblocked = await h.dispatch("herdrBot.answerPrompt", { id: "reviewer", signature: prompt.signature, action: "option", key: "1" });
+    assert.equal(unblocked.status === "failed" && unblocked.failure.code, "not_blocked");
+    assert.equal(h.fake.readLog().filter((argv) => argv[1] === "send-keys").length, keysBefore);
+    await h.host.mirror.refresh();
+    assert.equal((await h.call("listAgents")).find((a: { id: string }) => a.id === "reviewer").herdrBot.prompt, null);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("herdrBot.answerPrompt moves a multi-select question on with Tab", async () => {
+  const h = await harness();
+  try {
+    await h.call("createAgent", { name: "Reviewer", description: "", herdrBot: { id: "reviewer", kind: "claude", permissionMode: "ask" } });
+    const state = h.fake.readState();
+    h.fake.writeState({ ...state, agents: state.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "blocked" } : a)), screens: { reviewer: ASK_MULTI_SELECT_SCREEN } });
+    await h.host.mirror.refresh();
+    const prompt = (await h.call("listAgents")).find((a: { id: string }) => a.id === "reviewer").herdrBot.prompt;
+    assert.equal(prompt.multiSelect, true);
+    await h.call("herdrBot.answerPrompt", { id: "reviewer", signature: prompt.signature, action: "next" });
+    assert.deepEqual(h.fake.readLog().filter((argv) => argv[1] === "send-keys").at(-1), ["agent", "send-keys", "reviewer", "tab"]);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("a blocked prompt becomes an inline transcript card: pending -> answered from the card, or resolved when the pane moves on by itself", async () => {
+  const h = await harness();
+  try {
+    await h.call("createAgent", { name: "Reviewer", description: "", herdrBot: { id: "reviewer", kind: "claude", permissionMode: "ask" } });
+    const block = (screen: string) => {
+      const state = h.fake.readState();
+      h.fake.writeState({ ...state, agents: state.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "blocked" } : a)), screens: { reviewer: screen } });
+    };
+    const unblock = () => {
+      const state = h.fake.readState();
+      h.fake.writeState({ ...state, agents: state.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "idle" } : a)) });
+    };
+    const promptEntries = async () => (await h.call("openAgentTail", { id: "reviewer" })).entries.filter((e: { kind: string }) => e.kind === "prompt");
+
+    block(ASK_SINGLE_SCREEN);
+    await h.host.mirror.refresh();
+    let entries = await promptEntries();
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0].status, "pending");
+    assert.equal(entries[0].prompt.question, "Which color do you prefer?");
+    assert.deepEqual(entries[0].author, { id: "reviewer", name: "Reviewer" });
+
+    await h.call("herdrBot.answerPrompt", { id: "reviewer", signature: entries[0].prompt.signature, action: "option", key: "2" });
+    entries = await promptEntries();
+    assert.equal(entries[0].status, "answered");
+    assert.deepEqual(entries[0].answer, { kind: "option", key: "2", label: "Green" });
+
+    unblock();
+    await h.host.mirror.refresh();
+    entries = await promptEntries();
+    assert.equal(entries.length, 1, "no new card once the pane moved on");
+    assert.equal(entries[0].status, "answered", "an in-app answer is not downgraded to resolved");
+
+    // Answered in the terminal instead: the card is resolved without an answer.
+    block(BASH_PERMISSION_SCREEN);
+    await h.host.mirror.refresh();
+    entries = await promptEntries();
+    assert.equal(entries.length, 2);
+    assert.equal(entries[1].prompt.kind, "permission");
+    unblock();
+    await h.host.mirror.refresh();
+    entries = await promptEntries();
+    assert.equal(entries[1].status, "resolved");
+    assert.equal(entries[1].answer, undefined);
+
+    // The next question of the same form is a new card; the previous one resolves.
+    block(ASK_MULTI_QUESTION_SCREEN);
+    await h.host.mirror.refresh();
+    block(ASK_MULTI_SELECT_SCREEN);
+    await h.host.mirror.refresh();
+    entries = await promptEntries();
+    assert.equal(entries.length, 4);
+    assert.equal(entries[2].status, "resolved");
+    assert.equal(entries[3].status, "pending");
+    assert.equal(entries[3].prompt.multiSelect, true);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("a prompt raised during a room turn is filed in the room, not the bot's DM", async () => {
+  const h = await harness();
+  try {
+    await h.call("createAgent", { name: "Reviewer", description: "", herdrBot: { id: "reviewer", kind: "claude", permissionMode: "ask" } });
+    const group = await h.call("createGroup", { name: "Auth", description: "", memberIds: ["reviewer"] });
+    const state = h.fake.readState();
+    h.fake.writeState({ ...state, onPrompt: { reviewer: { finalStatus: "blocked" } }, screens: { reviewer: BASH_PERMISSION_SCREEN } });
+    await h.call("sendPrompt", { agentId: group.agent.id, prompt: "clean up the temp dir" });
+    const roomPrompts = async () => (await h.call("openAgentTail", { id: group.agent.id })).entries.filter((e: { kind: string }) => e.kind === "prompt");
+    for (let i = 0; i < 40 && (await roomPrompts()).length === 0; i += 1) await new Promise((resolve) => setTimeout(resolve, 100));
+    const entries = await roomPrompts();
+    assert.equal(entries.length, 1, "the card belongs to the room whose turn raised it");
+    assert.equal(entries[0].status, "pending");
+    assert.equal(entries[0].prompt.kind, "permission");
+    const dmPrompts = (await h.call("openAgentTail", { id: "reviewer" })).entries.filter((e: { kind: string }) => e.kind === "prompt");
+    assert.equal(dmPrompts.length, 0, "and not duplicated into the DM");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("a host restart resumes -- does not duplicate -- a card whose pane is still blocked on the same form", async () => {
+  const h = await harness();
+  const secondHost = createHost(resolveConfig({ HERDR_BOT_HOME: h.temp.home, HERDR_BIN_PATH: h.fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" }), { cli: createHerdrCli(h.fake.binPath, h.fake.env), socketPath: null, ensureSession: null });
+  let secondStarted = false;
+  try {
+    await h.call("createAgent", { name: "Reviewer", description: "", herdrBot: { id: "reviewer", kind: "claude", permissionMode: "ask" } });
+    const state = h.fake.readState();
+    h.fake.writeState({ ...state, agents: state.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "blocked" } : a)), screens: { reviewer: ASK_SINGLE_SCREEN } });
+    await h.host.mirror.refresh();
+    assert.equal((await h.call("openAgentTail", { id: "reviewer" })).entries.filter((e: { kind: string }) => e.kind === "prompt")[0]?.status, "pending");
+    await h.host.stop();
+
+    // The pane is still blocked on the exact same form when the host comes back: one live card, not
+    // a "터미널에서 답변됨" ghost stacked above a second, freshly-appended one.
+    await secondHost.start();
+    secondStarted = true;
+    const entries = filterPromptEntries(secondHost.chat.tail("reviewer", 50).entries);
+    assert.equal(entries.length, 1, "no duplicate card for the still-blocked form");
+    assert.equal(entries[0]?.status, "pending");
+    assert.equal(entries[0]?.prompt.question, "Which color do you prefer?");
+
+    // It is still the live, answerable card, not an orphan: answering it goes through and settles.
+    const answered = await secondHost.prompts.answer("reviewer", entries[0]!.prompt.signature, { action: "option", key: "2" });
+    assert.equal(answered, undefined);
+  } finally {
+    if (secondStarted) await secondHost.stop();
+    h.temp.cleanup();
+  }
+});
+
+test("a host restart resolves a card the pane moved past while the app was closed, without leaving it answerable", async () => {
+  const h = await harness();
+  const secondHost = createHost(resolveConfig({ HERDR_BOT_HOME: h.temp.home, HERDR_BIN_PATH: h.fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" }), { cli: createHerdrCli(h.fake.binPath, h.fake.env), socketPath: null, ensureSession: null });
+  let secondStarted = false;
+  try {
+    await h.call("createAgent", { name: "Reviewer", description: "", herdrBot: { id: "reviewer", kind: "claude", permissionMode: "ask" } });
+    const state = h.fake.readState();
+    h.fake.writeState({ ...state, agents: state.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "blocked" } : a)), screens: { reviewer: ASK_SINGLE_SCREEN } });
+    await h.host.mirror.refresh();
+    await h.host.stop();
+
+    // The user answered it directly in herdr while the app was closed: the pane is idle again by the
+    // time the new run starts.
+    const idled = h.fake.readState();
+    h.fake.writeState({ ...idled, agents: idled.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "idle" } : a)) });
+    await secondHost.start();
+    secondStarted = true;
+    const entries = filterPromptEntries(secondHost.chat.tail("reviewer", 50).entries);
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0]?.status, "resolved");
+    await assert.rejects(secondHost.prompts.answer("reviewer", entries[0]!.prompt.signature, { action: "option", key: "2" }), (error: unknown) => error instanceof PromptError && error.code === "not_blocked");
+  } finally {
+    if (secondStarted) await secondHost.stop();
+    h.temp.cleanup();
+  }
+});
+
+test("a host restart hides the ghost cards an earlier (buggy) run stacked above a still-live card for the same form", async () => {
+  const h = await harness();
+  const secondHost = createHost(resolveConfig({ HERDR_BOT_HOME: h.temp.home, HERDR_BIN_PATH: h.fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" }), { cli: createHerdrCli(h.fake.binPath, h.fake.env), socketPath: null, ensureSession: null });
+  let secondStarted = false;
+  try {
+    await h.call("createAgent", { name: "Reviewer", description: "", herdrBot: { id: "reviewer", kind: "claude", permissionMode: "ask" } });
+    const state = h.fake.readState();
+    h.fake.writeState({ ...state, agents: state.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "blocked" } : a)), screens: { reviewer: ASK_SINGLE_SCREEN } });
+    await h.host.mirror.refresh();
+    // What the old restart logic left behind: the first card force-resolved ("터미널에서 답변됨") and a
+    // second, identical card appended right after it -- twice, for two restarts.
+    const first = filterPromptEntries(h.host.chat.tail("reviewer", 50).entries)[0]!;
+    h.host.chat.updateEntry("reviewer", (first as unknown as { id: string }).id, (entry) => ({ ...entry, status: "resolved" }));
+    const second = h.host.chat.appendPrompt("reviewer", { id: "reviewer", name: "Reviewer" }, h.host.mirror.get("reviewer").prompt!);
+    h.host.chat.updateEntry("reviewer", second.id, (entry) => ({ ...entry, status: "resolved" }));
+    h.host.chat.appendPrompt("reviewer", { id: "reviewer", name: "Reviewer" }, h.host.mirror.get("reviewer").prompt!);
+    await h.host.stop();
+
+    await secondHost.start();
+    secondStarted = true;
+    const entries = filterPromptEntries(secondHost.chat.tail("reviewer", 50).entries);
+    assert.deepEqual(entries.map((e) => e.status), ["superseded", "superseded", "pending"], "ghosts are hidden, the last card stays live");
+    await secondHost.prompts.answer("reviewer", entries[2]!.prompt.signature, { action: "option", key: "2" });
+  } finally {
+    if (secondStarted) await secondHost.stop();
+    h.temp.cleanup();
+  }
+});
+
+test("a resolved card followed by a different question is history, not a ghost, and stays visible", async () => {
+  const h = await harness();
+  const secondHost = createHost(resolveConfig({ HERDR_BOT_HOME: h.temp.home, HERDR_BIN_PATH: h.fake.binPath, HERDR_BOT_USER_NAME: "ray", HERDR_BOT_DEFAULT_CWD: "/tmp/repo" }), { cli: createHerdrCli(h.fake.binPath, h.fake.env), socketPath: null, ensureSession: null });
+  let secondStarted = false;
+  try {
+    await h.call("createAgent", { name: "Reviewer", description: "", herdrBot: { id: "reviewer", kind: "claude", permissionMode: "ask" } });
+    const block = (screen: string) => {
+      const state = h.fake.readState();
+      h.fake.writeState({ ...state, agents: state.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "blocked" } : a)), screens: { reviewer: screen } });
+    };
+    block(BASH_PERMISSION_SCREEN);
+    await h.host.mirror.refresh();
+    block(ASK_SINGLE_SCREEN);
+    await h.host.mirror.refresh();
+    await h.host.stop();
+
+    await secondHost.start();
+    secondStarted = true;
+    const entries = filterPromptEntries(secondHost.chat.tail("reviewer", 50).entries);
+    assert.deepEqual(entries.map((e) => e.status), ["resolved", "pending"]);
+  } finally {
+    if (secondStarted) await secondHost.stop();
+    h.temp.cleanup();
   }
 });

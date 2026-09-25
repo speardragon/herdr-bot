@@ -33,7 +33,6 @@ export function ConversationAgentHeader({ agent, isComputerActive, isInfoOpen, o
     <span className="sand-chat-header__avatar"><AgentAvatar agentId={agent.id} kind={avatarKind} memberIds={agent.memberIds} dataUrl={agent.avatarDataUrl} color={agent.avatarColor} shape={agent.avatarShape} currentActivity={agent.currentActivity} isComposingMessage={agent.isComposingMessage} isRunning={agent.isRunning} awaitingUserResponse={agent.awaitingUserResponse} size="md" /></span>
     <span id="sand-conversation-heading">{agent.name}</span>
     {agent.isRunning ? <small>{t("Working")}</small> : null}
-    {onboardingStage != null && onboardingStage !== "ready" && onboardingStage !== "failed" ? <small>{t("Setting up…", "설정 중…")}</small> : null}
   </>;
   return <div aria-labelledby="sand-conversation-heading" className="sand-chat-header" role="group">
     {onToggleSettings == null

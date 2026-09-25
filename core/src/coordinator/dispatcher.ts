@@ -2,6 +2,7 @@ import type { Host } from "../host.ts";
 import type { ReasoningEffort } from "../bots/launch-args.ts";
 import { isValidRequestId } from "../bots/onboarding.ts";
 import { RosterError } from "../services/roster-service.ts";
+import { PromptError, type PromptAnswer } from "../services/prompt-service.ts";
 import type { PermissionMode } from "../store/profile-store.ts";
 import type { AgentSummary } from "../model/summaries.ts";
 import { COORDINATOR_INVALID_ARGS, COORDINATOR_UNKNOWN_METHOD, COORDINATOR_UNSUPPORTED, type CoordinatorReplyOutcome } from "./frames.ts";
@@ -93,7 +94,13 @@ function quickCreateBot(host: Host, args: Args): unknown {
   // A blank/whitespace-only name (the combobox never sends one, but a stale/hand-rolled call might)
   // is treated the same as omitting it -- onboarding.create falls back to the plain default name.
   const name = optStr(args, "name");
-  const profile = host.onboarding.create({ requestId, locale: args.locale, ...(name == null || name.trim().length === 0 ? {} : { name }) });
+  const avatarColor = optStr(args, "avatarColor");
+  const profile = host.onboarding.create({
+    requestId,
+    locale: args.locale,
+    ...(name == null || name.trim().length === 0 ? {} : { name }),
+    ...(avatarColor == null ? {} : { avatarColor }),
+  });
   host.chat.emitRoster();
   return { agent: requireSummary(host, profile.id) };
 }
@@ -128,8 +135,17 @@ function updateAgent(host: Host, args: Args): unknown {
   const id = str(args, "id");
   const profile = isRecord(args.profile) ? args.profile : {};
   const patch = { ...(optStr(profile, "name") == null ? {} : { name: optStr(profile, "name")! }), ...(typeof profile.description === "string" ? { description: profile.description } : {}) };
-  // The optional label (`title`) is a bot-only field; rooms have no label in the reference UI.
-  const botPatch = { ...patch, ...(typeof profile.title === "string" ? { title: profile.title } : {}) };
+  // The optional label (`title`) is a bot-only field; rooms have no label in the reference UI. So is
+  // the persona mark: the avatar editor (renderer avatar-editor/controller.ts) sends avatarShape/
+  // avatarColor at the top level of `args`, not inside `profile`. It sends "" for "clear to the
+  // default persona" (stageCharacter/resetCharacter's `?? ""`), which maps to null here rather than
+  // being dropped the way an absent field is.
+  const botPatch = {
+    ...patch,
+    ...(typeof profile.title === "string" ? { title: profile.title } : {}),
+    ...(typeof args.avatarShape === "string" ? { avatarShape: args.avatarShape === "" ? null : args.avatarShape } : {}),
+    ...(typeof args.avatarColor === "string" ? { avatarColor: args.avatarColor === "" ? null : args.avatarColor } : {}),
+  };
   const updated = host.chat.chatKind(id) === "room" ? host.roster.updateRoom(id, patch) : host.roster.updateProfile(id, botPatch);
   if (updated != null) host.chat.emitUpsert(id);
   return updated == null ? null : host.chat.summary(id);
@@ -233,6 +249,27 @@ function herdrBotDefaults(host: Host): unknown {
   return { cwd: host.config.defaultCwd, kind: host.config.defaultKind };
 }
 
+function promptAnswer(args: Args): PromptAnswer {
+  switch (args.action) {
+    case "option": return { action: "option", key: str(args, "key") };
+    case "text": return { action: "text", text: str(args, "text") };
+    case "next": return { action: "next" };
+    case "cancel": return { action: "cancel" };
+    default: throw new ArgsError('action must be "option", "text", "next", or "cancel"');
+  }
+}
+
+/** Answers the approval/question card of a blocked bot (renderer's PendingPromptCard). `signature` is
+ * the prompt identity the card was rendered from; a mismatch fails with `prompt_changed` and the
+ * renderer re-renders from the fresh summary this returns. */
+async function answerPrompt(host: Host, args: Args): Promise<unknown> {
+  const id = str(args, "id");
+  requireSummary(host, id);
+  await host.prompts.answer(id, str(args, "signature"), promptAnswer(args));
+  await host.mirror.refresh();
+  return host.chat.summary(id);
+}
+
 const METHOD_TABLE: Readonly<Record<string, Handler>> = {
   listAgents: (host) => host.chat.listSummaries(),
   countAgents: (host) => host.chat.listSummaries().length,
@@ -258,6 +295,7 @@ const METHOD_TABLE: Readonly<Record<string, Handler>> = {
   "herdrBot.listAdoptable": (host) => host.roster.listAdoptable(),
   "herdrBot.focus": herdrBotFocus,
   "herdrBot.defaults": herdrBotDefaults,
+  "herdrBot.answerPrompt": answerPrompt,
   "herdrBot.listDirectories": (_host, args) => listDirectories(optStr(args, "path") ?? ""),
   "herdrBot.listModels": (_host, args) => listBotModels(str(args, "kind")),
 };
@@ -286,6 +324,7 @@ function mapError(method: string, error: unknown): CoordinatorReplyOutcome {
   if (error instanceof Unsupported) return failed(COORDINATOR_UNSUPPORTED, error.message);
   if (error instanceof ArgsError) return failed(COORDINATOR_INVALID_ARGS, error.message);
   if (error instanceof RosterError) return failed(error.code, error.message);
+  if (error instanceof PromptError) return failed(error.code, error.message);
   return failed("internal", error instanceof Error ? error.message : String(error));
 }
 

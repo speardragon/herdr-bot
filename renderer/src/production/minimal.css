@@ -1,10 +1,22 @@
 .hb-settings-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
 .hb-settings-heading h2 { font-size: 18px; margin: 0; }
-.hb-settings-heading button { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 8px; background: var(--cursor-bg-hover); color: inherit; font-size: 24px; cursor: pointer; }
+/* The close button used to be a bare "×" glyph in a button of its own, which every font centers
+ * slightly differently -- swapped for the same SandIconButton the rest of the app uses for "close",
+ * so alignment matches everywhere else. */
 .hb-settings-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 20px 0; }
-.hb-settings-row select { min-width: 140px; padding: 9px 12px; border: 1px solid var(--cursor-stroke-secondary); border-radius: 8px; background: var(--cursor-bg-input-surface); color: var(--cursor-text-primary); font: inherit; }
-.hb-settings-footer { padding: 12px; border-top: 1px solid var(--cursor-stroke-tertiary); }
+.hb-settings-row > .ui-select-trigger { min-width: 140px; }
+.hb-settings-footer { padding: 12px; }
 .hb-settings-footer button { width: 100%; min-height: 36px; }
+/* Collapsed rail: icon-only new-bot and settings, stacked and centered. The width/min-height
+ * above would stretch those icon buttons across the 88px column. */
+.hb-settings-footer.hb-settings-footer--rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 12px;
+}
+.hb-settings-footer.hb-settings-footer--rail > button { width: auto; min-height: 0; }
 .sand-kit-icon-button, .sand-prompt-send { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; }
 .sand-kit-icon-button > *, .sand-kit-button > [data-icon-name] { flex-shrink: 0; }
 .sand-kit-icon, .sand-kit-icon svg { display: inline-block; vertical-align: middle; }
@@ -110,18 +122,18 @@ button.sand-group-member-remove { position: absolute; right: 8px; padding: 3px 7
 .sand-group-members-footer { padding: 8px; color: var(--cursor-text-secondary); font-size: 11px; line-height: 1.5; }
 
 /* herdr-bot: the one status dot over a sidebar avatar's bottom-right corner (sidebar-status-dot.ts).
- * The wrapper (.sand-agent-item__avatar, 44px) centers a 36px row avatar with 4px of slack on each
- * side, so the dot is inset from the wrapper's corner until its center sits on the avatar's own
- * 45° edge point -- "closer to the avatar", not floating off the wrapper corner. Total size includes
- * the 2px white ring (border-box), so the ring never enlarges the layout box. */
+ * Only working / done / blocked (and unread on tiles) draw one; an idle bot has no dot. The wrapper
+ * (.sand-agent-item__avatar, 44px) centers a 36px row avatar with 4px of slack on each side, so the
+ * dot is inset from the wrapper's corner until its center sits on the avatar's own 45° edge point --
+ * "closer to the avatar", not floating off the wrapper corner. Total size includes the 2px white ring
+ * (border-box), so the ring never enlarges the layout box. */
 .herdr-avatar-wrap { position: relative; flex: 0 0 auto; }
 .herdr-status-dot {
-  position: absolute; right: 2px; bottom: 2px; box-sizing: border-box;
-  width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff;
+  position: absolute; right: 3px; bottom: 3px; box-sizing: border-box;
+  width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff;
   background: var(--herdr-status-dot-color, var(--sand-fill-neutral, #9a9a9a));
   pointer-events: none;
 }
-.herdr-status-dot[data-tone="idle"] { --herdr-status-dot-color: var(--sand-fill-neutral, #9a9a9a); }
 .herdr-status-dot[data-tone="working"] { --herdr-status-dot-color: var(--cursor-yellow, #ff9800); }
 .herdr-status-dot[data-tone="done"] { --herdr-status-dot-color: var(--cursor-green, #00c972); }
 .herdr-status-dot[data-tone="blocked"] { --herdr-status-dot-color: var(--cursor-red, #ff263c); }
@@ -213,8 +225,9 @@ button.sand-group-member-remove { position: absolute; right: 8px; padding: 3px 7
 .sand-agent-item.sand-agent-item--tile {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   /* herdr-bot: this padding is what the hover/active background (sand-agent-item:hover, [data-active])
-   * actually covers -- cut well below the row padding (8px) since a tile has no side text to clear. */
-  min-height: 0; padding: 2px; text-align: center;
+   * actually covers -- horizontal stays cut well below the row padding (8px) since a tile has no side
+   * text to clear, but vertical got room to breathe above/below the avatar+name stack. */
+  min-height: 0; padding: 8px 2px; text-align: center;
 }
 /* herdr-bot regression fix: removing the old size-tier plumbing dropped this override entirely, so
  * the wrapper fell back to the generic row rule (44px, production.css) while the avatar rendered
@@ -230,9 +243,9 @@ button.sand-group-member-remove { position: absolute; right: 8px; padding: 3px 7
   font-size: var(--cursor-font-size-sm); font-weight: 400;
 }
 .sand-agent-item.sand-agent-item--tile .sand-agent-item__name-input { width: 100%; text-align: center; }
-/* A 72px tile avatar fills its wrapper exactly, so the same 2px inset already lands the (slightly
- * larger) dot's center on the avatar's 45° edge point. */
-.sand-agent-item.sand-agent-item--tile .herdr-status-dot { width: 16px; height: 16px; }
+/* A 72px tile avatar fills its wrapper exactly, so a 3px inset lands the (slightly larger) dot's
+ * center on the avatar's 45° edge point. */
+.sand-agent-item.sand-agent-item--tile .herdr-status-dot { width: 13px; height: 13px; }
 /* The sidebar's in-progress "새 채팅" row: a normal-height list row whose avatar slot is a plain
  * gray circle with a + mark (reference), rendered inside .sand-agents-list__rows so the grid
  * carrier never stretches it. */

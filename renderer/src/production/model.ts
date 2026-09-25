@@ -6,6 +6,8 @@ import type {
   TranscriptMessage,
   TranscriptLocalToolPermission,
   TranscriptPermissionRequest,
+  TranscriptPrompt,
+  TranscriptPromptAnswer,
   TranscriptThinking,
   TranscriptToolCall
 } from "../recovered/features/conversation/workspace/model";
@@ -22,6 +24,7 @@ import { sortRecentChats } from "./sidebar-model";
 import { projectRuntimeStatus } from "./bot-activity";
 import { projectBotSystemEvent } from "./bot-system-event";
 import type { ReasoningEffort } from "./new-chat-dialog-model";
+import { projectPromptShape } from "./pending-prompt";
 
 export type { DeepLinkInfo } from "../recovered/features/deep-links/overlay/model";
 
@@ -255,6 +258,35 @@ export interface ProjectedUserAttachmentMessage extends TranscriptMessage {
 
 export type ProductionTranscriptEntry = ConversationTranscriptEntry | ProjectedUserAttachmentMessage;
 
+// herdr-bot: the host's "prompt" entry (core entries.ts promptEntry) -- a blocked bot's form plus how
+// it was settled. `answer` is only meaningful for "answered"; anything malformed drops the entry.
+function projectPromptAnswer(value: unknown): TranscriptPromptAnswer | null {
+  if (!isRecord(value)) return null;
+  if (value.kind === "option" && typeof value.key === "string" && typeof value.label === "string") return { kind: "option", key: value.key, label: value.label };
+  if (value.kind === "text" && typeof value.text === "string") return { kind: "text", text: value.text };
+  if (value.kind === "cancelled") return { kind: "cancelled" };
+  return null;
+}
+
+function projectPromptEntry(value: Record<string, unknown>, id: string, timestampMs: number, agentName: string): TranscriptPrompt | null {
+  const prompt = projectPromptShape(value.prompt);
+  if (prompt == null) return null;
+  // "superseded" (a ghost an old run stacked above the live card for the same form) is dropped here.
+  const status = value.status === "answered" || value.status === "resolved" ? value.status : value.status === "pending" ? "pending" : null;
+  if (status == null) return null;
+  const author = isRecord(value.author) ? value.author : null;
+  return {
+    kind: "prompt",
+    id,
+    botId: typeof author?.id === "string" ? author.id : "",
+    botName: typeof author?.name === "string" ? author.name : agentName,
+    prompt,
+    status,
+    answer: status === "answered" ? projectPromptAnswer(value.answer) : null,
+    timestampMs
+  };
+}
+
 function projectPermissionRequestEntry(value: Record<string, unknown>, id: string, timestampMs: number): TranscriptPermissionRequest | null {
   const message = isRecord(value.message) && value.message.type === "permission-request" ? value.message : null;
   if (message == null || !isRecord(message.permission) || typeof message.permission.title !== "string" || message.permission.title.trim().length === 0) return null;
@@ -398,6 +430,7 @@ export function projectTranscriptEntry(value: unknown, index: number, agentName:
     const event = projectBotSystemEvent(value.event);
     return { kind: "notice", id, text, timestampMs, ...(event == null ? {} : { event }) };
   }
+  if (value.kind === "prompt") return projectPromptEntry(value, id, timestampMs, agentName);
   const message = isRecord(value.message) ? value.message : null;
   if (value.kind === "send-message" && message?.type === "permission-request") {
     return projectPermissionRequestEntry(value, id, timestampMs);

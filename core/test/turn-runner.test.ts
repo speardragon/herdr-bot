@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { join } from "node:path";
 import { SayInbox } from "../src/bots/say-inbox.ts";
-import { runBotTurn } from "../src/bots/turn-runner.ts";
+import { runBotTurn, terminalKeys, TURN_ENVELOPE_PREFIX } from "../src/bots/turn-runner.ts";
 import { createHerdrCli } from "../src/herdr/cli.ts";
 import { StatusMirror } from "../src/herdr/status-mirror.ts";
 import { startControlServer } from "../src/control/server.ts";
@@ -37,6 +37,11 @@ test("a settled turn returns what the bot said through the control socket", asyn
     assert.deepEqual(result.spoken, ["looks good", "one nit"]);
     assert.deepEqual(h.said, ["reviewer:in-turn:looks good", "reviewer:in-turn:one nit"]);
     assert.equal(h.fake.readState().prompts?.[0]?.target, "reviewer");
+    const calls = h.fake.readLog();
+    const prefix = calls.find((argv) => argv[0] === "agent" && argv[1] === "send-keys");
+    const prompt = calls.find((argv) => argv[0] === "agent" && argv[1] === "prompt");
+    assert.deepEqual(prefix?.slice(3), terminalKeys(TURN_ENVELOPE_PREFIX));
+    assert.ok(calls.indexOf(prefix!) < calls.indexOf(prompt!), "the non-pasted authorization must be typed before the pasted envelope is submitted");
   } finally {
     await h.cleanup();
   }
@@ -49,6 +54,7 @@ test("busy, blocked, and offline bots are skipped without prompting", async () =
     assert.equal((await runBotTurn(h.deps, { chatId: "room-1", botId: "stuck", prompt: "x" })).outcome, "blocked");
     assert.equal((await runBotTurn(h.deps, { chatId: "room-1", botId: "ghost", prompt: "x" })).outcome, "offline");
     assert.equal(h.fake.readState().prompts?.length ?? 0, 0);
+    assert.equal(h.fake.readLog().filter((argv) => argv[0] === "agent" && argv[1] === "send-keys").length, 0);
   } finally {
     await h.cleanup();
   }

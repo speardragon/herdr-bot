@@ -9,6 +9,8 @@ import { HostEvents } from "./host-events.ts";
 import { log } from "./log.ts";
 import { BotOnboardingService } from "./services/bot-onboarding-service.ts";
 import { ChatService } from "./services/chat-service.ts";
+import { PromptService, readBlockedPrompt } from "./services/prompt-service.ts";
+import { PromptTracker } from "./services/prompt-tracker.ts";
 import { RosterService } from "./services/roster-service.ts";
 import { RunQueue } from "./services/run-queue.ts";
 import { BotExecutionLock, TurnService } from "./services/turn-service.ts";
@@ -41,6 +43,7 @@ export interface Host {
   readonly turns: TurnService;
   readonly onboarding: BotOnboardingService;
   readonly mirror: StatusMirror;
+  readonly prompts: PromptService;
   start(): Promise<void>;
   stop(): Promise<void>;
   sendUserMessage(chatId: string, args: SendUserMessageArgs): StoredEntry;
@@ -70,6 +73,8 @@ interface HostServices {
   readonly roster: RosterService;
   readonly turns: TurnService;
   readonly onboarding: BotOnboardingService;
+  readonly prompts: PromptService;
+  readonly promptTracker: PromptTracker;
 }
 
 /** Constructs the stores plus the mirror/roster/chat/turn wiring, evicting per-chat caches on delete. */
@@ -83,15 +88,27 @@ function buildServices(config: HostConfig, overrides: HostOverrides): HostServic
   const inbox = new SayInbox();
   let chatRef: ChatService | null = null;
   let turnsRef: TurnService | null = null;
+  let promptsRef: PromptService | null = null;
+  let promptTrackerRef: PromptTracker | null = null;
 
   const mirror = new StatusMirror({
     cli,
     socketPath: overrides.socketPath === undefined ? config.herdrSocketPath : overrides.socketPath,
     botIds: () => profiles.list().map((profile) => profile.id),
-    onChange: (botId) => chatRef?.emitUpsert(botId),
+    onChange: (botId, runtime, previous) => {
+      // The prompt card entry is appended/updated first so the upsert that follows already sees it.
+      promptTrackerRef?.onRuntimeChange(botId, runtime, previous);
+      chatRef?.emitUpsert(botId);
+    },
+    readPrompt: (botId) => readBlockedPrompt(cli, botId),
+    isPromptReadSuppressed: (botId) => promptsRef?.isAnswering(botId) ?? false,
   });
+  const prompts = new PromptService({ cli, mirror, onAnswered: (botId, answer, prompt) => promptTrackerRef?.recordAnswer(botId, answer, prompt) });
+  promptsRef = prompts;
   const chat = new ChatService({ config, profiles, rooms, view, mirror, events, isTurnActive: (chatId) => turnsRef?.isTurnActive(chatId) ?? false, ...(overrides.now == null ? {} : { now: overrides.now }) });
   chatRef = chat;
+  const promptTracker = new PromptTracker({ chat, inbox, profiles });
+  promptTrackerRef = promptTracker;
   const roster = new RosterService({
     config, profiles, rooms, cli, mirror,
     ...(overrides.now == null ? {} : { now: overrides.now }),
@@ -107,7 +124,7 @@ function buildServices(config: HostConfig, overrides: HostOverrides): HostServic
   const turns = new TurnService({ config, roster, chat, runQueue, cli, mirror, inbox }, botLocks);
   turnsRef = turns;
   const onboarding = new BotOnboardingService({ config, profiles, roster, chat, turns, ...(overrides.now == null ? {} : { now: overrides.now }) });
-  return { cli, profiles, rooms, events, mirror, chat, roster, turns, onboarding };
+  return { cli, profiles, rooms, events, mirror, chat, roster, turns, onboarding, prompts, promptTracker };
 }
 
 function defaultEnsureSession(config: HostConfig, cli: HerdrCli): () => Promise<string> {
@@ -119,7 +136,7 @@ function defaultEnsureSession(config: HostConfig, cli: HerdrCli): () => Promise<
 }
 
 export function createHost(config: HostConfig, overrides: HostOverrides = {}): Host {
-  const { cli, profiles, rooms, events, mirror, chat, roster, turns: turnService, onboarding } = buildServices(config, overrides);
+  const { cli, profiles, rooms, events, mirror, chat, roster, turns: turnService, onboarding, prompts, promptTracker } = buildServices(config, overrides);
   const ensureSession = overrides.ensureSession === undefined ? defaultEnsureSession(config, cli) : overrides.ensureSession;
 
   let controlServer: ControlServer | null = null;
@@ -131,6 +148,7 @@ export function createHost(config: HostConfig, overrides: HostOverrides = {}): H
     turns: turnService,
     onboarding,
     mirror,
+    prompts,
     async start() {
       onboarding.recover();
       controlServer = await startControlServer(config.controlSocketPath, createControlHandler(host));
@@ -142,6 +160,12 @@ export function createHost(config: HostConfig, overrides: HostOverrides = {}): H
           log("host", `herdr session "${config.herdrSession}" is unavailable; bot commands will fail until it starts`, error instanceof Error ? error.message : String(error));
         }
       }
+      // One real refresh before prompt-card reconciliation: `onRuntimeChange` (fired synchronously for
+      // every bot whose runtime differs from the pre-start empty state) already reconciles most bots
+      // against a card the previous run left `pending`; `promptTracker.recover` then sweeps only the
+      // ones that stayed fully offline throughout this refresh and so never reached that callback.
+      await mirror.refresh();
+      promptTracker.recover(mirror);
       mirror.start();
       log("host", `listening on ${config.controlSocketPath}`);
     },

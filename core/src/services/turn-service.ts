@@ -24,12 +24,14 @@ export interface TurnServiceDeps {
   readonly inbox: SayInbox;
 }
 
-export function outcomeNotice(member: GroupMember, result: MemberTurnResult, paneId: string | null, turnTimeoutMs: number): string | null {
+export function outcomeNotice(member: GroupMember, result: MemberTurnResult, paneId: string | null, turnTimeoutMs: number, hasPromptCard = false): string | null {
   const where = paneId == null ? "" : ` (pane ${paneId})`;
   switch (result.outcome) {
     case "settled": return null;
     case "busy": return `${member.name} is busy with other work in herdr${where}; skipped this turn.`;
-    case "blocked": return `${member.name} is waiting for an approval or answer in herdr${where}. Resolve it there to let the bot continue.`;
+    // The form itself is already in the chat as an answerable card; a notice next to it is noise. Only
+    // a blocked pane whose screen could not be parsed still needs pointing at herdr.
+    case "blocked": return hasPromptCard ? null : `${member.name} is waiting for an approval or answer in herdr${where}. Resolve it there to let the bot continue.`;
     case "stalled": return `${member.name} did not react to the turn prompt${where}; check its pane.`;
     case "timeout": return `${member.name} did not finish its turn within ${Math.round(turnTimeoutMs / 1000)}s${where}.`;
     case "offline": return `${member.name} is offline (no herdr agent named "${member.id}").`;
@@ -56,7 +58,8 @@ export class BotExecutionLock {
 /** Folds curly apostrophes/quotes to ASCII and collapses whitespace so an LLM's normalized echo of the
  * greeting still matches the spec text. Used ONLY for the onboarding acceptance check, never for storage. */
 function normalizeGreeting(text: string): string {
-  return text.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim();
+  // The greeting has a blank line between its two paragraphs; an agent may echo that as a literal "\n".
+  return text.replace(/\\n/g, " ").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim();
 }
 
 export class TurnService {
@@ -211,7 +214,8 @@ export class TurnService {
         isCurrent: () => this.#deps.runQueue.currentEpoch(chatId) === epoch,
         runMemberTurn: ({ member, peers, newMessages }) => this.#memberTurn(chatId, kind, member, peers, newMessages),
         onMemberTurnEnded: (member, result) => {
-          const notice = outcomeNotice(member, result, this.#deps.mirror.get(member.id).paneId, this.#deps.config.turnTimeoutMs);
+          const runtime = this.#deps.mirror.get(member.id);
+          const notice = outcomeNotice(member, result, runtime.paneId, this.#deps.config.turnTimeoutMs, runtime.prompt != null);
           if (notice != null) this.#deps.chat.appendNotice(chatId, notice);
         },
       }, kind === "bot" ? { maxRounds: 1 } : {});
@@ -225,11 +229,17 @@ export class TurnService {
   }
 
   #memberTurn(chatId: string, kind: "bot" | "room", member: GroupMember, peers: readonly GroupMember[], newMessages: readonly GroupMessage[]): Promise<MemberTurnResult> {
-    const cliPath = this.#deps.config.cliPath;
-    const prompt = kind === "room"
-      ? buildRoomTurnPrompt({ room: this.#roomIdentity(chatId), member, peers, newMessages, cliPath })
-      : buildDmTurnPrompt({ bot: member, chatId, userName: this.#deps.config.userName, newMessages, cliPath });
-    return this.#botLocks.run(member.id, () => runBotTurn({ cli: this.#deps.cli, mirror: this.#deps.mirror, inbox: this.#deps.inbox, turnTimeoutMs: this.#deps.config.turnTimeoutMs }, { chatId, botId: member.id, prompt }));
+    return this.#botLocks.run(member.id, () => {
+      // Profiles may change while this turn waits behind another chat's turn.
+      const current = this.#deps.roster.memberIdFor(member.id);
+      if (current == null) return Promise.resolve({ outcome: "offline" as const, spoken: [] });
+      const latestPeers = peers.flatMap((peer) => { const latest = this.#deps.roster.memberIdFor(peer.id); return latest == null ? [] : [latest]; });
+      const cliPath = this.#deps.config.cliPath;
+      const prompt = kind === "room"
+        ? buildRoomTurnPrompt({ room: this.#roomIdentity(chatId), member: current, peers: latestPeers, newMessages, cliPath })
+        : buildDmTurnPrompt({ bot: current, chatId, userName: this.#deps.config.userName, newMessages, cliPath });
+      return runBotTurn({ cli: this.#deps.cli, mirror: this.#deps.mirror, inbox: this.#deps.inbox, turnTimeoutMs: this.#deps.config.turnTimeoutMs }, { chatId, botId: member.id, prompt });
+    });
   }
 
   #roomIdentity(chatId: string): { id: string; name: string; description: string } {

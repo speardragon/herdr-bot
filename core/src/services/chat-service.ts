@@ -4,7 +4,8 @@ import type { StatusMirror } from "../herdr/status-mirror.ts";
 import type { HostEvents } from "../host-events.ts";
 import { ONBOARDING_ORIGIN } from "../bots/onboarding.ts";
 import { botSystemNoticeEntry, type BotSystemEvent } from "../model/bot-system-events.ts";
-import { botMessageEntry, noticeEntry, toGroupMessage, toggleReaction, userMessageEntry, type Author } from "../model/entries.ts";
+import { botMessageEntry, noticeEntry, promptEntry, toGroupMessage, toggleReaction, userMessageEntry, type Author } from "../model/entries.ts";
+import type { BlockedPrompt } from "../herdr/blocked-prompt.ts";
 import { isRoomId } from "../model/ids.ts";
 import { botSummary, roomSummary, type AgentSummary } from "../model/summaries.ts";
 import type { ProfileStore } from "../store/profile-store.ts";
@@ -69,6 +70,20 @@ export class ChatService {
     return this.#append(chatId, noticeEntry({ content, timestampMs: this.#now() }), false);
   }
 
+  /** A bot's blocked approval/question form as an inline card entry (see entries.ts promptEntry). */
+  appendPrompt(chatId: string, author: Author, prompt: BlockedPrompt): StoredEntry {
+    this.#requireChat(chatId);
+    return this.#append(chatId, promptEntry({ author, prompt, timestampMs: this.#now() }), false);
+  }
+
+  /** Rewrites one stored entry in place and publishes it as a transcript "updated" event. */
+  updateEntry(chatId: string, entryId: string, patch: (entry: StoredEntry) => StoredEntry): StoredEntry | null {
+    if (this.chatKind(chatId) == null) return null;
+    const updated = this.transcript(chatId).update(entryId, patch);
+    if (updated != null) this.#deps.events.emit("transcript", { type: "updated", agentId: chatId, entry: updated });
+    return updated;
+  }
+
   /**
    * A structured system notice (bot rename, cross-chat message delivery -- Task 9). Follows the exact
    * same `#append(..., false)` path as `appendNotice`: never counted toward the unread-bot-message
@@ -87,9 +102,16 @@ export class ChatService {
   appendOnboardingGreeting(chatId: string, author: Author, content: string, onboardingKey: string): StoredEntry {
     this.#requireChat(chatId);
     const existing = this.findByOnboardingKey(chatId, onboardingKey);
+    this.#promoteOnboardingToReady(chatId);
     if (existing != null) return existing;
     const base = botMessageEntry({ content, author, timestampMs: this.#now() });
     return this.#append(chatId, { ...base, origin: ONBOARDING_ORIGIN, onboardingKey }, false);
+  }
+
+  #promoteOnboardingToReady(botId: string): void {
+    const profile = this.#deps.profiles.get(botId);
+    if (profile?.onboarding == null || profile.onboarding.stage === "ready") return;
+    this.#deps.profiles.save({ ...profile, onboarding: { ...profile.onboarding, stage: "ready", error: null }, updatedAt: this.#now() });
   }
 
   /** The greeting entry recorded for this onboarding key, if any (the crash-recovery source of truth). */

@@ -65,6 +65,7 @@ function searchableText(entry: ConversationTranscriptEntry): string {
       }
     }
     case "notice": return entry.text;
+    case "prompt": return entry.prompt.question;
     default: return "";
   }
 }

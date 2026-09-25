@@ -105,6 +105,21 @@ export function parseCliArgs(argv: readonly string[], env: NodeJS.ProcessEnv = p
     }
     case "rooms": return control("rooms", {});
     case "whoami": return control("whoami", { paneId });
+    case "profile": {
+      if (rest[0] === "get" && rest.length === 1) return control("profile.get", { paneId });
+      if (rest[0] !== "update") return { error: "usage: herdr-bot profile <get|update --name NAME --label LABEL --description TEXT>" };
+      const patch: Record<string, string> = {};
+      const mapping: Record<string, string> = { "--name": "name", "--label": "title", "--description": "description" };
+      for (let i = 1; i < rest.length; i += 2) {
+        const key = mapping[rest[i]!];
+        const value = rest[i + 1];
+        if (key == null || value == null || value.startsWith("--")) return { error: "profile update needs named fields with values" };
+        if (key === "name" && value.trim().length === 0) return { error: "profile name must not be empty" };
+        patch[key] = value;
+      }
+      if (Object.keys(patch).length === 0) return { error: "profile update needs at least one field" };
+      return control("profile.update", { paneId, ...patch });
+    }
     case "status": return control("status", {});
     case "send": {
       const [chatId, ...words] = rest;

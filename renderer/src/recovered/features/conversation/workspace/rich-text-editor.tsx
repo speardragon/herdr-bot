@@ -882,7 +882,12 @@ export function PromptRichTextEditor({ prompt, richText, scopeKey = "", clearGen
       if (scopedFence != null) {
         if (JSON.stringify(current.getJSON()) === scopedFence.before) return;
         if (transaction.getMeta("sand-field-cleared") === true) return;
-        if (transaction.getMeta("uiEvent") == null) return;
+        // herdr-bot: the recovered fence also required a `uiEvent` meta before it would lift, but
+        // ProseMirror only tags cut/paste/drop with one -- plain typing never carries it. After any
+        // chat switch every keystroke was therefore swallowed here: the draft never updated, the mic
+        // never turned into the send button, and Enter did nothing until the user pasted something.
+        // The two checks above already exclude the programmatic paths (the old scope's document and
+        // the clear-on-send transaction); anything else that changed the document is the user.
         scopeFence.current = null;
       }
       const text = promptEditorText(current);

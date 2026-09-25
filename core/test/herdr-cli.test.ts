@@ -121,3 +121,24 @@ test("sessionList parses herdr's bare sessions payload", async () => {
     { name: "herdr-bot", running: false, socketPath: "/h/.config/herdr/sessions/herdr-bot/herdr.sock" },
   ]);
 });
+
+test("agentRead takes a source, and send-keys / send-text pass through as herdr argv", async () => {
+  const temp = makeTempHome();
+  try {
+    const fake = installFakeHerdr(temp.home, { agents: [{ ...idleAgent, agent_status: "blocked" }], workspaces: [], screens: { reviewer: "Do you want to proceed?\n ❯ 1. Yes\n   2. No\n" } });
+    const cli = createHerdrCli(fake.binPath, fake.env);
+    assert.equal(await cli.agentRead("reviewer", 80, "detection"), "Do you want to proceed?\n ❯ 1. Yes\n   2. No\n");
+    assert.deepEqual(fake.readLog().at(-1), ["agent", "read", "reviewer", "--source", "detection", "--lines", "80"]);
+    await cli.agentRead("reviewer", 40);
+    assert.deepEqual(fake.readLog().at(-1)?.slice(3, 5), ["--source", "visible"]);
+    await cli.agentSendKeys("reviewer", ["2"]);
+    assert.deepEqual(fake.readLog().at(-1), ["agent", "send-keys", "reviewer", "2"]);
+    await cli.agentSendKeys("reviewer", []);
+    assert.deepEqual(fake.readLog().at(-1), ["agent", "send-keys", "reviewer", "2"], "no herdr call for an empty key list");
+    await cli.paneSendText("w1:p2", "todo-list.md");
+    assert.deepEqual(fake.readLog().at(-1), ["pane", "send-text", "w1:p2", "todo-list.md"]);
+    await assert.rejects(cli.agentSendKeys("ghost", ["1"]), (error: unknown) => error instanceof HerdrError && error.code === "agent_not_found");
+  } finally {
+    temp.cleanup();
+  }
+});

@@ -4,6 +4,15 @@ import { parseCliArgs } from "../src/args.ts";
 
 const env = { HERDR_PANE_ID: "w1:p2" };
 
+test("profile commands scope edits to the caller and preserve empty fields for clearing", () => {
+  assert.deepEqual(parseCliArgs(["profile", "get"], env), { kind: "control", method: "profile.get", params: { paneId: "w1:p2" }, output: "json" });
+  assert.deepEqual(parseCliArgs(["profile", "update", "--name", "레이", "--label", "", "--description", "코드 리뷰"], env),
+    { kind: "control", method: "profile.update", params: { paneId: "w1:p2", name: "레이", title: "", description: "코드 리뷰" }, output: "json" });
+  for (const args of [[], ["--name"], ["--name", " "], ["--id", "other"]]) {
+    assert.ok("error" in parseCliArgs(["profile", "update", ...args], env));
+  }
+});
+
 test("say joins the remaining words and carries the pane id", () => {
   assert.deepEqual(parseCliArgs(["say", "room-1", "hello", "there"], env), { kind: "control", method: "say", params: { chatId: "room-1", text: "hello there", paneId: "w1:p2" }, output: "json" });
   assert.deepEqual(parseCliArgs(["pass", "room-1"], env), { kind: "control", method: "pass", params: { chatId: "room-1", paneId: "w1:p2" }, output: "json" });

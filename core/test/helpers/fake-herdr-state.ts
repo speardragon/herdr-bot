@@ -23,6 +23,8 @@ export interface FakeHerdrState {
   prompts?: { target: string; text: string }[];
   closedPanes?: string[];
   sayErrors?: string[];
+  /** What `agent read <name>` prints, keyed by agent name (a blocked agent's approval/question form). */
+  screens?: Record<string, string>;
 }
 
 export interface FakeHerdr {

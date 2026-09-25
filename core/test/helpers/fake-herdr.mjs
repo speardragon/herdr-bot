@@ -149,7 +149,17 @@ async function main() {
     return ok({ agent });
   }
   if (group === "agent" && command === "focus") return findAgent(positionals()[0]) ? ok({ type: "agent_focus" }, false) : fail("agent_not_found", "no such agent");
-  if (group === "agent" && command === "read") { process.stdout.write("fake screen\n"); process.exit(0); }
+  // `state.screens[<name>]` lets a test script what a blocked agent's pane shows (see blocked-prompt.ts).
+  if (group === "agent" && command === "read") {
+    const agent = findAgent(positionals()[0]);
+    if (!agent) fail("agent_not_found", "no such agent");
+    process.stdout.write(state.screens?.[agent.name] ?? "fake screen\n");
+    process.exit(0);
+  }
+  // Key presses / typed text are only logged (readLog()); tests rewrite `agents[].agent_status` and
+  // `screens` themselves to model how the agent's form reacts.
+  if (group === "agent" && command === "send-keys") return findAgent(positionals()[0]) ? ok({ type: "ok" }, false) : fail("agent_not_found", "no such agent");
+  if (group === "pane" && command === "send-text") return ok({ type: "ok" }, false);
   if (group === "workspace" && command === "list") return ok({ workspaces: state.workspaces }, false);
   if (group === "workspace" && command === "create") {
     const id = `w${state.counters.workspace++}`;
