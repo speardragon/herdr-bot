@@ -144,7 +144,11 @@ export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom
     const generation = ++modelCatalogGeneration.current;
     listModels(kind).then(
       (result) => { if (modelCatalogGeneration.current === generation) setModelCatalog(result); },
-      () => { if (modelCatalogGeneration.current === generation) setModelCatalog({ models: [], source: "unavailable" }); },
+      // The RPC call itself rejected (transport/IPC failure) -- distinct from a normal
+      // `{source: "unavailable"}` response, which already carries its own `error` text from
+      // core/src/bots/model-catalog.ts. Without an `error` here the dialog would silently fall
+      // back to just the custom-model-ID input with no explanation.
+      (cause) => { if (modelCatalogGeneration.current === generation) setModelCatalog({ models: [], source: "unavailable", error: cause instanceof Error ? cause.message : String(cause) }); },
     );
   }, [open, kind, source, listModels]);
 
