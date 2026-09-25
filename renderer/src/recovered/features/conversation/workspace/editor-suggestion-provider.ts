@@ -44,8 +44,6 @@ export interface EditorSuggestionIcon {
   readonly dataUrl?: string | null;
   readonly shape?: string | null;
   readonly color?: string | null;
-  /** everyone-only: the scope's actual member ids, so the row can reuse the existing composited group avatar. */
-  readonly memberIds?: readonly string[];
 }
 
 export interface EditorMentionSuggestion {
@@ -120,7 +118,7 @@ export interface EditorSuggestionController {
   dispose(): void;
 }
 
-const EVERYONE_ID = "__everyone__";
+export const EVERYONE_ID = "__everyone__";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -212,9 +210,9 @@ export function projectMentionMembers(value: unknown, allowEveryone = true): Edi
       // backend plain text always stay the literal "everyone" / "@everyone".
       label: t("Everyone", "전체"),
       keywords: ["전체", "everyone", "all"],
-      // Reuses the existing group avatar (composited from the scope's actual candidates), not a
-      // fresh single-mark avatar keyed on the synthetic "__everyone__" id.
-      icon: { type: "everyone", memberIds: result.map((entry) => entry.id) },
+      // A fixed generic multi-person mark, not an avatar composited from the scope's actual
+      // members -- "everyone" is a placeholder, not an identity made of specific bots.
+      icon: { type: "everyone" },
       isGroup: false,
       insert: { type: "mention", id: EVERYONE_ID, label: "everyone" },
     });

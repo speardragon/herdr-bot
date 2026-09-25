@@ -144,12 +144,12 @@ test("everyone appears even for a single-member scope (DM), matching the actual 
   assert.deepEqual(rest.map((entry) => entry.id), ["solo"]);
 });
 
-test("everyone's icon carries the scope's actual member ids, so its row reuses the existing composited group avatar", () => {
+test("everyone's icon is a fixed generic mark, never composited from the scope's actual members", () => {
   const group = projectMentionMembers([{ id: "m1", name: "M1" }, { id: "m2", name: "M2" }], true);
-  assert.deepEqual(group[0]!.icon.memberIds, ["m1", "m2"]);
+  assert.deepEqual(group[0]!.icon, { type: "everyone" });
 
   const dm = projectMentionMembers([{ id: "solo", name: "Solo" }], true);
-  assert.deepEqual(dm[0]!.icon.memberIds, ["solo"]);
+  assert.deepEqual(dm[0]!.icon, { type: "everyone" });
 });
 
 test("everyone is omitted for an empty roster (0-member guidance case)", () => {

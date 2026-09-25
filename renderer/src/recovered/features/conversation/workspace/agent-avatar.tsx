@@ -41,7 +41,7 @@ import grayBotAvatarMask from "../../../../assets/persona-avatars/masks/gray-bot
 // mark. There is deliberately no initials or CSS-generated fallback branch.
 
 export type AgentAvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
-export type AgentAvatarKind = "agent" | "group" | "shared-room";
+export type AgentAvatarKind = "agent" | "group" | "shared-room" | "everyone";
 export type PersonaState = OnboardingCharacterState;
 
 export interface AgentAvatarProps {
@@ -193,6 +193,15 @@ function SharedRoomAvatar({ sizePx }: { sizePx: number }) {
   </span>;
 }
 
+/** herdr-bot: a plain multi-person glyph for the "@everyone" mention -- deliberately not a
+ * composited GroupAvatar of the scope's actual members, since "everyone" is a fixed placeholder
+ * mark, not an identity made of specific bots. */
+function EveryoneAvatar({ sizePx }: { sizePx: number }) {
+  return <span aria-hidden="true" className="sand-agent-avatar sand-everyone-avatar" data-avatar-kind="everyone" style={avatarStyle(sizePx)}>
+    <svg aria-hidden="true" style={{ fill: "none", height: "65%", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 1.5, width: "65%" }} viewBox="0 0 24 24"><circle cx="9" cy="8" r="3" /><path d="M2.5 19.5c0-3 2.9-5.25 6.5-5.25s6.5 2.25 6.5 5.25" /><circle cx="17" cy="8.5" r="2.25" /><path d="M14.8 14.6c.6-.15 1.25-.22 1.95-.1 2.35.4 4.75 2.15 4.75 5" /></svg>
+  </span>;
+}
+
 function groupSlots(count: number, frame: number): Array<{ x: number; y: number; size: number }> {
   if (count <= 1) return [{ x: 0, y: 0, size: frame }];
   if (count === 2) { const size = frame * 2 / 3; return [{ x: 0, y: 0, size }, { x: frame - size, y: frame - size, size }]; }
@@ -225,6 +234,7 @@ export function AgentAvatar(props: AgentAvatarProps) {
   const shape = useMemo(() => resolvePersonaShape(props.agentId, props.shape ?? HERDR_BOT_DEFAULT_SHAPE), [props.agentId, props.shape]);
   const dataUrl = typeof props.dataUrl === "string" && props.dataUrl.length > 0 ? props.dataUrl : null;
   const kind = props.kind ?? "agent";
+  if (kind === "everyone") return <EveryoneAvatar sizePx={sizePx} />;
   if (dataUrl != null) return <img alt="" aria-hidden="true" className="sand-agent-avatar" data-avatar-kind="photo" data-size={size} draggable={false} height={sizePx} src={dataUrl} style={avatarStyle(sizePx)} width={sizePx} />;
   if (kind === "shared-room") return <SharedRoomAvatar sizePx={sizePx} />;
   if (kind === "group") return <GroupAvatar agentId={props.agentId} memberIds={props.memberIds ?? []} paused={props.paused} sizePx={sizePx} state={state} />;

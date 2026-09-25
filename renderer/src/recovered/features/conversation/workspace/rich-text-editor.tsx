@@ -529,7 +529,7 @@ function mentionAvatarProps(row: SuggestionRow): AgentAvatarProps | null {
   const entry = row.value;
   if (!isEditorMentionSuggestion(entry)) return null;
   const icon: EditorSuggestionIcon = entry.icon;
-  if (icon.type === "everyone") return { agentId: entry.id, kind: "group", memberIds: icon.memberIds ?? [] };
+  if (icon.type === "everyone") return { agentId: entry.id, kind: "everyone" };
   if (icon.type === "agent" || icon.type === "group") {
     return {
       agentId: icon.agentId ?? entry.id,
