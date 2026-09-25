@@ -33,6 +33,9 @@ export interface NewChatHeaderProps {
   onCreateGroup(): void;
   onOpenBot(id: string): void;
   onCancel(): void;
+  /** herdr-bot (Task 7): opens the full New Bot dialog (provider/model/reasoning/working-directory)
+   * instead of the one-click quick-create; see new-chat-model.ts's "advanced-setup" option kind. */
+  onOpenAdvancedSetup(): void;
   /** Bumped by the root shell when the user presses "+" while this draft already exists -- refocuses
    * the input instead of creating a second draft (the root shell owns the "at most one draft" rule). */
   readonly focusSignal?: number;
@@ -44,12 +47,14 @@ const SHORTCUT_ROWS = 9;
 function optionLeading(option: NewChatOption<NewChatHeaderBot>): ReactNode {
   if (option.kind === "create-bot") return <SandIcon name="plus" size="sm" />;
   if (option.kind === "create-group") return <SandIcon name="people" size="sm" />;
+  if (option.kind === "advanced-setup") return <SandIcon name="settings" size="sm" />;
   return <AgentAvatar agentId={option.bot.id} name={option.bot.name} size="sm" isStatic dataUrl={option.bot.avatarDataUrl} shape={option.bot.avatarShape} color={option.bot.avatarColor} />;
 }
 
 function optionLabel(option: NewChatOption<NewChatHeaderBot>): string {
   if (option.kind === "create-bot") return option.name == null ? t("Create a new Bot") : t(`Create a Bot named "${option.name}"`, `이름이 "${option.name}"인 Bot 만들기`);
   if (option.kind === "create-group") return t("Create a group chat");
+  if (option.kind === "advanced-setup") return t("Advanced setup", "고급 설정");
   return option.bot.name;
 }
 
@@ -64,7 +69,7 @@ function optionKey(option: NewChatOption<NewChatHeaderBot>): string {
  * keyboard math, shortcut mapping, and default-name logic live in new-chat-model.ts (see
  * new-chat-header.test.ts) so they are testable without a DOM harness.
  */
-export function NewChatHeader({ draft, candidates, pending, error, onChange, onCreateBot, onCreateGroup, onOpenBot, onCancel, focusSignal }: NewChatHeaderProps) {
+export function NewChatHeader({ draft, candidates, pending, error, onChange, onCreateBot, onCreateGroup, onOpenBot, onCancel, onOpenAdvancedSetup, focusSignal }: NewChatHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -91,6 +96,7 @@ export function NewChatHeader({ draft, candidates, pending, error, onChange, onC
   const selectOption = (option: NewChatOption<NewChatHeaderBot>) => {
     if (option.kind === "create-bot") { if (!pending) onCreateBot(option.name ?? undefined); return; }
     if (option.kind === "create-group") { enterGroupMode(); return; }
+    if (option.kind === "advanced-setup") { setIsOpen(false); onOpenAdvancedSetup(); return; }
     if (draft.mode === "group") {
       const next = addDraftMember(draft, option.bot.id);
       if (next === draft) return; // already selected, or at the member cap -- addDraftMember is a no-op

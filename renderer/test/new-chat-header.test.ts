@@ -32,16 +32,16 @@ const BOTS: readonly NewChatCandidateBot[] = [
 
 // Reference (Grok Bot): the two create actions always lead, followed by every bot -- an empty
 // query lists the whole roster so ⌘1..⌘N shortcuts map to a stable, fully visible list.
-test("empty query in choose mode lists the two create actions first, then every bot", () => {
+test("empty query in choose mode lists the three create/setup actions first, then every bot", () => {
   const draft = createNewChatDraft("r1");
   const options = buildOptionList(draft, BOTS);
-  assert.deepEqual(options.map(o => (o.kind === "bot" ? o.bot.id : o.kind)), ["create-bot", "create-group", "reviewer", "fixer", "researcher", "provisioning-bot", "failed-bot"]);
+  assert.deepEqual(options.map(o => (o.kind === "bot" ? o.bot.id : o.kind)), ["create-bot", "create-group", "advanced-setup", "reviewer", "fixer", "researcher", "provisioning-bot", "failed-bot"]);
 });
 
-test("a non-empty query in choose mode keeps the create actions first and filters the bots", () => {
+test("a non-empty query in choose mode keeps the create/setup actions first and filters the bots", () => {
   const draft: NewChatDraft = { ...createNewChatDraft("r1"), query: "fix" };
   const options = buildOptionList(draft, BOTS);
-  assert.deepEqual(options.map(o => (o.kind === "bot" ? o.bot.id : o.kind)), ["create-bot", "create-group", "fixer"]);
+  assert.deepEqual(options.map(o => (o.kind === "bot" ? o.bot.id : o.kind)), ["create-bot", "create-group", "advanced-setup", "fixer"]);
 });
 
 // herdr-bot: "+" with an empty combobox must offer a plain, untitled create (the host names the

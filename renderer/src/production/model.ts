@@ -20,6 +20,7 @@ import type { TranscriptThreadSummary } from "../recovered/features/conversation
 import { previewTextFromLastEntry } from "../recovered/features/conversation/workspace/sidebar-agent-preview-content";
 import { sortRecentChats } from "./sidebar-model";
 import { projectRuntimeStatus } from "./bot-activity";
+import type { ReasoningEffort } from "./new-chat-dialog-model";
 
 export type { DeepLinkInfo } from "../recovered/features/deep-links/overlay/model";
 
@@ -31,7 +32,7 @@ export type { DeepLinkInfo } from "../recovered/features/deep-links/overlay/mode
 export interface RendererAgentRaw extends Record<string, unknown> {
   readonly isSharedRoom?: boolean;
   readonly sharedRoomId?: string | null;
-  readonly herdrBot?: { readonly status?: unknown } | null;
+  readonly herdrBot?: { readonly status?: unknown; readonly model?: unknown; readonly reasoningEffort?: unknown } | null;
 }
 
 /** The host session-summary projection used by the sidebar preview content. */
@@ -63,6 +64,12 @@ export interface RendererAgent extends ConversationAgentSummary {
   /** herdr-bot: a quick-created bot's onboarding stage/error (spawn -> brief -> greeting -> ready),
    * or null for every ordinary bot and room. Lets the sidebar show "setting up…"/retry affordances. */
   onboarding: RendererAgentOnboarding | null;
+  /** herdr-bot (Task 7, plan bot-collaboration-and-launch-settings): the bot's configured model id
+   * (`null` means the CLI's own default) and reasoning effort, read from `herdrBot`. No UI reads or
+   * edits these post-creation yet -- this only makes the data available on the projected agent for
+   * whatever surface (or future task) ends up showing it. */
+  model: string | null;
+  reasoningEffort: ReasoningEffort | null;
 }
 
 export interface RendererAgentOnboarding {
@@ -201,7 +208,9 @@ export function projectRendererAgent(value: unknown, now = Date.now()): Renderer
     createdAt: numberValue(value.createdAt, numberValue(value.updatedAt, now)),
     lastMessageAt: numberValue(value.lastMessageAt, 0),
     runtimeStatus: projectRuntimeStatus(isRecord(value.herdrBot) ? value.herdrBot.status : undefined),
-    onboarding: projectRendererOnboarding(value.herdrBot)
+    onboarding: projectRendererOnboarding(value.herdrBot),
+    model: isRecord(value.herdrBot) && typeof value.herdrBot.model === "string" ? value.herdrBot.model : null,
+    reasoningEffort: isRecord(value.herdrBot) && typeof value.herdrBot.reasoningEffort === "string" ? value.herdrBot.reasoningEffort as ReasoningEffort : null
   };
 }
 

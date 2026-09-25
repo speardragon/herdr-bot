@@ -6,39 +6,32 @@ import { SandButton } from "../recovered/ui/sand-kit-primitives";
 import { SandCheckbox, SandTabs, SandTextField, SandTextarea } from "../recovered/ui/sand-form-primitives";
 import { SandSelect, type SandSelectOption } from "../recovered/ui/sand-floating-primitives";
 import { rendererRuntimeAssetUrl } from "./runtime-assets";
+import {
+  buildCreateBotRequest,
+  SPAWN_SOURCE,
+  supportsModelSelection,
+  supportsReasoningEffort,
+  type AdoptableAgent,
+  type BotDefaults,
+  type CreateBotRequest,
+  type CreateRoomRequest,
+  type DirectoryListing,
+  type ModelCatalogResult,
+  type ReasoningEffort,
+} from "./new-chat-dialog-model";
 
-export interface CreateBotRequest {
-  readonly id: string;
-  readonly name: string;
-  readonly description: string;
-  readonly kind: string;
-  readonly cwd: string;
-  readonly permissionMode: "ask" | "auto";
-  readonly adoptPaneId?: string;
-}
-
-export interface CreateRoomRequest {
-  readonly name: string;
-  readonly description: string;
-  readonly memberIds: string[];
-}
-
-export interface AdoptableAgent {
-  readonly pane_id: string;
-  readonly agent: string | null;
-  readonly cwd: string | null;
-  readonly name: string | null;
-}
-
-export interface BotDefaults {
-  readonly cwd: string;
-  readonly kind: string;
-}
-
-export interface DirectoryListing {
-  readonly exists: boolean;
-  readonly entries: readonly string[];
-}
+export type {
+  AdoptableAgent,
+  BotDefaults,
+  CreateBotRequest,
+  CreateRoomRequest,
+  DirectoryListing,
+  ModelCatalogResult,
+  ModelEntry,
+  ModelCatalogSource,
+  ReasoningEffort,
+} from "./new-chat-dialog-model";
+export { isValidBotId, suggestBotId } from "./new-chat-dialog-model";
 
 export interface NewChatDialogProps {
   readonly open: boolean;
@@ -49,6 +42,9 @@ export interface NewChatDialogProps {
   listAdoptable(): Promise<AdoptableAgent[]>;
   getDefaults(): Promise<BotDefaults>;
   listDirectories(path: string): Promise<DirectoryListing>;
+  /** Task 6's model catalog RPC (herdrBot.listModels), re-queried whenever the selected provider
+   * changes while spawning a new agent. */
+  listModels(kind: string): Promise<ModelCatalogResult>;
 }
 
 /**
@@ -65,28 +61,19 @@ const KIND_META = [
 ] as const;
 
 const TABS = [{ id: "bot", label: "Bot" }, { id: "room", label: "Room" }] as const;
-const SPAWN = "__spawn__";
 
-export function suggestBotId(name: string): string {
-  const slug = name.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/-{2,}/g, "-").replace(/^-+|-+$/g, "").slice(0, 32).replace(/-+$/g, "");
-  if (slug.length === 0) return "bot";
-  return /^[a-z]/.test(slug) ? slug : `bot-${slug}`.slice(0, 32);
-}
+const DEFAULT_MODEL_VALUE = "__default__";
+const CUSTOM_MODEL_VALUE = "__custom__";
 
-export function isValidBotId(id: string): boolean {
-  return /^[a-z][a-z0-9_-]{0,31}$/.test(id) && !id.startsWith("room-");
-}
-
-/** The dialog never asks for an id; it derives one from the name and, on collision, appends -2, -3, ... */
-function uniqueBotId(name: string, takenIds: ReadonlySet<string>): string {
-  const base = suggestBotId(name);
-  if (!takenIds.has(base)) return base;
-  for (let suffix = 2; suffix < 1000; suffix += 1) {
-    const candidate = `${base.slice(0, 32 - String(suffix).length - 1)}-${suffix}`;
-    if (!takenIds.has(candidate)) return candidate;
-  }
-  return base;
-}
+/** `Default` maps to `null` (CLI default) -- see launch-args.ts's ReasoningEffort. */
+const REASONING_LEVELS: readonly { readonly value: "default" | ReasoningEffort; readonly label: string }[] = [
+  { value: "default", label: "Default" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "xhigh", label: "XHigh" },
+  { value: "max", label: "Max" },
+];
 
 function KindBadge({ letter, color, icon }: { readonly letter: string; readonly color: string; readonly icon: string | null }) {
   if (icon == null) return <span aria-hidden="true" className="sand-kind-badge" style={{ background: color }}>{letter}</span>;
@@ -94,7 +81,7 @@ function KindBadge({ letter, color, icon }: { readonly letter: string; readonly 
   return <span aria-hidden="true" className="sand-kind-badge" style={{ background: color }}><span className="sand-kind-badge__icon" style={{ "--kind-icon": `url(${url})` } as CSSProperties} /></span>;
 }
 
-export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom, listAdoptable, getDefaults, listDirectories }: NewChatDialogProps) {
+export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom, listAdoptable, getDefaults, listDirectories, listModels }: NewChatDialogProps) {
   const [tab, setTab] = useState<"bot" | "room">("bot");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -104,20 +91,27 @@ export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom
   const [cwdExists, setCwdExists] = useState(true);
   const [cwdMenuOpen, setCwdMenuOpen] = useState(false);
   const [permissionMode, setPermissionMode] = useState<"ask" | "auto">("ask");
-  const [source, setSource] = useState<string>(SPAWN);
+  const [source, setSource] = useState<string>(SPAWN_SOURCE);
   const [adoptable, setAdoptable] = useState<AdoptableAgent[]>([]);
+  const [model, setModel] = useState<string | null>(null);
+  const [useCustomModel, setUseCustomModel] = useState(false);
+  const [customModelId, setCustomModelId] = useState("");
+  const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort | null>(null);
+  const [modelCatalog, setModelCatalog] = useState<ModelCatalogResult | null>(null);
   const [roomName, setRoomName] = useState("");
   const [roomGoal, setRoomGoal] = useState("");
   const [members, setMembers] = useState<ReadonlySet<string>>(new Set());
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cwdRequestGeneration = useRef(0);
+  const modelCatalogGeneration = useRef(0);
 
   useEffect(() => {
     if (!open) return;
     setTab("bot"); setName(""); setDescription(""); setKind("claude"); setCwd("");
     setCwdSuggestions([]); setCwdExists(true); setCwdMenuOpen(false);
-    setPermissionMode("ask"); setSource(SPAWN); setRoomName(""); setRoomGoal(""); setMembers(new Set()); setError(null); setPending(false);
+    setPermissionMode("ask"); setSource(SPAWN_SOURCE); setRoomName(""); setRoomGoal(""); setMembers(new Set()); setError(null); setPending(false);
+    setModel(null); setUseCustomModel(false); setCustomModelId(""); setReasoningEffort(null); setModelCatalog(null);
     let cancelled = false;
     listAdoptable().then(
       (list) => { if (!cancelled) setAdoptable(list); },
@@ -139,17 +133,42 @@ export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom
     );
   }, [open, cwd, listDirectories]);
 
+  // herdr-bot (Task 7): re-fetch the model catalog whenever the provider changes, and reset the
+  // previous provider's selected model/reasoning -- the plan's "프로바이더가 바뀌면 herdrBot.listModels
+  // 재조회 및 이전 프로바이더의 선택 모델 초기화". Only relevant while spawning a new agent: adopting a
+  // pane hides this whole section (see the JSX below) and keeps that pane's existing settings.
+  useEffect(() => {
+    if (!open || source !== SPAWN_SOURCE) return;
+    setModel(null); setUseCustomModel(false); setCustomModelId(""); setReasoningEffort(null);
+    if (!supportsModelSelection(kind)) { setModelCatalog(null); return; }
+    const generation = ++modelCatalogGeneration.current;
+    listModels(kind).then(
+      (result) => { if (modelCatalogGeneration.current === generation) setModelCatalog(result); },
+      () => { if (modelCatalogGeneration.current === generation) setModelCatalog({ models: [], source: "unavailable" }); },
+    );
+  }, [open, kind, source, listModels]);
+
   const takenIds = useMemo(() => new Set(agents.map((agent) => agent.id)), [agents]);
-  const effectiveId = useMemo(() => uniqueBotId(name, takenIds), [name, takenIds]);
   const bots = useMemo(() => agents.filter((agent) => !agent.isGroup), [agents]);
   const sourceOptions = useMemo(() => [
-    { value: SPAWN, label: t("Start a new agent in herdr") },
+    { value: SPAWN_SOURCE, label: t("Start a new agent in herdr") },
     ...adoptable.map((agent) => ({ value: agent.pane_id, label: `Adopt ${agent.agent ?? "agent"} at ${agent.pane_id}${agent.cwd ? ` (${agent.cwd})` : ""}` })),
   ], [adoptable]);
   const kindOptions: SandSelectOption<string>[] = useMemo(() => KIND_META.map((meta) => ({
     value: meta.value, label: meta.label, leading: <KindBadge color={meta.color} icon={meta.icon} letter={meta.letter} />,
   })), []);
-  const canCreateBot = name.trim().length > 0 && (source !== SPAWN || cwdExists) && !pending;
+  const modelOptions: SandSelectOption<string>[] = useMemo(() => [
+    { value: DEFAULT_MODEL_VALUE, label: t("CLI default") },
+    ...(modelCatalog?.models ?? []).map((entry) => ({ value: entry.id, label: entry.label })),
+    { value: CUSTOM_MODEL_VALUE, label: t("Custom model ID…", "직접 모델 ID 입력…") },
+  ], [modelCatalog]);
+  const modelSelectValue = useCustomModel ? CUSTOM_MODEL_VALUE : model ?? DEFAULT_MODEL_VALUE;
+  const onModelSelectChange = (value: string) => {
+    if (value === CUSTOM_MODEL_VALUE) { setUseCustomModel(true); return; }
+    setUseCustomModel(false);
+    setModel(value === DEFAULT_MODEL_VALUE ? null : value);
+  };
+  const canCreateBot = name.trim().length > 0 && (source !== SPAWN_SOURCE || cwdExists) && !pending;
   const canCreateRoom = roomName.trim().length > 0 && members.size > 0 && members.size <= 6 && !pending;
 
   const submit = async (): Promise<void> => {
@@ -157,7 +176,12 @@ export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom
     setError(null);
     try {
       if (tab === "bot") {
-        await onCreateBot({ id: effectiveId, name: name.trim(), description, kind, cwd: cwd.trim(), permissionMode, ...(source === SPAWN ? {} : { adoptPaneId: source }) });
+        const request = buildCreateBotRequest({
+          name, description, kind, cwd, permissionMode,
+          model: useCustomModel ? customModelId : model,
+          reasoningEffort, source, takenIds,
+        });
+        await onCreateBot(request);
       } else {
         await onCreateRoom({ name: roomName.trim(), description: roomGoal, memberIds: [...members] });
       }
@@ -176,8 +200,8 @@ export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom
       <SandTextField autoFocus label={t("Name")} onChange={(event) => setName(event.currentTarget.value)} placeholder={t("Code Reviewer")} value={name} />
       <SandTextarea label={t("Persona (optional)")} minRows={2} onChange={(event) => setDescription(event.currentTarget.value)} placeholder={t("Reviews diffs for correctness and style.")} value={description} />
       {sourceOptions.length > 1 ? <label className="sand-new-chat-dialog__row"><span>{t("Source")}</span><SandSelect ariaLabel={t("Source")} className="ui-select-trigger" matchAnchorWidth onValueChange={setSource} options={sourceOptions} value={source} /></label> : null}
-      {source === SPAWN ? <>
-        <label className="sand-new-chat-dialog__row"><span>{t("Agent")}</span><SandSelect ariaLabel={t("Agent kind")} className="ui-select-trigger" onValueChange={setKind} options={kindOptions} value={kind} /></label>
+      {source === SPAWN_SOURCE ? <>
+        <label className="sand-new-chat-dialog__row"><span>{t("AI provider", "AI 프로바이더")}</span><SandSelect ariaLabel={t("AI provider", "AI 프로바이더")} className="ui-select-trigger" onValueChange={setKind} options={kindOptions} value={kind} /></label>
         <div className="sand-new-chat-dialog__cwd">
           <SandTextField
             description={cwd.trim().length > 0 && !cwdExists ? undefined : "Where the agent's shell starts"}
@@ -196,7 +220,13 @@ export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom
           </div> : null}
         </div>
         <label className="sand-new-chat-dialog__row"><span>{t("Permissions")}</span><SandSelect ariaLabel={t("Permissions")} className="ui-select-trigger" onValueChange={setPermissionMode} options={[{ value: "ask" as const, label: t("Ask before edits and commands") }, { value: "auto" as const, label: t("Agent-specific automation permissions") }]} value={permissionMode} /></label>
-      </> : null}
+        {supportsModelSelection(kind) ? <>
+          <label className="sand-new-chat-dialog__row"><span>{t("Model")}</span><SandSelect ariaLabel={t("Model")} className="ui-select-trigger" onValueChange={onModelSelectChange} options={modelOptions} value={modelSelectValue} /></label>
+          {useCustomModel ? <SandTextField label={t("Custom model ID", "직접 입력한 모델 ID")} onChange={(event) => setCustomModelId(event.currentTarget.value)} placeholder={t("e.g. gpt-5.4")} value={customModelId} /> : null}
+          {modelCatalog?.error != null ? <p className="sand-new-chat-dialog__hint">{modelCatalog.error}</p> : null}
+        </> : null}
+        {supportsReasoningEffort(kind) ? <label className="sand-new-chat-dialog__row"><span>{t("Reasoning")}</span><SandSelect ariaLabel={t("Reasoning")} className="ui-select-trigger" onValueChange={(value) => setReasoningEffort(value === "default" ? null : value as ReasoningEffort)} options={REASONING_LEVELS.map((level) => ({ value: level.value, label: t(level.label) }))} value={reasoningEffort ?? "default"} /></label> : null}
+      </> : <p className="sand-new-chat-dialog__hint">{t("Adopting an existing pane keeps its current model, reasoning, and permission settings -- they can't be changed here.", "기존 pane을 가져오면 현재 모델·추론·권한 설정이 그대로 유지되며 여기서 변경할 수 없습니다.")}</p>}
     </div> : <div className="sand-new-chat-dialog__form">
       <SandTextField autoFocus label={t("Room name")} onChange={(event) => setRoomName(event.currentTarget.value)} placeholder={t("Auth refactor")} value={roomName} />
       <SandTextarea label={t("Goal (optional)")} minRows={2} onChange={(event) => setRoomGoal(event.currentTarget.value)} placeholder={t("Ship the login fix with tests and a changelog entry.")} value={roomGoal} />
@@ -208,7 +238,7 @@ export function NewChatDialog({ open, agents, onClose, onCreateBot, onCreateRoom
     {error == null ? null : <p className="sand-new-chat-dialog__error" role="alert">{error}</p>}
     <footer className="sand-new-chat-dialog__footer">
       <SandButton disabled={pending} onClick={onClose} size="sm" variant="secondary">{t("Cancel")}</SandButton>
-      <SandButton disabled={tab === "bot" ? !canCreateBot : !canCreateRoom} onClick={() => void submit()} size="sm">{pending ? t("Creating…") : tab === "bot" ? (source === SPAWN ? t("Start bot") : t("Adopt bot")) : t("Create room")}</SandButton>
+      <SandButton disabled={tab === "bot" ? !canCreateBot : !canCreateRoom} onClick={() => void submit()} size="sm">{pending ? t("Creating…") : tab === "bot" ? (source === SPAWN_SOURCE ? t("Start bot") : t("Adopt bot")) : t("Create room")}</SandButton>
     </footer>
   </OverlayDialog>;
 }

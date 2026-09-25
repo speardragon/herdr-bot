@@ -147,6 +147,7 @@ import type { TranscriptMessageReactionSlotProps } from "../recovered/features/c
 import { LocalToolPermissionDock, type LocalToolPermissionRequest } from "../recovered/features/permissions/local-tool/view";
 import { NewChatHeader, type NewChatHeaderBot } from "./NewChatHeader";
 import { createNewChatDraft, defaultGroupName, pruneDraftMembers, selectedMembers, type NewChatDraft } from "./new-chat-model";
+import { NewChatDialog, type AdoptableAgent, type BotDefaults, type CreateBotRequest, type CreateRoomRequest, type DirectoryListing, type ModelCatalogResult } from "./NewChatDialog";
 import {
   isRecord,
   parseDesktopIntent,
@@ -3095,6 +3096,71 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
     void openAgent(id);
   }, [openAgent]);
 
+  // herdr-bot (Task 7, plan bot-collaboration-and-launch-settings): the general New Bot/Room dialog
+  // (AI provider, model, reasoning effort, working directory) -- a configurable alternative to the
+  // "+" picker's one-click quick-create, reachable from FirstBotPanel (before any bot exists) and
+  // from NewChatHeader's "advanced-setup" option (every bot after that).
+  const [newChatDialogOpen, setNewChatDialogOpen] = useState(false);
+  const openNewChatDialog = useCallback(() => { setNewChatDialogOpen(true); }, []);
+  const closeNewChatDialog = useCallback(() => { setNewChatDialogOpen(false); }, []);
+  const openNewChatDialogFromHeader = useCallback(() => {
+    // The "+" combobox draft is a separate, mutually exclusive UI to this dialog -- drop it so the
+    // header row doesn't sit open (and unusable) behind the modal.
+    discardNewChatDraft();
+    setNewChatDialogOpen(true);
+  }, [discardNewChatDraft]);
+
+  const createBotFromDialog = useCallback(async (request: CreateBotRequest) => {
+    if (client == null) throw new Error("coordinator is unavailable for createAgent");
+    const herdrBot: Record<string, unknown> = {
+      id: request.id,
+      kind: request.kind,
+      cwd: request.cwd,
+      permissionMode: request.permissionMode,
+      ...(request.model == null ? {} : { model: request.model }),
+      ...(request.reasoningEffort == null ? {} : { reasoningEffort: request.reasoningEffort }),
+      ...(request.adoptPaneId == null ? {} : { adoptPaneId: request.adoptPaneId }),
+    };
+    const result = await client.call("createAgent", { name: request.name, description: request.description, herdrBot });
+    const created = result && typeof result === "object" && "agent" in result ? (result as { agent: unknown }).agent : result;
+    const projected = projectRendererAgent(created);
+    await refreshRoster();
+    if (projected != null) await openAgent(projected.id);
+  }, [client, openAgent, refreshRoster]);
+
+  // Thin passthrough to the same createGroup RPC createGroupFromDraft uses -- NewChatHeader's own
+  // inline group flow (createGroupFromDraft above) is unaffected; this only keeps the dialog's Room
+  // tab functional rather than dead.
+  const createRoomFromDialog = useCallback(async (request: CreateRoomRequest) => {
+    if (client == null) throw new Error("coordinator is unavailable for createGroup");
+    const result = await client.call("createGroup", { name: request.name, description: request.description, memberIds: request.memberIds });
+    const created = result && typeof result === "object" && "agent" in result ? (result as { agent: unknown }).agent : result;
+    const projected = projectRendererAgent(created);
+    await refreshRoster();
+    if (projected != null) await openAgent(projected.id);
+  }, [client, openAgent, refreshRoster]);
+
+  const listAdoptableForDialog = useCallback(async (): Promise<AdoptableAgent[]> => {
+    if (client == null) return [];
+    const result = await client.call("herdrBot.listAdoptable", {});
+    return Array.isArray(result) ? result as AdoptableAgent[] : [];
+  }, [client]);
+
+  const getDialogDefaults = useCallback(async (): Promise<BotDefaults> => {
+    if (client == null) throw new Error("coordinator is unavailable for herdrBot.defaults");
+    return await client.call("herdrBot.defaults", {}) as BotDefaults;
+  }, [client]);
+
+  const listDirectoriesForDialog = useCallback(async (path: string): Promise<DirectoryListing> => {
+    if (client == null) return { exists: false, entries: [] };
+    return await client.call("herdrBot.listDirectories", { path }) as DirectoryListing;
+  }, [client]);
+
+  const listModelsForDialog = useCallback(async (kind: string): Promise<ModelCatalogResult> => {
+    if (client == null) return { models: [], source: "unavailable" };
+    return await client.call("herdrBot.listModels", { kind }) as ModelCatalogResult;
+  }, [client]);
+
   const [retryingSetupId, setRetryingSetupId] = useState<string | null>(null);
   const retryBotSetup = useCallback(async (id: string) => {
     if (client == null || retryingSetupId === id) return;
@@ -3742,6 +3808,7 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
           onChange={setNewChatDraft}
           onCreateBot={(name) => void createBotFromDraft(name)}
           onCreateGroup={() => void createGroupFromDraft()}
+          onOpenAdvancedSetup={openNewChatDialogFromHeader}
           onOpenBot={openBotFromDraft}
           pending={newChatPending}
         /></main> : showRootEmptyWorkspace ? <RootShellEmptyWorkspace isVisible /> : activeAgent == null ? null : <div style={{ display: "flex", flex: "1 1 auto", flexDirection: "column", minHeight: 0, minWidth: 0 }}>
@@ -4035,6 +4102,17 @@ export function ProductionRenderer({ bridge, coordinatorPort }: ProductionRender
       />
       <AgentDeleteConfirmation agent={deleteAgent} onClose={() => setDeleteAgent(null)} onConfirm={deleteAgentById} />
       <SidebarSectionDeleteConfirmation section={deleteSection} onClose={() => setDeleteSection(null)} onConfirm={deleteSectionById} />
+      <NewChatDialog
+        agents={agents}
+        getDefaults={getDialogDefaults}
+        listAdoptable={listAdoptableForDialog}
+        listDirectories={listDirectoriesForDialog}
+        listModels={listModelsForDialog}
+        onClose={closeNewChatDialog}
+        onCreateBot={createBotFromDialog}
+        onCreateRoom={createRoomFromDialog}
+        open={newChatDialogOpen}
+      />
       <Suspense fallback={null}><ComputerOverlayRouteView params={{}} /></Suspense>
     </div>
   );

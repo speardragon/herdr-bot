@@ -1,0 +1,27 @@
+/* herdr-bot: the "create your first bot" main-area panel (see FirstBotPanel.tsx). Centered content
+ * below a header row that stands in for the real per-chat header, so creating the bot doesn't cause
+ * a layout jump. */
+.hb-first-bot__body { display: flex; flex: 1 1 auto; align-items: center; justify-content: center; min-height: 0; overflow: auto; padding: 24px; }
+.hb-first-bot__card { display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(100%, 320px); }
+
+/* Same swatch pattern as the avatar editor (agent-info/avatar-editor/view.css): a CSS-var-driven
+ * dot, selected one gets a gapped ring instead of a filled outline. 11 colours honeycomb into 6 on
+ * top and 5 below: same per-dot pitch (swatch + gap) in both rows, so `align-items: center` on its
+ * own already lands the narrower 5-row exactly half a pitch to the right of the 6-row -- each of
+ * its dots sits in the notch between two dots above it. No extra offset needed (an earlier
+ * `margin-left` here double-applied that half-pitch on top of the centering and pushed row 2 a full
+ * pitch off, not half). */
+.hb-first-bot__colors { --hb-swatch: 26px; --hb-swatch-gap: 10px; display: flex; flex-direction: column; align-items: center; gap: var(--hb-swatch-gap); }
+.hb-first-bot__color-row { display: flex; gap: var(--hb-swatch-gap); }
+.hb-first-bot__color {
+  width: var(--hb-swatch); height: var(--hb-swatch); padding: 0; border: 0; border-radius: 50%;
+  background: var(--hb-avatar-swatch); cursor: pointer;
+}
+.hb-first-bot__color[aria-checked="true"] { box-shadow: 0 0 0 2px var(--cursor-bg-editor), 0 0 0 3.5px var(--cursor-text-tertiary); }
+.hb-first-bot__color:disabled { cursor: default; opacity: .6; }
+
+.hb-first-bot__card > [data-component="field"] { width: 100%; }
+.hb-first-bot__card > .sand-kit-button { width: 100%; }
+.hb-first-bot__error { margin: 0; color: var(--sand-text-danger, #d24848); font-size: 12px; line-height: 16px; text-align: center; }
+.hb-first-bot__advanced-link { margin: -4px 0 0; padding: 0; border: 0; background: none; color: var(--cursor-text-secondary); font-size: 12px; line-height: 16px; text-decoration: underline; cursor: pointer; }
+.hb-first-bot__advanced-link:disabled { cursor: default; opacity: .6; }

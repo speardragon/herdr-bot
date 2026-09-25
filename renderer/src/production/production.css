@@ -456,6 +456,7 @@ button, textarea, input { font: inherit; }
 .sand-new-chat-dialog__members { display: grid; gap: 8px; margin: 0; padding: 10px 12px; border: 1px solid var(--cursor-border-secondary); border-radius: var(--cursor-radius-lg); }
 .sand-new-chat-dialog__members legend { padding: 0 4px; color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-xs); }
 .sand-new-chat-dialog__error { margin: 12px 0 0; color: var(--cursor-danger); font-size: var(--cursor-font-size-sm); }
+.sand-new-chat-dialog__hint { margin: 0; color: var(--cursor-text-secondary); font-size: var(--cursor-font-size-xs); }
 .sand-new-chat-dialog__footer { display: flex; justify-content: flex-end; gap: 8px; margin: 18px -20px -20px; padding: 12px 20px; border-top: 1px solid var(--cursor-border-secondary); }
 
 /* herdr-bot: room member attribution on bot messages */

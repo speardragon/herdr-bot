@@ -50,7 +50,11 @@ export type NewChatOption<TBot extends NewChatCandidateBot = NewChatCandidateBot
    * -- the row reads "Create a new Bot" when null, "이름이 "…"인 Bot 만들기" when a name is typed, and
    * selecting it creates a bot with that name (see NewChatHeader.optionLabel/selectOption). */
   | { readonly kind: "create-bot"; readonly name: string | null }
-  | { readonly kind: "create-group" };
+  | { readonly kind: "create-group" }
+  /** herdr-bot (Task 7, plan bot-collaboration-and-launch-settings): opens the full New Bot dialog
+   * (provider/model/reasoning/working-directory) instead of the one-click quick-create above, which
+   * stays a defaults-only shortcut per the plan ("원클릭 quick creation은 기본 설정 전용 단축 경로로 유지"). */
+  | { readonly kind: "advanced-setup" };
 
 function isJoinable(bot: NewChatCandidateBot): boolean {
   return bot.onboardingStage == null || bot.onboardingStage === "ready";
@@ -78,7 +82,12 @@ export function buildOptionList<TBot extends NewChatCandidateBot>(draft: NewChat
   // query lists the whole roster, so the ⌘1..⌘9 badges map onto a stable, fully visible list.
   const matches = candidates.filter(bot => matchesQuery(bot.name, draft.query));
   const typedName = draft.query.trim().length > 0 ? draft.query.trim() : null;
-  return [{ kind: "create-bot" as const, name: typedName }, { kind: "create-group" as const }, ...matches.map(bot => ({ kind: "bot" as const, bot }))];
+  return [
+    { kind: "create-bot" as const, name: typedName },
+    { kind: "create-group" as const },
+    { kind: "advanced-setup" as const },
+    ...matches.map(bot => ({ kind: "bot" as const, bot })),
+  ];
 }
 
 /** `selectedBots`, in `draft.memberIds` order, for rendering chips ahead of the input. */
