@@ -99,12 +99,45 @@ export function projectCodexModels(data: readonly unknown[]): ModelEntry[] {
   return dedupById(entries);
 }
 
+/**
+ * The minimal shape `runCodexModelList` actually consumes from a real `ChildProcess` (a real
+ * `ChildProcess` satisfies this structurally, so no cast is needed at the default implementation
+ * below). Exposed as an injectable `ModelCatalogDeps.spawnCodexProcess` seam purely so tests can hand
+ * in a fully test-controlled fake -- a plain `EventEmitter`-based stub whose `stdin`/`stdout` are
+ * themselves `EventEmitter`-based stubs -- to test the "is an error listener attached before any
+ * stdin write can happen" invariant directly and deterministically, instead of racing a real
+ * subprocess's OS-scheduled timing (see the regression test in model-catalog.test.ts for why the
+ * latter does not reliably discriminate pre-fix from post-fix behavior in this environment).
+ */
+export interface CodexChildProcess {
+  readonly stdin: {
+    write(chunk: string): boolean;
+    on(event: "error", listener: (error: Error) => void): void;
+  };
+  readonly stdout: {
+    on(event: "data", listener: (chunk: Buffer) => void): void;
+    removeAllListeners(event?: string): void;
+  };
+  on(event: "error", listener: (error: Error) => void): void;
+  on(event: "exit", listener: (code: number | null) => void): void;
+  removeAllListeners(event?: string): void;
+  kill(): void;
+}
+
+function defaultSpawnCodexProcess(command: string, env: NodeJS.ProcessEnv): CodexChildProcess {
+  // stderr is ignored, not piped: an unread pipe fills its OS buffer once the child logs enough,
+  // which blocks the child until *we* time it out -- turning a log-noisy build into a guaranteed 5s
+  // stall instead of a fast reply.
+  return spawn(command, ["app-server"], { env, stdio: ["pipe", "pipe", "ignore"] });
+}
+
 export interface ModelCatalogDeps {
   readonly env: NodeJS.ProcessEnv;
   readonly now: () => number;
   readonly timeoutMs: number;
   readonly ttlMs: number;
   readonly platform: NodeJS.Platform;
+  readonly spawnCodexProcess: (command: string, env: NodeJS.ProcessEnv) => CodexChildProcess;
 }
 
 function resolvedDeps(overrides: Partial<ModelCatalogDeps>): ModelCatalogDeps {
@@ -114,6 +147,7 @@ function resolvedDeps(overrides: Partial<ModelCatalogDeps>): ModelCatalogDeps {
     timeoutMs: DEFAULT_TIMEOUT_MS,
     ttlMs: DEFAULT_TTL_MS,
     platform: process.platform,
+    spawnCodexProcess: defaultSpawnCodexProcess,
     ...overrides,
   };
 }
@@ -221,10 +255,7 @@ const CODEX_CLIENT_INFO = { name: "herdr-bot", version: "0.1.0" };
 
 function runCodexModelList(command: string, deps: ModelCatalogDeps): Promise<ModelEntry[]> {
   return new Promise((resolve, reject) => {
-    // stderr is ignored, not piped: an unread pipe fills its OS buffer once the child logs enough,
-    // which blocks the child until *we* time it out -- turning a log-noisy build into a guaranteed
-    // 5s stall instead of a fast reply.
-    const child = spawn(command, ["app-server"], { env: deps.env, stdio: ["pipe", "pipe", "ignore"] });
+    const child = deps.spawnCodexProcess(command, deps.env);
     // Attached immediately, not only inside `finish()` below: `send()` writes to `child.stdin` both
     // for `initialize` (right after spawn) and, from inside the stdout "data" handler, for
     // `model/list` -- i.e. *before* `finish()` has ever run. If the real app-server exits or closes

@@ -3,12 +3,14 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EventEmitter } from "node:events";
 import {
   createModelCatalog,
   listBotModels,
   parseGrokModelsOutput,
   parseOpencodeModelsOutput,
   projectCodexModels,
+  type CodexChildProcess,
   type ModelCatalog,
   type ModelCatalogResult,
 } from "../src/bots/model-catalog.ts";
@@ -311,26 +313,20 @@ test("codex: a binary missing from PATH becomes unavailable (mirrors the grok EN
   assert.equal(result.source, "unavailable");
 });
 
-// Behavioral coverage for review finding: a stray `child.stdin` write error (e.g. the real app-server
-// answering `initialize` and then exiting before `model/list` is sent) must resolve gracefully, not
-// crash the host process with an uncaught 'error' event. The fix moved `child.stdin.on("error", ...)`
-// to run immediately after `spawn(...)` instead of only inside `finish()` (which had not run yet at
-// the moment `send(2, ...)` writes to a possibly-already-closed stdin pipe), closing that window.
+// End-to-end behavioral coverage for review finding: a stray `child.stdin` write error (e.g. the real
+// app-server answering `initialize` and then exiting before `model/list` is sent) must resolve
+// gracefully, not crash the host process with an uncaught 'error' event.
 //
-// Note on what this specific test does and doesn't prove: direct experimentation (documented in the
-// Task 6 fix-round-1 report) confirmed the general mechanism is real -- an unlistened 'error' on a
-// pipe hit with a genuine EPIPE does crash a Node process (reproduced with a plain SIGKILL'd child).
-// But forcing that exact failure through *this* interaction shape -- reply-then-exit racing the
-// immediate `send(2, ...)` triggered from inside the stdout "data" handler -- did not reproduce a
-// crash even against the pre-fix code in this Node/OS environment across several deliberately
-// adversarial variants (exit in the write-flush callback, explicit `stdin.destroy()` before exit,
-// self-SIGKILL): the buffered reply data is consistently delivered to and handled by the "data"
-// listener, and the resulting stdin write consistently completes, before the child's death is
-// processed on the parent side. So this test does not reliably discriminate pre-fix from post-fix in
-// this environment; it verifies the documented failure interaction resolves to a graceful
-// `"unavailable"` result end-to-end, which is real coverage on its own, while the fix's correctness
-// rests on Node's documented "unlistened stream error crashes the process" semantics (confirmed
-// above) rather than on this test forcing the race.
+// This test alone does NOT reliably discriminate pre-fix from post-fix code: direct experimentation
+// (documented in the Task 6 fix-round-1 report) found that in this Node/OS environment, the buffered
+// reply data is consistently delivered to and handled by the "data" listener, and the resulting
+// second stdin write consistently completes, before the child's death is processed on the parent
+// side -- across several adversarial exit-timing variants, none reproduced a crash even against
+// pre-fix code. It is kept as real end-to-end coverage of the observable outcome (a graceful
+// `"unavailable"` result, not a hang or a thrown exception escaping the test). The actual regression
+// guard for the listener-placement fix is the mechanism-level test below, which tests the "is a
+// listener attached before any write" invariant directly against a fully-controlled fake child, and
+// does discriminate.
 test("codex: the server replying to initialize and exiting before model/list is sent resolves gracefully (does not crash the host process)", async () => {
   const bin = makeFixtureBin();
   try {
@@ -361,6 +357,70 @@ rl.on("line", (line) => {
   } finally {
     bin.cleanup();
   }
+});
+
+// Mechanism-level regression test for the same review finding, and the one that actually
+// discriminates pre-fix from post-fix code (unlike the end-to-end test above -- see its comment).
+// Rather than racing a real subprocess's OS-scheduled exit timing, this drives a fully-controlled fake
+// `ChildProcess` (a plain `EventEmitter`, whose `stdin`/`stdout` are themselves plain `EventEmitter`s
+// -- exactly what a real `ChildProcess` and its stdin/stdout streams structurally are) through the
+// precise interaction shape the fix closes: the buffered `initialize` reply is handled synchronously
+// inside the stdout "data" listener, which synchronously issues the second stdin write from inside
+// that same callback -- and that second write is made to emit an 'error' on the stdin stream
+// synchronously. (A real EPIPE surfaces asynchronously, on a later tick; emitting synchronously here
+// only tightens the test, since the invariant under test -- whether an error listener is registered on
+// `stdin` before any write can happen -- depends only on listener-registration order, which this test
+// controls precisely, not on when the emit happens.)
+//
+// This discriminates for real: a plain `EventEmitter` with no listener for 'error' throws synchronously
+// out of `.emit("error", ...)` (Node's documented default behavior for the special-cased 'error'
+// event). If the fix regressed to attaching `child.stdin.on("error", ...)` only inside `finish()`
+// (which has not run yet at the point of the second write), that throw would escape this test's
+// `assert.doesNotThrow` call and fail it. With the listener attached immediately after spawn (the
+// current, correct code), the emit finds a listener and is swallowed, so nothing throws. Verified
+// empirically both ways (see the Task 6 fix-round-2 report for the scratch-copy revert-and-rerun).
+test("codex: an error listener is attached to child.stdin before any write happens (mechanism-level, deterministic)", async () => {
+  let writeCount = 0;
+  const stdin = new EventEmitter() as EventEmitter & { write(chunk: string): boolean };
+  stdin.write = (_chunk: string): boolean => {
+    writeCount += 1;
+    if (writeCount === 2) {
+      // Simulates the second write (the `model/list` send) hitting a broken pipe.
+      stdin.emit("error", new Error("EPIPE: broken pipe (test)"));
+    }
+    return true;
+  };
+  const stdout = new EventEmitter();
+  const childEmitter = new EventEmitter();
+  const child = Object.assign(childEmitter, { stdin, stdout, kill: () => {} }) as unknown as CodexChildProcess;
+
+  const catalog = createModelCatalog({
+    platform: "linux",
+    timeoutMs: 500, // belt-and-braces: if a pre-fix throw escaped send() and finish() never ran, don't hang the suite
+    spawnCodexProcess: () => child,
+  });
+
+  const pending = catalog.listBotModels("codex");
+  // Let the pending microtasks run to completion (the spawn-env getter's await, then
+  // runCodexModelList's synchronous executor: spawn, attach the stdin error listener, send
+  // `initialize`). A single setImmediate macrotask boundary is enough regardless of the exact
+  // microtask hop count, since Node always drains the microtask queue before a macrotask callback.
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(writeCount, 1, "initialize should have been sent by now");
+  assert.equal(
+    stdin.listenerCount("error"),
+    1,
+    "a listener must already be registered on stdin before any write happens -- this is the fix's actual invariant",
+  );
+
+  assert.doesNotThrow(() => {
+    stdout.emit("data", Buffer.from(`${JSON.stringify({ id: 1, result: {} })}\n`));
+  }, "the second stdin write's 'error' event must be swallowed by the pre-attached listener, not thrown");
+  assert.equal(writeCount, 2, "model/list should have been sent, triggered synchronously by handling the initialize reply");
+
+  childEmitter.emit("exit", 1);
+  const result = await pending;
+  assert.equal(result.source, "unavailable");
 });
 
 // Regression tests for review finding: on macOS, herdr starts new interactive panes as **login**
