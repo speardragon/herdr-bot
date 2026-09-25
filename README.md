@@ -17,7 +17,7 @@ npm run desktop:dev:fake       # 가짜 herdr로 UI만 시험
 npm run desktop:package        # .build/desktop/mac-arm64/herdr-bot.app
 ```
 
-- `+` → **Bot**: herdr에 새 에이전트를 띄우거나(Start) 이미 떠 있는 에이전트를 채택(Adopt). 채택은 herdr-bot이 직접 띄운 게 아니므로, 모델·추론 수준 같은 실행 설정은 이후에 지정하거나 바꿀 수 없다.
+- `+` → **Bot**: herdr에 새 에이전트를 띄우거나(Start) 이미 떠 있는 에이전트를 채택(Adopt). 채택한 에이전트는 herdr-bot이 띄운 게 아니므로, 모델·추론 수준 같은 실행 설정을 지정하거나 나중에 바꿀 수 없다(해당 항목은 비활성으로 표시된다).
 - `+` → **Room**: 봇을 골라 단체방을 만든다. 방에 쓰면 봇들이 라운드로빈으로 답하고, `@id`로 특정 봇만 부를 수 있다.
 - 봇 이름을 누르면 이름·페르소나를 수정하고, 방 이름을 누르면 멤버를 초대하거나 제외할 수 있다.
 - 설정은 사이드바 하단에서 연다. 한국어가 기본이며 English와 라이트/다크 모드를 선택할 수 있다. 앱 자체 로그인과 Plugin 메뉴는 제공하지 않는다. 외부 도구는 각 에이전트의 기존 CLI/MCP 환경을 사용한다.
@@ -55,10 +55,10 @@ node cli/src/main.ts read <room-id>
 
 - 봇 = herdr가 pane 안에서 감지하는 이름 붙은 에이전트. 스폰(`herdr agent start`)하거나 이미 떠 있는 에이전트를 채택(`herdr agent rename`). 모든 herdr 호출은 `herdr --session <HERDR_BOT_SESSION> …`으로 전용 세션을 향하고, 채택 대상도 그 세션의 에이전트다.
 - 방에 사용자가 말하면 호스트가 grok-bot식 라운드로빈(최대 3라운드·10발언, @멘션이면 그 봇만)을 돌린다. 각 턴은 `herdr agent prompt <bot> … --wait`.
-- 봇이 방에 말하는 유일한 방법은 `~/.herdr-bot/bin/herdr-bot say <room> "…"`. 터미널 출력은 방에 보이지 않는다.
+- 봇이 방에 말하는 방법은 herdr-bot CLI(`say` / `message`)뿐이다. 터미널 출력은 방에 보이지 않는다.
 - 상태 저장: `~/.herdr-bot/` (`HERDR_BOT_HOME`으로 변경). 트랜스크립트는 JSONL.
 
-`say`와 `message`는 다르다. `say`는 방금 자신에게 프롬프트를 보낸, 지금 열려 있는 턴의 채팅에만 답한다. 반면 `message`는 다른 채팅으로 향한다 — 자신의 턴은 다른 곳에서 진행 중이지만 다른 봇의 DM으로 작업을 넘기거나, 방에 결과를 올리고 싶을 때 쓴다. 단 봇은 자신이 이미 멤버로 속한 방에만 `message`할 수 있고, 그렇지 않으면 호출은 `not_a_member`로 실패하며 어떤 트랜스크립트에도 아무것도 기록되지 않는다.
+`say`와 `message`는 다르다. `say`는 방금 자신에게 프롬프트를 보낸, 지금 열려 있는 턴의 채팅에만 답한다. 반면 `message`는 다른 채팅으로 향한다. 자신의 턴은 다른 곳에서 진행 중이지만 다른 봇의 DM으로 작업을 넘기거나, 방에 결과를 올리고 싶을 때 쓴다. 단 봇은 자신이 이미 멤버로 속한 방에만 `message`할 수 있고, 그렇지 않으면 호출은 `not_a_member`로 실패하며 어떤 트랜스크립트에도 아무것도 기록되지 않는다.
 
 ```bash
 herdr-bot bot create reviewer --cwd /work/repo --kind codex --model gpt-5.4 --reasoning high
