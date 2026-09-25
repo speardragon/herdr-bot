@@ -60,7 +60,7 @@ test("a bot can message another bot DM and wake the recipient", async () => {
     assert.equal((entry?.message as { content?: string } | undefined)?.content, "Can you inspect the parser?");
     await h.runQueue.enqueue("b", async () => undefined);
     assert.deepEqual(h.fake.readState().prompts?.map((prompt) => prompt.target), ["b"]);
-    assert.match(h.fake.readState().prompts![0]!.text, /A: Can you inspect the parser\?/);
+    assert.match(h.fake.readState().prompts![0]!.text, /A \(bot id: a\): Can you inspect the parser\?/);
     h.turns.handleMessage("w1:p-b", "a", "I found it");
     await h.runQueue.enqueue("a", async () => undefined);
     assert.equal((h.chat.transcript("a").last()?.author as { id?: string } | undefined)?.id, "b");
