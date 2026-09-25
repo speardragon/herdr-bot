@@ -146,8 +146,11 @@ function updateAgent(host: Host, args: Args): unknown {
     ...(typeof args.avatarShape === "string" ? { avatarShape: args.avatarShape === "" ? null : args.avatarShape } : {}),
     ...(typeof args.avatarColor === "string" ? { avatarColor: args.avatarColor === "" ? null : args.avatarColor } : {}),
   };
-  const updated = host.chat.chatKind(id) === "room" ? host.roster.updateRoom(id, patch) : host.roster.updateProfile(id, botPatch);
-  if (updated != null) host.chat.emitUpsert(id);
+  const isRoom = host.chat.chatKind(id) === "room";
+  const updated = isRoom ? host.roster.updateRoom(id, patch) : host.roster.updateProfile(id, botPatch);
+  // A bot profile update already emits exactly one upsert itself (see RosterService.updateProfile);
+  // a room update has no such side effect and still needs this explicit emit.
+  if (isRoom && updated != null) host.chat.emitUpsert(id);
   return updated == null ? null : host.chat.summary(id);
 }
 
@@ -226,16 +229,20 @@ function markChatRead(host: Host, args: Args): unknown {
 function setAgentHiddenFromSidebar(host: Host, args: Args): null {
   const id = str(args, "id");
   const hidden = args.isHidden === true;
-  if (host.chat.chatKind(id) === "room") host.roster.updateRoom(id, { isHiddenFromSidebar: hidden });
-  else host.roster.updateProfile(id, { isHiddenFromSidebar: hidden });
-  host.chat.emitUpsert(id);
+  // A room update has no upsert side effect of its own and still needs this explicit emit; a bot
+  // profile update already emits exactly one upsert itself (see RosterService.updateProfile).
+  if (host.chat.chatKind(id) === "room") {
+    host.roster.updateRoom(id, { isHiddenFromSidebar: hidden });
+    host.chat.emitUpsert(id);
+  } else {
+    host.roster.updateProfile(id, { isHiddenFromSidebar: hidden });
+  }
   return null;
 }
 
 function setAgentNotifyOnUpdates(host: Host, args: Args): unknown {
   const id = str(args, "id");
   host.roster.updateProfile(id, { notifyOnUpdatesEnabled: args.isEnabled === true });
-  host.chat.emitUpsert(id);
   return host.chat.summary(id);
 }
 

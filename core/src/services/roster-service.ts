@@ -59,6 +59,11 @@ export interface RosterServiceDeps {
    * in host.ts to `chat.appendBotEvent`, so both a UI settings edit and the bot's own `profile update`
    * CLI command record the same "이름 변경됨" notice in the bot's DM. */
   readonly onBotEvent?: (chatId: string, event: BotSystemEvent) => void;
+  /** Fired once, after a successful `updateProfile` save whose `name` did NOT change -- the rename
+   * case already gets its one upsert as a side effect of `onBotEvent` recording a transcript notice.
+   * Wired in host.ts to `chat.emitUpsert`, so a `profile.update`/`updateAgent` bot-profile edit emits
+   * exactly one upsert either way, never zero and never two. */
+  readonly onProfileUpdated?: (chatId: string) => void;
   /** Called once a bot or room is fully removed, so callers can evict any per-chat caches (transcript, view state, run queue). */
   readonly onChatRemoved?: (chatId: string) => void;
   /** Injectable so tests do not wait through real retry backoff. Defaults to a real setTimeout-based sleep. */
@@ -137,6 +142,7 @@ export class RosterService {
     };
     this.#deps.profiles.save(next);
     if (current.name !== next.name) this.#deps.onBotEvent?.(id, { type: "bot-renamed", oldName: current.name, newName: next.name });
+    else this.#deps.onProfileUpdated?.(id);
     return next;
   }
 

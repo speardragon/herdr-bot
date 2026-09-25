@@ -78,8 +78,9 @@ function ownProfile(host: Host, params: Params, update = false): unknown {
       patch[key] = value;
     }
     if (Object.keys(patch).length === 0) throw new ControlError("invalid_params", "no profile fields provided");
+    // updateProfile emits exactly one upsert itself (via onBotEvent on a rename, onProfileUpdated
+    // otherwise) -- emitting again here would double-fire "agent-upserted" for the same edit.
     profile = host.roster.updateProfile(bot.id, patch)!;
-    host.chat.emitUpsert(bot.id);
   }
   return { id: profile.id, name: profile.name, title: profile.title ?? "", description: profile.description };
 }

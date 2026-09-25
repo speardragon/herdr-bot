@@ -114,6 +114,7 @@ function buildServices(config: HostConfig, overrides: HostOverrides): HostServic
     ...(overrides.now == null ? {} : { now: overrides.now }),
     onNotice: (chatId, text) => chat.appendNotice(chatId, text),
     onBotEvent: (chatId, event) => chat.appendBotEvent(chatId, event),
+    onProfileUpdated: (chatId) => chat.emitUpsert(chatId),
     onChatRemoved: (chatId) => {
       chat.forget(chatId);
       view.delete(chatId);
