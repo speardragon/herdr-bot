@@ -104,6 +104,7 @@ export interface ModelCatalogDeps {
   readonly now: () => number;
   readonly timeoutMs: number;
   readonly ttlMs: number;
+  readonly platform: NodeJS.Platform;
 }
 
 function resolvedDeps(overrides: Partial<ModelCatalogDeps>): ModelCatalogDeps {
@@ -112,6 +113,7 @@ function resolvedDeps(overrides: Partial<ModelCatalogDeps>): ModelCatalogDeps {
     now: Date.now,
     timeoutMs: DEFAULT_TIMEOUT_MS,
     ttlMs: DEFAULT_TTL_MS,
+    platform: process.platform,
     ...overrides,
   };
 }
@@ -144,6 +146,71 @@ function rpcErrorMessage(parsed: Record<string, unknown>, fallback: string): str
   return isRecord(error) && typeof error.message === "string" ? error.message : fallback;
 }
 
+const LOGIN_SHELL_PROBE_TIMEOUT_MS = 2_000;
+const LOGIN_SHELL_PATH_MARKER = "__HB_PATH__";
+
+function dedupPathSegments(segments: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const segment of segments) {
+    if (segment.length === 0 || seen.has(segment)) continue;
+    seen.add(segment);
+    out.push(segment);
+  }
+  return out;
+}
+
+/**
+ * herdr starts new interactive panes as macOS **login** shells by default (`terminal.shell_mode =
+ * "auto"`, see herdr's configuration.mdx docs), specifically so that login-only PATH setup --
+ * `/usr/libexec/path_helper`, Homebrew's shell init, etc -- runs in the pane before it resolves an
+ * agent kind's CLI there. A plain `execFile`/`spawn` from this Electron/node host process only
+ * inherits the GUI-launched process's own PATH, which is typically narrower on macOS -- the
+ * well-known Electron/GUI-app PATH gotcha. Empirically reproduced in this sandbox:
+ *   env -i HOME="$HOME" USER="$USER" PATH=/usr/bin:/bin /bin/zsh -lc 'echo $PATH'
+ *   -> gains /opt/homebrew/bin, /opt/homebrew/sbin, ~/.cargo/bin, etc that the narrow starting PATH
+ *      did not have -- exactly the entries a Homebrew-installed `grok`/`opencode`/`codex` would live
+ *      under.
+ * To resolve those CLIs on the same basis herdr resolves them on, ask the user's login shell for its
+ * PATH once per catalog (memoized below -- only the first query pays this cost) and union it in
+ * front of the inherited PATH, so an already-working inherited PATH entry is never lost, only ever
+ * gains entries (a broken login profile can only fail to add PATH, never remove one that already
+ * worked). The provider CLI itself is still always invoked via execFile/spawn with an argv array
+ * elsewhere in this file, never a shell string built from external input -- this probe's own shell
+ * command is a fixed literal, not string-interpolated from anything the caller supplies.
+ *
+ * Uses `-lc` (login, non-interactive), matching herdr's own stated rationale of "login-only PATH
+ * setup" above. This does not source `.zshrc`-only interactive-shell additions (some nvm/pyenv
+ * installs add PATH there instead of in a login file); `-ilc` would additionally cover those but
+ * spawns slower and can trip interactive-only prompts/output. Known, accepted gap -- not attempted
+ * here.
+ *
+ * On non-macOS, herdr's own shell_mode "auto" keeps non-login shell startup (same config doc), so
+ * this returns the inherited env unchanged and never spawns a probe process.
+ */
+export async function resolveSpawnEnv(deps: ModelCatalogDeps): Promise<NodeJS.ProcessEnv> {
+  if (deps.platform !== "darwin") return deps.env;
+  const shell = deps.env.SHELL != null && deps.env.SHELL.length > 0 ? deps.env.SHELL : "/bin/sh";
+  // A fixed marker line, not the raw first line of stdout: login init commonly prints banners/stray
+  // output before the shell even gets to running our command, so we can't trust "first line of
+  // stdout" to be the PATH.
+  const script = `printf '\\n${LOGIN_SHELL_PATH_MARKER}%s\\n' "$PATH"`;
+  let outcome: RunOutcome;
+  try {
+    outcome = await runOneShot(shell, ["-lc", script], { ...deps, timeoutMs: Math.min(deps.timeoutMs, LOGIN_SHELL_PROBE_TIMEOUT_MS) });
+  } catch {
+    return deps.env;
+  }
+  if (outcome.code !== 0) return deps.env;
+  const markerIndex = outcome.stdout.lastIndexOf(LOGIN_SHELL_PATH_MARKER);
+  if (markerIndex < 0) return deps.env;
+  const afterMarker = outcome.stdout.slice(markerIndex + LOGIN_SHELL_PATH_MARKER.length);
+  const loginPath = (afterMarker.split("\n")[0] ?? "").trim();
+  if (loginPath.length === 0) return deps.env;
+  const merged = dedupPathSegments([...loginPath.split(":"), ...(deps.env.PATH ?? "").split(":")]);
+  return { ...deps.env, PATH: merged.join(":") };
+}
+
 /**
  * Codex exposes its model catalog over app-server's newline-delimited JSON-RPC on stdio: an
  * `initialize` handshake is required before any other call, then `model/list` returns `{data: Model[]}`.
@@ -158,6 +225,17 @@ function runCodexModelList(command: string, deps: ModelCatalogDeps): Promise<Mod
     // which blocks the child until *we* time it out -- turning a log-noisy build into a guaranteed
     // 5s stall instead of a fast reply.
     const child = spawn(command, ["app-server"], { env: deps.env, stdio: ["pipe", "pipe", "ignore"] });
+    // Attached immediately, not only inside `finish()` below: `send()` writes to `child.stdin` both
+    // for `initialize` (right after spawn) and, from inside the stdout "data" handler, for
+    // `model/list` -- i.e. *before* `finish()` has ever run. If the real app-server exits or closes
+    // stdin between those two writes (e.g. it answered `initialize` and then exited before
+    // `model/list` was sent), the second write hits EPIPE; Node destroys the stream and emits
+    // 'error' on it on a later tick. Without a listener attached before that happens, an unlistened
+    // stream 'error' is an uncaught exception that crashes the host process, not a graceful
+    // rejection/timeout. The `exit`/`error` handlers on `child` below already surface that failure
+    // through `finish()`, so this listener only needs to swallow the stream-level error, never act
+    // on it.
+    child.stdin.on("error", () => {});
     let buffer = "";
     let settled = false;
     let awaiting: 1 | 2 = 1;
@@ -169,10 +247,6 @@ function runCodexModelList(command: string, deps: ModelCatalogDeps): Promise<Mod
       child.stdout.removeAllListeners("data");
       child.removeAllListeners("error");
       child.removeAllListeners("exit");
-      child.stdin.on("error", () => {
-        // A write can race a just-exited process (ENOENT/EPIPE); the exit/error listeners above
-        // already report that failure, so a stray stdin error here must not crash the process.
-      });
       try {
         child.kill();
       } catch {
@@ -236,16 +310,20 @@ function fallbackOrUnavailable(kind: string, error: string): ModelCatalogResult 
   return fallback.length > 0 ? { models: fallback, source: "user-fallback", error } : { models: [], source: "unavailable", error };
 }
 
+type SpawnEnvGetter = () => Promise<NodeJS.ProcessEnv>;
+
 async function queryOneShotList(
   kind: string,
   command: string,
   args: readonly string[],
   parse: (stdout: string) => ModelEntry[],
   deps: ModelCatalogDeps,
+  getSpawnEnv: SpawnEnvGetter,
 ): Promise<ModelCatalogResult> {
   let outcome: RunOutcome;
   try {
-    outcome = await runOneShot(command, args, deps);
+    const env = await getSpawnEnv();
+    outcome = await runOneShot(command, args, { ...deps, env });
   } catch (error) {
     return fallbackOrUnavailable(kind, error instanceof Error ? error.message : String(error));
   }
@@ -255,10 +333,11 @@ async function queryOneShotList(
   return { models, source: "installed-cli" };
 }
 
-async function queryCodex(deps: ModelCatalogDeps): Promise<ModelCatalogResult> {
+async function queryCodex(deps: ModelCatalogDeps, getSpawnEnv: SpawnEnvGetter): Promise<ModelCatalogResult> {
   let models: ModelEntry[];
   try {
-    models = await runCodexModelList("codex", deps);
+    const env = await getSpawnEnv();
+    models = await runCodexModelList("codex", { ...deps, env });
   } catch (error) {
     return fallbackOrUnavailable("codex", error instanceof Error ? error.message : String(error));
   }
@@ -270,14 +349,17 @@ function aliasResult(kind: string, aliases: readonly ModelEntry[]): ModelCatalog
   return { models: dedupById([...aliases, ...userFallbackModels(kind)]), source: "latest-alias" };
 }
 
-async function queryProvider(kind: string, deps: ModelCatalogDeps): Promise<ModelCatalogResult> {
+/** `getSpawnEnv` is only consulted by the branches that actually spawn a process (grok/opencode/
+ * codex) -- claude/gemini never spawn anything, so they must never pay for (or trigger) the login-
+ * shell PATH probe. */
+async function queryProvider(kind: string, deps: ModelCatalogDeps, getSpawnEnv: SpawnEnvGetter): Promise<ModelCatalogResult> {
   switch (kind) {
     case "grok":
-      return queryOneShotList("grok", "grok", ["models"], parseGrokModelsOutput, deps);
+      return queryOneShotList("grok", "grok", ["models"], parseGrokModelsOutput, deps, getSpawnEnv);
     case "opencode":
-      return queryOneShotList("opencode", "opencode", ["models"], parseOpencodeModelsOutput, deps);
+      return queryOneShotList("opencode", "opencode", ["models"], parseOpencodeModelsOutput, deps, getSpawnEnv);
     case "codex":
-      return queryCodex(deps);
+      return queryCodex(deps, getSpawnEnv);
     case "claude":
       return aliasResult("claude", CLAUDE_ALIASES);
     case "gemini":
@@ -308,11 +390,19 @@ export function createModelCatalog(overrides: Partial<ModelCatalogDeps> = {}): M
   const deps = resolvedDeps(overrides);
   const cache = new Map<string, CacheEntry>();
   const inFlight = new Map<string, Promise<ModelCatalogResult>>();
+  // Resolved at most once per catalog instance (see `resolveSpawnEnv`'s doc comment) -- every
+  // grok/opencode/codex query, across every `kind` and every background refresh, shares this one
+  // probe instead of paying its ~up-to-2s cost on every call.
+  let spawnEnvPromise: Promise<NodeJS.ProcessEnv> | null = null;
+  function getSpawnEnv(): Promise<NodeJS.ProcessEnv> {
+    if (spawnEnvPromise == null) spawnEnvPromise = resolveSpawnEnv(deps);
+    return spawnEnvPromise;
+  }
 
   function fetchAndCache(kind: string): Promise<ModelCatalogResult> {
     const pending = inFlight.get(kind);
     if (pending != null) return pending;
-    const promise = queryProvider(kind, deps).then((result) => {
+    const promise = queryProvider(kind, deps, getSpawnEnv).then((result) => {
       cache.set(kind, { result, timestamp: deps.now(), refreshing: false });
       inFlight.delete(kind);
       return result;

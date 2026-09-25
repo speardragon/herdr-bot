@@ -146,7 +146,7 @@ test("grok: installed CLI output becomes an installed-cli result", async () => {
   const bin = makeFixtureBin();
   try {
     writeBin(bin.dir, "grok", `process.stdout.write(${JSON.stringify("Available models:\n  * grok-4.7 (default)\n  - grok-4.6\n")});`);
-    const catalog = createModelCatalog({ env: bin.env });
+    const catalog = createModelCatalog({ env: bin.env, platform: "linux" });
     const result = await catalog.listBotModels("grok");
     assert.equal(result.source, "installed-cli");
     assert.deepEqual(result.models, [
@@ -162,7 +162,7 @@ test("grok: empty CLI output becomes unavailable", async () => {
   const bin = makeFixtureBin();
   try {
     writeBin(bin.dir, "grok", `process.stdout.write("");`);
-    const catalog = createModelCatalog({ env: bin.env });
+    const catalog = createModelCatalog({ env: bin.env, platform: "linux" });
     assert.deepEqual(await catalog.listBotModels("grok"), { models: [], source: "unavailable", error: "grok models returned no models" });
   } finally {
     bin.cleanup();
@@ -173,7 +173,7 @@ test("grok: a nonzero exit becomes unavailable", async () => {
   const bin = makeFixtureBin();
   try {
     writeBin(bin.dir, "grok", `process.stderr.write("not logged in"); process.exit(1);`);
-    const catalog = createModelCatalog({ env: bin.env });
+    const catalog = createModelCatalog({ env: bin.env, platform: "linux" });
     const result = await catalog.listBotModels("grok");
     assert.equal(result.source, "unavailable");
     assert.equal(result.error, "not logged in");
@@ -183,7 +183,7 @@ test("grok: a nonzero exit becomes unavailable", async () => {
 });
 
 test("grok: a CLI missing from PATH becomes unavailable", async () => {
-  const catalog = createModelCatalog({ env: { PATH: "/definitely/not/a/real/path" } });
+  const catalog = createModelCatalog({ env: { PATH: "/definitely/not/a/real/path" }, platform: "linux" });
   const result = await catalog.listBotModels("grok");
   assert.equal(result.source, "unavailable");
   assert.match(result.error ?? "", /not installed/);
@@ -193,7 +193,7 @@ test("grok: exceeding the timeout becomes unavailable, without waiting for the f
   const bin = makeFixtureBin();
   try {
     writeBin(bin.dir, "grok", "setInterval(() => {}, 1000);"); // never exits
-    const catalog = createModelCatalog({ env: bin.env, timeoutMs: 200 });
+    const catalog = createModelCatalog({ env: bin.env, timeoutMs: 200, platform: "linux" });
     const started = Date.now();
     const result = await catalog.listBotModels("grok");
     assert.ok(Date.now() - started < 4000, "should not wait anywhere near the real 5s default timeout");
@@ -207,7 +207,7 @@ test("opencode: installed CLI output becomes an installed-cli result, preserving
   const bin = makeFixtureBin();
   try {
     writeBin(bin.dir, "opencode", `process.stdout.write("opencode/big-pickle\\ngithub-copilot/claude-opus-4.8\\nopenai/gpt-5.4\\n");`);
-    const catalog = createModelCatalog({ env: bin.env });
+    const catalog = createModelCatalog({ env: bin.env, platform: "linux" });
     const result = await catalog.listBotModels("opencode");
     assert.equal(result.source, "installed-cli");
     assert.deepEqual(result.models.map((m) => m.id), ["opencode/big-pickle", "github-copilot/claude-opus-4.8", "openai/gpt-5.4"]);
@@ -220,7 +220,7 @@ test("opencode: empty CLI output becomes unavailable", async () => {
   const bin = makeFixtureBin();
   try {
     writeBin(bin.dir, "opencode", `process.stdout.write("");`);
-    const catalog = createModelCatalog({ env: bin.env });
+    const catalog = createModelCatalog({ env: bin.env, platform: "linux" });
     assert.deepEqual(await catalog.listBotModels("opencode"), { models: [], source: "unavailable", error: "opencode models returned no models" });
   } finally {
     bin.cleanup();
@@ -239,7 +239,7 @@ test("codex: app-server model/list becomes an installed-cli result, deduped and 
         { id: "gpt-6-sol", model: "gpt-6-sol", displayName: "GPT-6-Sol", hidden: false },
       ]),
     );
-    const catalog = createModelCatalog({ env: bin.env });
+    const catalog = createModelCatalog({ env: bin.env, platform: "linux" });
     const result = await catalog.listBotModels("codex");
     assert.equal(result.source, "installed-cli");
     assert.deepEqual(result.models, [
@@ -255,7 +255,7 @@ test("codex: an empty model/list result becomes unavailable", async () => {
   const bin = makeFixtureBin();
   try {
     writeBin(bin.dir, "codex", codexServerScript([]));
-    const catalog = createModelCatalog({ env: bin.env });
+    const catalog = createModelCatalog({ env: bin.env, platform: "linux" });
     assert.deepEqual(await catalog.listBotModels("codex"), { models: [], source: "unavailable", error: "codex app-server returned no models" });
   } finally {
     bin.cleanup();
@@ -282,7 +282,7 @@ rl.on("line", (line) => {
 });
 `,
     );
-    const catalog = createModelCatalog({ env: bin.env });
+    const catalog = createModelCatalog({ env: bin.env, platform: "linux" });
     const result = await catalog.listBotModels("codex");
     assert.equal(result.source, "unavailable");
     assert.equal(result.error, "restart Codex");
@@ -295,7 +295,7 @@ test("codex: a server that never replies times out to unavailable, without waiti
   const bin = makeFixtureBin();
   try {
     writeBin(bin.dir, "codex", `setInterval(() => {}, 1000);`); // reads stdin, replies to nothing
-    const catalog = createModelCatalog({ env: bin.env, timeoutMs: 200 });
+    const catalog = createModelCatalog({ env: bin.env, timeoutMs: 200, platform: "linux" });
     const started = Date.now();
     const result = await catalog.listBotModels("codex");
     assert.ok(Date.now() - started < 4000, "should not wait anywhere near the real 5s default timeout");
@@ -306,9 +306,133 @@ test("codex: a server that never replies times out to unavailable, without waiti
 });
 
 test("codex: a binary missing from PATH becomes unavailable (mirrors the grok ENOENT case, since codex spawns via a different code path)", async () => {
-  const catalog = createModelCatalog({ env: { PATH: "/definitely/not/a/real/path" } });
+  const catalog = createModelCatalog({ env: { PATH: "/definitely/not/a/real/path" }, platform: "linux" });
   const result = await catalog.listBotModels("codex");
   assert.equal(result.source, "unavailable");
+});
+
+// Behavioral coverage for review finding: a stray `child.stdin` write error (e.g. the real app-server
+// answering `initialize` and then exiting before `model/list` is sent) must resolve gracefully, not
+// crash the host process with an uncaught 'error' event. The fix moved `child.stdin.on("error", ...)`
+// to run immediately after `spawn(...)` instead of only inside `finish()` (which had not run yet at
+// the moment `send(2, ...)` writes to a possibly-already-closed stdin pipe), closing that window.
+//
+// Note on what this specific test does and doesn't prove: direct experimentation (documented in the
+// Task 6 fix-round-1 report) confirmed the general mechanism is real -- an unlistened 'error' on a
+// pipe hit with a genuine EPIPE does crash a Node process (reproduced with a plain SIGKILL'd child).
+// But forcing that exact failure through *this* interaction shape -- reply-then-exit racing the
+// immediate `send(2, ...)` triggered from inside the stdout "data" handler -- did not reproduce a
+// crash even against the pre-fix code in this Node/OS environment across several deliberately
+// adversarial variants (exit in the write-flush callback, explicit `stdin.destroy()` before exit,
+// self-SIGKILL): the buffered reply data is consistently delivered to and handled by the "data"
+// listener, and the resulting stdin write consistently completes, before the child's death is
+// processed on the parent side. So this test does not reliably discriminate pre-fix from post-fix in
+// this environment; it verifies the documented failure interaction resolves to a graceful
+// `"unavailable"` result end-to-end, which is real coverage on its own, while the fix's correctness
+// rests on Node's documented "unlistened stream error crashes the process" semantics (confirmed
+// above) rather than on this test forcing the race.
+test("codex: the server replying to initialize and exiting before model/list is sent resolves gracefully (does not crash the host process)", async () => {
+  const bin = makeFixtureBin();
+  try {
+    writeBin(
+      bin.dir,
+      "codex",
+      `
+const readline = require("node:readline");
+const rl = readline.createInterface({ input: process.stdin });
+rl.on("line", (line) => {
+  let msg;
+  try { msg = JSON.parse(line); } catch { return; }
+  if (msg.method === "initialize") {
+    // Flush the reply, then exit immediately -- by the time the parent's stdout "data" handler has
+    // parsed this line and written "model/list" to our stdin, our end of that pipe is already gone.
+    process.stdout.write(JSON.stringify({ id: msg.id, result: { codexHome: "/tmp" } }) + "\\n", () => {
+      process.exit(0);
+    });
+  }
+});
+`,
+    );
+    const catalog = createModelCatalog({ env: bin.env, platform: "linux" });
+    const started = Date.now();
+    const result = await catalog.listBotModels("codex");
+    assert.ok(Date.now() - started < 4000, "should resolve via the exit path, not idle out the full 5s timeout");
+    assert.equal(result.source, "unavailable");
+  } finally {
+    bin.cleanup();
+  }
+});
+
+// Regression tests for review finding: on macOS, herdr starts new interactive panes as **login**
+// shells by default (`terminal.shell_mode = "auto"`, herdr's configuration.mdx: "starts login shells
+// on macOS so login-only PATH setup ... runs in new panes"), so the CLI lookup basis for grok/
+// opencode/codex must match that, not just this host process's own inherited PATH.
+test("darwin: a CLI reachable only through the login shell's PATH is found, unioned in front of the inherited PATH", async () => {
+  const bin = makeFixtureBin(); // bin.dir holds the fixture "grok"; bin.env.PATH would include it, but we deliberately don't use bin.env below.
+  const shellDir = mkdtempSync(join(tmpdir(), "hb-model-shell-"));
+  try {
+    writeBin(bin.dir, "grok", `process.stdout.write("Available models:\\n  - grok-4.7\\n");`);
+    // Stands in for a real login shell: ignores whatever `-lc <script>` it's given and always reports
+    // a PATH containing the fixture CLI's directory, exactly like a real login shell would report a
+    // PATH that gained a Homebrew/nvm directory the inherited env never had.
+    writeBin(
+      shellDir,
+      "fake-login-shell",
+      `process.stdout.write("last login noise, ignored\\n"); process.stdout.write("\\n__HB_PATH__" + ${JSON.stringify(bin.dir)} + "\\n");`,
+    );
+    const catalog = createModelCatalog({
+      env: { PATH: process.env.PATH ?? "", SHELL: join(shellDir, "fake-login-shell") }, // note: NOT bin.env -- bin.dir is absent from this inherited PATH
+      platform: "darwin",
+    });
+    const result = await catalog.listBotModels("grok");
+    assert.equal(result.source, "installed-cli");
+    assert.deepEqual(result.models, [{ id: "grok-4.7", label: "grok-4.7" }]);
+  } finally {
+    bin.cleanup();
+    rmSync(shellDir, { recursive: true, force: true });
+  }
+});
+
+test("darwin: a login shell probe failure (missing/broken SHELL) falls back to the inherited PATH, never crashes, still finds an already-reachable CLI", async () => {
+  const bin = makeFixtureBin();
+  try {
+    writeBin(bin.dir, "grok", `process.stdout.write("Available models:\\n  - grok-4.7\\n");`);
+    const catalog = createModelCatalog({ env: { ...bin.env, SHELL: "/definitely/not/a/real/shell" }, platform: "darwin" });
+    const result = await catalog.listBotModels("grok");
+    assert.equal(result.source, "installed-cli", "the probe failing must not take down an already-working inherited-PATH lookup");
+    assert.deepEqual(result.models, [{ id: "grok-4.7", label: "grok-4.7" }]);
+  } finally {
+    bin.cleanup();
+  }
+});
+
+test("darwin: the login shell probe runs at most once per catalog, shared across different kinds", async () => {
+  const bin = makeFixtureBin();
+  const shellDir = mkdtempSync(join(tmpdir(), "hb-model-shell-"));
+  const probeLog = join(shellDir, "probe-invocations.log");
+  try {
+    writeBin(bin.dir, "grok", `process.stdout.write("Available models:\\n  - grok-4.7\\n");`);
+    writeBin(bin.dir, "opencode", `process.stdout.write("opencode/big-pickle\\n");`);
+    writeBin(
+      shellDir,
+      "fake-login-shell",
+      `
+require("node:fs").appendFileSync(${JSON.stringify(probeLog)}, "x");
+process.stdout.write("\\n__HB_PATH__" + ${JSON.stringify(bin.dir)} + "\\n");
+`,
+    );
+    const catalog = createModelCatalog({
+      env: { PATH: process.env.PATH ?? "", SHELL: join(shellDir, "fake-login-shell") },
+      platform: "darwin",
+    });
+    await catalog.listBotModels("grok");
+    await catalog.listBotModels("opencode");
+    await catalog.listBotModels("grok"); // within TTL, served from cache, no new query at all
+    assert.equal(readFileSync(probeLog, "utf8"), "x", "the login shell probe must be memoized, not re-run per kind or per call");
+  } finally {
+    bin.cleanup();
+    rmSync(shellDir, { recursive: true, force: true });
+  }
 });
 
 test("cache: a cold call queries the CLI once; a repeat call within the TTL reuses it without spawning again", async () => {
@@ -317,7 +441,7 @@ test("cache: a cold call queries the CLI once; a repeat call within the TTL reus
   try {
     writeBin(bin.dir, "grok", `require("node:fs").appendFileSync(${JSON.stringify(logPath)}, "x"); process.stdout.write("Available models:\\n  - grok-4.7\\n");`);
     let now = 1_000_000;
-    const catalog = createModelCatalog({ env: bin.env, now: () => now });
+    const catalog = createModelCatalog({ env: bin.env, now: () => now, platform: "linux" });
     await catalog.listBotModels("grok");
     assert.equal(readFileSync(logPath, "utf8"), "x");
     now += 60_000; // well under the 5-minute TTL
@@ -346,7 +470,7 @@ process.stdout.write(count === 0 ? "Available models:\\n  - grok-4.7\\n" : "Avai
     );
     let now = 1_000_000;
     const ttlMs = 1000;
-    const catalog = createModelCatalog({ env: bin.env, now: () => now, ttlMs });
+    const catalog = createModelCatalog({ env: bin.env, now: () => now, ttlMs, platform: "linux" });
     const first = await catalog.listBotModels("grok");
     assert.deepEqual(first.models, [{ id: "grok-4.7", label: "grok-4.7" }]);
     now += ttlMs + 1;
