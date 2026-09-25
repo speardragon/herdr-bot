@@ -226,7 +226,7 @@ test("a user message runs a full room turn: every member speaks, replies land in
     const prompts = h.fake.readState().prompts ?? [];
     assert.match(prompts[0]!.text, /\[herdr-bot room "auth" - with B\]/);
     assert.match(prompts[0]!.text, /ray \(user\): hello everyone/);
-    assert.match(prompts[1]!.text, /A: a says hi/);
+    assert.match(prompts[1]!.text, /A \(bot id: a\): a says hi/);
   } finally {
     await h.cleanup();
   }
