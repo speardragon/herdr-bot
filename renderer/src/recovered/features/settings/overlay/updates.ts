@@ -27,7 +27,9 @@ export type LastUpdateCheck =
 export type UpdateState =
   | { type: "disabled"; reason: DisabledUpdateReason }
   | { type: "checking" }
-  | { type: "available"; version: string }
+  /** herdr-bot: releaseUrl (unsigned builds only) is where "available"'s action opens instead of
+   * auto-downloading. */
+  | { type: "available"; version: string; releaseUrl?: string }
   | { type: "downloading"; version: string; progress?: number | null }
   | { type: "staging"; version: string }
   | { type: "ready"; version: string; lastCheck?: LastUpdateCheck | null }

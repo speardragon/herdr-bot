@@ -49,7 +49,11 @@ export function commandPaletteUpdateCommand({ status, isStatusLoading, actions }
   switch (status.state.type) {
     case "checking":
       return { ...base, label: "Checking for Updates…", run: actions.openSettings };
+    // herdr-bot: unsigned builds never auto-download, so "available" is terminal here, not a step
+    // toward "downloading" -- its label and action (open Settings, where the button opens the
+    // release page) must say so rather than claim a download is already underway.
     case "available":
+      return { ...base, label: `Update Available (${status.state.version})`, run: actions.openSettings };
     case "downloading":
       return { ...base, label: "Downloading Update…", run: actions.openSettings };
     case "staging":

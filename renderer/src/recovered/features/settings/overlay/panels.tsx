@@ -520,6 +520,9 @@ export interface UpdatesSettingsPanelProps {
   autoUpdateWhenIdle: boolean;
   onCheck(): void | Promise<unknown>;
   onInstall?(): void | Promise<unknown>;
+  /** herdr-bot: unsigned builds have no silent install, so an "available" state opens the release
+   * page instead -- see checkForAppUpdate (desktop/src/bridge-main.ts). */
+  onOpenRelease?(url: string): void;
   onSetTrack(track: UpdateTrack): void | Promise<unknown>;
   onSetAutoUpdateWhenIdle(enabled: boolean): void | Promise<unknown>;
   computer?: SettingsComputerMount;
@@ -538,6 +541,7 @@ export function UpdatesSettingsPanel({
   autoUpdateWhenIdle,
   onCheck,
   onInstall,
+  onOpenRelease,
   onSetTrack,
   onSetAutoUpdateWhenIdle,
   computer,
@@ -578,7 +582,11 @@ export function UpdatesSettingsPanel({
   const message = updateStatusMessage(status);
   const isDisabled = status.state.type === "disabled";
   const isChecking = status.state.type === "checking";
-  const isTransitioning = isChecking || status.state.type === "available" || status.state.type === "downloading" || status.state.type === "staging";
+  // herdr-bot: "available" is no longer transient here -- there is no signed build to silently
+  // download, so it is the terminal state until the user acts (opens the release page) or checks
+  // again. Only "downloading"/"staging" (electron-updater's own path, dormant without signing) still
+  // block the Check button.
+  const isTransitioning = isChecking || status.state.type === "downloading" || status.state.type === "staging";
   const trackManagedByPolicy = status.isTrackManagedByPolicy ?? false;
   const autoUpdateGateEnabled = status.autoUpdateWhenIdleGateEnabled ?? true;
   const effectiveAutoUpdateWhenIdle = status.autoUpdateWhenIdleOptIn ?? autoUpdateWhenIdle;
@@ -597,10 +605,13 @@ export function UpdatesSettingsPanel({
   return (
     <div className="sand-settings-beta-stack">
       <SettingsGroup title="Updates">
-        <label className="sand-settings-row">
+        {/* herdr-bot: there is only ever one build (no signed releases to split into tracks), so
+            onSetTrack is already a no-op (desktop/src/preload.cts) -- hide the picker rather than
+            offer a choice that does nothing. */}
+        {availableTracks.length > 1 ? <label className="sand-settings-row">
           <span className="sand-settings-copy"><strong>Update Track</strong><small>{trackDescription}</small></span>
           <SandSelect ariaLabel="Update Track" className="ui-select-trigger" disabled={isDisabled || trackPending || trackManagedByPolicy} onValueChange={(track) => runPendingAction(() => onSetTrack(track), setTrackPending)} options={availableTracks.map((track) => ({ value: track, label: UPDATE_TRACK_LABELS[track] }))} placement="bottom-end" value={status.currentTrack} />
-        </label>
+        </label> : null}
         {autoUpdateGateEnabled ? <div className="sand-settings-row">
           <SandSwitch
             checked={effectiveAutoUpdateWhenIdle}
@@ -613,6 +624,8 @@ export function UpdatesSettingsPanel({
           <span className="sand-settings-copy"><strong>Grok Bot {status.currentVersion}</strong><small>Updates follow the {UPDATE_TRACK_LABELS[status.currentTrack]} track</small></span>
           {status.state.type === "ready" ? (
             <SandButton disabled={installPending || onInstall == null} onClick={() => onInstall == null ? undefined : runPendingAction(onInstall, setInstallPending)} size="md" variant="primary">Restart to Update</SandButton>
+          ) : status.state.type === "available" ? (
+            <SandButton disabled={onOpenRelease == null || status.state.releaseUrl == null} onClick={() => { const url = status.state.type === "available" ? status.state.releaseUrl : undefined; if (url != null) onOpenRelease?.(url); }} size="md" variant="primary">Open Release Page</SandButton>
           ) : (
             <SandButton disabled={isDisabled || checkPending || isTransitioning} onClick={() => runPendingAction(onCheck, setCheckPending)} size="md" variant="secondary">{checkPending || isChecking ? "Checking…" : "Check for Updates"}</SandButton>
           )}

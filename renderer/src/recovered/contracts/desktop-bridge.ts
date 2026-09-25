@@ -33,7 +33,9 @@ export type DesktopUpdateState =
   | { type: "disabled"; reason: "not-packaged" | "lab-build" | "unsupported-platform" | "disabled-by-env" }
   | { type: "idle"; lastCheck?: { at: number; result: "up-to-date" | "error"; errorMessage?: string } }
   | { type: "checking" }
-  | { type: "available"; version: string }
+  /** herdr-bot: releaseUrl (unsigned builds only) is where "available"'s action opens instead of
+   * auto-downloading -- see bridge-main.ts checkForAppUpdate. */
+  | { type: "available"; version: string; releaseUrl?: string }
   | { type: "downloading"; version: string; progress?: number }
   | { type: "staging"; version: string }
   | { type: "ready"; version: string; lastCheck?: { at: number; result: "up-to-date" | "error"; errorMessage?: string } };

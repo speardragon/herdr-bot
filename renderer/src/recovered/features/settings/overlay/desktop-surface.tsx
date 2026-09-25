@@ -280,6 +280,7 @@ export function SettingsDesktopSurface({ bridge, coordinatorClient = null, initi
               throw reason;
             })}
             onInstall={() => mutate(() => installUpdate(bridge), "settings-update-install", () => {})}
+            onOpenRelease={(url) => void bridge.openExternal(url)}
             onSetAutoUpdateWhenIdle={(enabled) => mutate(() => bridge.update.setAutoUpdateWhenIdleOptIn(enabled), "settings-update-auto-update-when-idle", updateSnapshot)}
             onSetTrack={(track) => mutate(() => bridge.update.setTrack(track), "settings-update-track", updateSnapshot)}
             egressTunnel={{

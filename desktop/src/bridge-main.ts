@@ -3,6 +3,7 @@ import type { Host } from "../../core/src/host.ts";
 import { log } from "../../core/src/log.ts";
 import type { SettingsStore } from "./settings-store.ts";
 import { createAttachmentService, type AttachmentService } from "./attachments.ts";
+import { isNewerVersion } from "./version-check.ts";
 
 export interface BridgeDeps {
   readonly ipcMain: IpcMain;
@@ -30,12 +31,47 @@ function themeState(settings: SettingsStore, nativeTheme: NativeTheme): { prefer
   return { preference, resolved };
 }
 
-function updateStatus(appVersion: string): unknown {
+// herdr-bot: no code-signing certificate, so there is no silent background download/install --
+// Squirrel.Mac in particular refuses to run against an unsigned build, and an unsigned Windows
+// installer would just trade that failure for an unverifiable one. "Check for Updates" instead
+// compares the running version against the latest GitHub release tag; when one is newer, the
+// settings panel's action opens that release's page so the user downloads and installs it
+// themselves (release/version-check.ts has the pure comparison, GitHub-tag-suffix handling
+// included). "Update Track" and "Auto-update when idle" have no effect either way (there is only
+// ever one build), so their gates below stay off and the settings panel hides the track picker.
+const UPDATE_CHECK_REPO = "speardragon/herdr-bot";
+
+function updateStatus(appVersion: string, state: unknown): unknown {
   return {
-    state: { type: "disabled", reason: "not-packaged" },
+    state,
     currentVersion: appVersion, currentTrack: "stable", trackOverride: null, buildDefaultTrack: "stable", availableTracks: ["stable"],
     isTrackManagedByPolicy: false, isBelowMinimumVersion: false, autoUpdateWhenIdleOptIn: false, autoUpdateWhenIdleGateEnabled: false,
   };
+}
+
+async function fetchLatestRelease(): Promise<{ readonly tag: string; readonly url: string } | null> {
+  const response = await fetch(`https://api.github.com/repos/${UPDATE_CHECK_REPO}/releases/latest`, {
+    headers: { accept: "application/vnd.github+json" },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (response.status === 404) return null; // no release published yet
+  if (!response.ok) throw new Error(`GitHub returned ${response.status}`);
+  const body = await response.json() as { tag_name?: unknown; html_url?: unknown };
+  if (typeof body.tag_name !== "string" || body.tag_name.length === 0) return null;
+  return { tag: body.tag_name, url: typeof body.html_url === "string" ? body.html_url : `https://github.com/${UPDATE_CHECK_REPO}/releases` };
+}
+
+async function checkForAppUpdate(appVersion: string): Promise<unknown> {
+  const now = Date.now();
+  try {
+    const release = await fetchLatestRelease();
+    if (release != null && isNewerVersion(appVersion, release.tag)) {
+      return updateStatus(appVersion, { type: "available", version: release.tag.replace(/^v/i, ""), releaseUrl: release.url });
+    }
+    return updateStatus(appVersion, { type: "idle", lastCheck: { at: now, result: "up-to-date" } });
+  } catch (error) {
+    return updateStatus(appVersion, { type: "idle", lastCheck: { at: now, result: "error", errorMessage: error instanceof Error ? error.message : String(error) } });
+  }
 }
 
 export function createBridgeHandlers(deps: BridgeDeps, attachments: AttachmentService): Record<string, Handler> {
@@ -46,6 +82,9 @@ export function createBridgeHandlers(deps: BridgeDeps, attachments: AttachmentSe
   const windowState = () => ({ isFullscreen: window.isFullScreen(), isMaximized: window.isMaximized() });
   const account = { kind: "logged-in", displayName: deps.userName, email: undefined, isAnysphereUser: false };
   const granted = { state: "granted", reason: "none" };
+  // herdr-bot: getUpdateStatus returns the last check's result (so re-opening Settings doesn't
+  // re-hit the network); checkForUpdates is the one that actually performs it.
+  let lastUpdateStatus: unknown = updateStatus(deps.appVersion, { type: "idle" });
 
   return {
     // shell / window
@@ -73,8 +112,12 @@ export function createBridgeHandlers(deps: BridgeDeps, attachments: AttachmentSe
     getCursorPrReviewPreferences: () => null,
     getCursorPrivacyModeEnabled: () => false,
     // updates / onboarding / misc state
-    getUpdateStatus: () => updateStatus(deps.appVersion),
-    checkForUpdates: () => updateStatus(deps.appVersion),
+    getUpdateStatus: () => lastUpdateStatus,
+    // herdr-bot: pushed too, not just returned -- the command palette's "Check for Updates" entry
+    // reads a separate controller that only ever learns of a new status via this event (it does not
+    // see this call's return value), so without the push it would still say "Check for Updates"
+    // after an update was actually found, until the app restarted.
+    checkForUpdates: async () => { lastUpdateStatus = await checkForAppUpdate(deps.appVersion); push("update-status", lastUpdateStatus); return lastUpdateStatus; },
     getOnboardingSeen: () => settings.get("onboarding.seen", true),
     setOnboardingSeen: ({ seen }) => { settings.set("onboarding.seen", seen === true); },
     getBoxMigrationStatus: () => null,
