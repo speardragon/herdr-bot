@@ -1,0 +1,37 @@
+.hb-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-5);
+}
+
+.hb-settings-section-header {
+  font-weight: 600;
+  color: var(--hb-text-secondary);
+  padding-top: var(--hb-space-2);
+}
+
+.hb-settings-help {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-tertiary);
+  margin: calc(var(--hb-space-3) * -1) 0 0;
+}
+
+.hb-settings-version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--hb-border-hairline);
+  padding-top: var(--hb-space-5);
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-secondary);
+}
+
+.hb-settings-update-available {
+  color: var(--hb-accent-unread);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}

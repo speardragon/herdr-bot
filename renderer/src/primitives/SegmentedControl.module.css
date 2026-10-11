@@ -1,0 +1,25 @@
+.hb-segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--hb-radius-sm);
+  background: var(--hb-overlay-neutral-hover);
+  gap: 2px;
+}
+
+.hb-segmented-item {
+  border-radius: calc(var(--hb-radius-sm) - 2px);
+  padding: var(--hb-space-2) var(--hb-space-5);
+  font-size: var(--hb-text-size-sm);
+  font-weight: 600;
+  color: var(--hb-text-secondary);
+  transition: background-color var(--hb-motion-fast) var(--hb-motion-ease), color var(--hb-motion-fast) var(--hb-motion-ease);
+}
+
+.hb-segmented-item[aria-selected="true"] {
+  background: var(--hb-bg-raised);
+  color: var(--hb-text-primary);
+}
+
+.hb-segmented-item:not([aria-selected="true"]):hover {
+  color: var(--hb-text-primary);
+}

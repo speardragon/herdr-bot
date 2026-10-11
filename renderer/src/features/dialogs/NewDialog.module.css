@@ -1,0 +1,37 @@
+/* Shared layout for the New dialog's Bot/Room forms and, loosely, the bot/room info panels -- a plain
+ * vertical field stack with a right-aligned Cancel/primary button footer. */
+.hb-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-6);
+}
+
+.hb-form-tabs {
+  margin-bottom: var(--hb-space-6);
+}
+
+.hb-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--hb-space-3);
+  margin-top: var(--hb-space-2);
+}
+
+.hb-form-error {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-danger);
+}
+
+.hb-home-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-3);
+  background: var(--hb-overlay-neutral-hover);
+  border-radius: var(--hb-radius-sm);
+  padding: var(--hb-space-4);
+}
+
+.hb-home-confirm-text {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-secondary);
+}

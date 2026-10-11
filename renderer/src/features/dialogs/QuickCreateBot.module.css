@@ -1,0 +1,69 @@
+/* Mirrors the real chat header's numbers (44px tall, 0 16px padding, bottom hairline) so
+ * the quick-create screen still reads as "a chat with a not-yet-real bot" -- a live avatar+name preview
+ * header shows above the card, not just the card on its own. */
+.hb-quick-create-header {
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-3);
+  padding: 0 var(--hb-space-5);
+  border-bottom: 1px solid var(--hb-border-hairline);
+}
+
+.hb-quick-create-header-title {
+  font-size: var(--hb-text-size-md);
+  font-weight: 600;
+  color: var(--hb-text-primary);
+}
+
+.hb-quick-create {
+  max-width: 360px;
+  margin: 0 auto;
+  padding: var(--hb-space-8) var(--hb-space-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hb-space-6);
+  text-align: center;
+}
+
+.hb-quick-create-explainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-4);
+  color: var(--hb-text-secondary);
+  font-size: var(--hb-text-size-md);
+}
+
+.hb-quick-create-explainer p {
+  margin: 0;
+}
+
+.hb-quick-create-field {
+  width: 100%;
+  text-align: left;
+}
+
+.hb-quick-create-start {
+  width: 100%;
+}
+
+.hb-quick-create-start button {
+  width: 100%;
+}
+
+.hb-quick-create-advanced {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--hb-text-secondary);
+  text-decoration: underline;
+  font-size: var(--hb-text-size-sm);
+  cursor: pointer;
+}
+
+.hb-quick-create-error {
+  color: var(--hb-danger);
+  font-size: var(--hb-text-size-sm);
+}

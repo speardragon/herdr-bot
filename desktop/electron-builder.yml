@@ -1,0 +1,19 @@
+appId: dev.herdr.bot
+productName: herdr-bot
+directories:
+  output: ../.build/desktop
+asar: false
+files:
+  - dist/**
+  - package.json
+  - from: ../renderer/dist
+    to: renderer/dist
+mac:
+  icon: build/icon.icns
+  category: public.app-category.developer-tools
+  identity: null
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+artifactName: herdr-bot-${version}-${arch}.${ext}
+npmRebuild: false

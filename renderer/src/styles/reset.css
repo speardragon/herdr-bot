@@ -1,0 +1,127 @@
+/* herdr-bot renderer: minimal global reset. Everything else (spacing, color, radius, type) lives in
+ * design tokens (tokens.css) or component-local CSS modules -- nothing here is a design decision. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--hb-font-sans);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--hb-text-primary);
+  background: var(--hb-bg-app);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+a {
+  color: inherit;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+  font-weight: inherit;
+  font-size: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--hb-focus-ring);
+  outline-offset: 1px;
+}
+
+/* Visually-hidden but screen-reader-visible text (e.g. the "Me" avatar's full label). */
+.hb-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Electron window drag region helpers -- used by the shell's top strip (see shell/TitleBarRegion). */
+.hb-drag {
+  -webkit-app-region: drag;
+}
+
+.hb-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Thin, theme-aware scrollbars (WebKit/Chromium -- this app only ever runs in Electron/Chromium). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hb-scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--hb-scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}

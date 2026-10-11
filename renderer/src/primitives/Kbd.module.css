@@ -1,0 +1,14 @@
+.hb-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--hb-space-2);
+  border-radius: var(--hb-radius-xs);
+  background: var(--hb-overlay-neutral-hover);
+  color: var(--hb-text-secondary);
+  font-family: var(--hb-font-sans);
+  font-size: var(--hb-text-size-xs);
+  font-weight: 600;
+}

@@ -1,0 +1,32 @@
+.hb-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--hb-radius-pill);
+  color: var(--hb-text-secondary);
+  transition: background-color var(--hb-motion-fast) var(--hb-motion-ease), color var(--hb-motion-fast) var(--hb-motion-ease);
+}
+
+.hb-icon-button:hover:not(:disabled) {
+  background: var(--hb-overlay-neutral-hover);
+  color: var(--hb-text-primary);
+}
+
+.hb-icon-button:disabled {
+  opacity: 0.4;
+}
+
+.hb-icon-button--sm {
+  width: 24px;
+  height: 24px;
+}
+
+.hb-icon-button--md {
+  width: 34px;
+  height: 34px;
+}
+
+.hb-icon-button--lg {
+  width: 44px;
+  height: 44px;
+}

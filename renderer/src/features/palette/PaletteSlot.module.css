@@ -1,0 +1,140 @@
+.hb-palette-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: rgba(0, 0, 0, 0.28);
+  display: flex;
+  justify-content: center;
+}
+
+.hb-palette {
+  margin-top: 174px;
+  width: 560px;
+  max-width: calc(100vw - 32px);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--hb-radius-xl);
+  background: var(--hb-bg-raised);
+  box-shadow: var(--hb-shadow-palette);
+  overflow: hidden;
+  height: fit-content;
+}
+
+.hb-palette-input-row {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-3);
+  padding: var(--hb-space-5);
+  color: var(--hb-text-tertiary);
+  border-bottom: 1px solid var(--hb-border-hairline);
+}
+
+.hb-palette-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: var(--hb-text-size-xl);
+  color: var(--hb-text-primary);
+}
+
+.hb-palette-input:focus,
+.hb-palette-input:focus-visible {
+  outline: none;
+}
+
+.hb-palette-tabs {
+  flex: none;
+  display: flex;
+  gap: var(--hb-space-2);
+  padding: var(--hb-space-4) var(--hb-space-5);
+}
+
+.hb-palette-tab {
+  border-radius: var(--hb-radius-pill);
+  padding: var(--hb-space-2) var(--hb-space-4);
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-secondary);
+}
+
+.hb-palette-tab:hover {
+  background: var(--hb-overlay-neutral-hover);
+}
+
+.hb-palette-tab--active {
+  background: var(--hb-overlay-neutral-selected);
+  color: var(--hb-text-primary);
+  font-weight: 600;
+}
+
+.hb-palette-results {
+  flex: 1;
+  overflow: auto;
+  padding: 0 var(--hb-space-3) var(--hb-space-3);
+}
+
+.hb-palette-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-3);
+  width: 100%;
+  padding: var(--hb-space-3) var(--hb-space-3);
+  border-radius: var(--hb-radius-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.hb-palette-row:hover,
+.hb-palette-row--selected {
+  background: var(--hb-overlay-neutral-hover);
+}
+
+.hb-palette-row-icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--hb-text-secondary);
+}
+
+.hb-palette-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.hb-palette-row-name {
+  font-size: var(--hb-text-size-md);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-palette-row-subtitle {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The match stays marked up for screen readers but reads as plain text, like the rest of the row. */
+.hb-palette-row-highlight {
+  background: none;
+  color: inherit;
+}
+
+.hb-palette-row > :global(kbd) {
+  flex: none;
+  margin-left: auto;
+}
+
+.hb-palette-empty {
+  padding: var(--hb-space-6);
+  text-align: center;
+  color: var(--hb-text-tertiary);
+  font-size: var(--hb-text-size-sm);
+}

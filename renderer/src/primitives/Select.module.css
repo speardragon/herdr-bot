@@ -1,0 +1,90 @@
+/* `button.hb-select-trigger` (element + class, specificity 0,1,1) deliberately beats the plain
+ * `.hb-field-control` class (0,1,0) it's combined with on the trigger element, regardless of CSS Module
+ * source order -- the same trick the old native-`<select>` version used (`.hb-select-wrap select`). */
+button.hb-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-3);
+  width: 100%;
+  position: relative;
+  text-align: left;
+  cursor: pointer;
+  padding-right: var(--hb-space-7);
+}
+
+.hb-select-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.hb-select-trigger-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-select-chevron {
+  position: absolute;
+  right: var(--hb-space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--hb-text-tertiary);
+  flex: none;
+}
+
+.hb-select-listbox {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.hb-select-listbox--content {
+  min-width: 180px;
+  width: auto;
+}
+
+.hb-select-option {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-3);
+  width: 100%;
+  flex: none;
+  text-align: left;
+  padding: var(--hb-space-3) var(--hb-space-4);
+  border-radius: var(--hb-radius-sm);
+  font-size: var(--hb-text-size-md);
+  color: var(--hb-text-primary);
+}
+
+.hb-select-option:disabled {
+  color: var(--hb-text-tertiary);
+  cursor: not-allowed;
+}
+
+.hb-select-option--active,
+.hb-select-option:hover:not(:disabled) {
+  background: var(--hb-overlay-neutral-hover);
+  outline: none;
+}
+
+.hb-select-option--selected {
+  background: var(--hb-overlay-neutral-selected);
+}
+
+.hb-select-option-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-select-option-check {
+  flex: none;
+  color: var(--hb-text-tertiary);
+}

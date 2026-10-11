@@ -1,0 +1,70 @@
+/* Shared visual language for TextField/TextArea/Select -- a 1px bordered box, 8px radius, red border +
+ * helper line when invalid (e.g. a "No such directory" inline validation message). */
+.hb-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-2);
+}
+
+.hb-field-label {
+  font-size: var(--hb-text-size-sm);
+  font-weight: 500;
+  color: var(--hb-text-secondary);
+}
+
+/* Label left, control right (the Settings dialog's rows). */
+.hb-field--inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 58%);
+  align-items: center;
+  column-gap: var(--hb-space-4);
+}
+
+.hb-field--inline > .hb-field-label {
+  font-size: var(--hb-text-size-md);
+  font-weight: 400;
+  color: var(--hb-text-primary);
+}
+
+.hb-field--inline > :not(.hb-field-label) {
+  grid-column: 2;
+}
+
+.hb-field-control {
+  width: 100%;
+  border: 1px solid var(--hb-border-hairline);
+  border-radius: var(--hb-radius-sm);
+  background: var(--hb-bg-field);
+  color: var(--hb-text-primary);
+  padding: var(--hb-space-3) var(--hb-space-4);
+  font-size: var(--hb-text-size-md);
+  transition: border-color var(--hb-motion-fast) var(--hb-motion-ease);
+}
+
+.hb-field-control::placeholder {
+  color: var(--hb-text-tertiary);
+}
+
+.hb-field-control:focus-visible {
+  outline: none;
+  border-color: var(--hb-focus-ring);
+}
+
+.hb-field-control--invalid {
+  border-color: var(--hb-danger);
+}
+
+.hb-field-helper {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-tertiary);
+}
+
+.hb-field-helper--invalid {
+  color: var(--hb-danger);
+}
+
+textarea.hb-field-control {
+  resize: vertical;
+  min-height: 64px;
+  line-height: 1.45;
+}

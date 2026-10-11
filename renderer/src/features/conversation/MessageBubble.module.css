@@ -1,0 +1,95 @@
+.hb-message-row {
+  display: flex;
+  gap: var(--hb-space-3);
+  padding: 1px var(--hb-space-5);
+}
+
+.hb-message-row--mine {
+  justify-content: flex-end;
+}
+
+.hb-message-row--bot {
+  justify-content: flex-start;
+}
+
+.hb-message-avatar-slot {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  align-self: flex-end;
+}
+
+.hb-message-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-1);
+  max-width: 78%;
+  min-width: 0;
+}
+
+.hb-message-row--mine .hb-message-column {
+  align-items: flex-end;
+  max-width: 60%;
+}
+
+.hb-message-author {
+  font-size: var(--hb-text-size-sm);
+  font-weight: 700;
+  padding: 0 var(--hb-space-1);
+}
+
+.hb-message-bubble-wrap {
+  position: relative;
+  /* .hb-message-column's flex items aren't stretched (align-items: flex-end, both directions -- see
+   * that class) so nothing otherwise clamps a bubble's cross-axis size to the column's own max-width;
+   * an unshrinkable descendant (the reply-quote's nowrap snippet) could then force this wrapper, and the
+   * bubble inside it, wider than the column and the whole row would visibly overflow past its own
+   * right-aligned box. max-width: 100% resolves against the column's content width either way. */
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hb-bubble-user {
+  background: var(--hb-bubble-user-bg);
+  color: var(--hb-bubble-user-text);
+  border-radius: var(--hb-radius-xl);
+  padding: var(--hb-space-3) var(--hb-space-5);
+  font-size: var(--hb-text-size-md);
+  line-height: 1.45;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hb-bubble-bot {
+  background: var(--hb-bubble-bot-bg);
+  color: var(--hb-bubble-bot-text);
+  border-radius: var(--hb-radius-lg);
+  padding: var(--hb-space-3) var(--hb-space-5);
+  font-size: var(--hb-text-size-md);
+  line-height: 1.45;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hb-message-timestamp {
+  position: absolute;
+  bottom: 2px;
+  font-size: var(--hb-text-size-xs);
+  color: var(--hb-text-tertiary);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity var(--hb-motion-fast) var(--hb-motion-ease);
+  pointer-events: none;
+}
+
+.hb-message-row--mine .hb-message-timestamp {
+  right: calc(100% + var(--hb-space-2));
+}
+
+.hb-message-row--bot .hb-message-timestamp {
+  left: calc(100% + var(--hb-space-2));
+}
+
+.hb-message-row:hover .hb-message-timestamp {
+  opacity: 1;
+}

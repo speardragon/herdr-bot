@@ -1,0 +1,13 @@
+.hb-mention {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hb-space-1);
+  padding: 1px var(--hb-space-2) 1px 1px;
+  border-radius: var(--hb-radius-pill);
+  background: var(--hb-mention-bg);
+  color: var(--hb-mention-text);
+  font-weight: 600;
+  font-size: 0.95em;
+  line-height: 1.6;
+  vertical-align: -2px;
+}

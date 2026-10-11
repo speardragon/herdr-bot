@@ -1,0 +1,48 @@
+.hb-reply-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-3);
+  margin: 0 var(--hb-space-5);
+  padding: var(--hb-space-2) var(--hb-space-3);
+  border-radius: var(--hb-radius-md);
+  border: 1px solid var(--hb-border-hairline);
+  background: var(--hb-bg-raised);
+  border-left: 3px solid var(--hb-accent-unread);
+}
+
+.hb-reply-bar-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hb-reply-bar-label {
+  font-size: var(--hb-text-size-xs);
+  font-weight: 600;
+  color: var(--hb-accent-unread);
+}
+
+.hb-reply-bar-preview {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-reply-bar-clear {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--hb-text-secondary);
+}
+
+.hb-reply-bar-clear:hover {
+  background: var(--hb-overlay-neutral-hover);
+}

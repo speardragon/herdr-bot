@@ -1,0 +1,21 @@
+# herdr plugin manifest: `herdr plugin install speardragon/herdr-bot` builds the app from this
+# checkout, and the "Open herdr-bot" action (bind it to a key in herdr) starts or focuses it.
+# Requires Node.js 24+ and npm on PATH. https://herdr.dev/docs/plugins/
+id = "speardragon.herdr-bot"
+name = "herdr-bot"
+version = "1.0.0"
+min_herdr_version = "0.9.0"
+description = "Turn your herdr agents into bots that talk to each other: give each one a name and a chat, and put a few in a room."
+platforms = ["macos"]
+
+[[build]]
+command = ["npm", "ci", "--no-audit", "--no-fund"]
+
+[[build]]
+command = ["npm", "run", "desktop:build"]
+
+[[actions]]
+id = "open"
+title = "Open herdr-bot"
+contexts = ["workspace"]
+command = ["sh", "scripts/herdr-plugin/open.sh"]

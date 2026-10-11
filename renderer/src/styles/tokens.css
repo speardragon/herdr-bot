@@ -1,0 +1,196 @@
+/*
+ * herdr-bot renderer design tokens.
+ *
+ * Values are the UI's measured design numbers (colors, sizes, weights, radii). Every other part of the
+ * UI should reference these custom properties rather than hard-coding a color/size -- that is what keeps
+ * `features/*` visually consistent without sharing component code.
+ *
+ * Theme switching: the shell sets `data-theme="light"|"dark"` on <html> from `window.herdrBot.theme`
+ * (see src/data/hooks/useTheme.ts). The `@media (prefers-color-scheme)` block below only covers the
+ * instant before that JS runs (first paint / no-JS fallback) and is overridden the moment the attribute
+ * is set.
+ */
+
+:root {
+  /* ---- surfaces ---- */
+  --hb-bg-app: #fcfcfc;
+  --hb-bg-sidebar: #f7f7f7;
+  --hb-bg-raised: #ffffff;
+  /* Text field / textarea / select fill. Same as --hb-bg-raised in light theme (a 1px border is
+   * enough contrast against a white dialog) but overridden darker in dark theme -- see that block. */
+  --hb-bg-field: #ffffff;
+  --hb-border-hairline: rgba(20, 20, 20, 0.08);
+
+  /* ---- text ---- */
+  --hb-text-primary: #141414;
+  --hb-text-secondary: rgba(20, 20, 20, 0.6);
+  --hb-text-tertiary: rgba(20, 20, 20, 0.4);
+  --hb-text-on-dark-surface: #fcfcfc;
+  --hb-text-on-solid: #ffffff;
+
+  /* ---- neutral overlay: hover + selected states everywhere share one gray-on-surface token,
+     only alpha changes per theme/state ---- */
+  --hb-overlay-neutral-hover: rgba(119, 119, 119, 0.09);
+  --hb-overlay-neutral-selected: rgba(119, 119, 119, 0.17);
+  --hb-overlay-neutral-active: rgba(119, 119, 119, 0.24);
+
+  /* ---- accents / status ---- */
+  --hb-accent-unread: rgb(16, 132, 254);
+  --hb-status-blocked: rgb(255, 38, 60);
+  --hb-status-working: rgb(255, 152, 0);
+  --hb-status-ring-width: 2px;
+
+  --hb-danger: #e5342f;
+  --hb-danger-hover: #c92a26;
+  --hb-focus-ring: rgb(16, 132, 254);
+
+  /* ---- bubbles / code / mentions ---- */
+  --hb-bubble-user-bg: #000000;
+  --hb-bubble-user-text: #ffffff;
+  /* A dimmed variant of --hb-bubble-user-text, for secondary content nested inside the user's own
+   * bubble (the reply-quote strip) -- the page's usual --hb-text-tertiary assumes a light/raised
+   * background and is nearly invisible against the solid user bubble, which is the opposite color. */
+  --hb-bubble-user-text-dim: rgba(255, 255, 255, 0.6);
+  --hb-bubble-bot-bg: #ececec;
+  --hb-bubble-bot-text: #141414;
+  --hb-code-inline-text: rgb(235, 87, 87);
+  --hb-code-inline-bg: rgba(20, 20, 20, 0.1);
+  --hb-code-block-bg: #1a1a1a;
+  --hb-code-block-text: #e9e9e9;
+  --hb-mention-bg: #dcf2de;
+  --hb-mention-text: #16401d;
+  --hb-reaction-bg: rgba(16, 132, 254, 0.12);
+  --hb-reaction-border: rgba(16, 132, 254, 0.45);
+  --hb-reaction-bg-mine: rgba(16, 132, 254, 0.18);
+
+  --hb-scrollbar-thumb: rgba(20, 20, 20, 0.18);
+
+  /* ---- shape ---- */
+  --hb-radius-xs: 4px;
+  --hb-radius-sm: 8px;
+  --hb-radius-md: 10px;
+  --hb-radius-lg: 14px;
+  --hb-radius-xl: 16px;
+  --hb-radius-pill: 999px;
+
+  /* ---- spacing scale ---- */
+  --hb-space-1: 2px;
+  --hb-space-2: 4px;
+  --hb-space-3: 8px;
+  --hb-space-4: 12px;
+  --hb-space-5: 16px;
+  --hb-space-6: 20px;
+  --hb-space-7: 24px;
+  --hb-space-8: 32px;
+
+  /* ---- elevation ---- */
+  --hb-shadow-dialog: 0 10px 20px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --hb-shadow-palette: 0 22px 70px 4px rgba(0, 0, 0, 0.56);
+  --hb-shadow-popover: 0 8px 24px -4px rgba(0, 0, 0, 0.18), 0 2px 8px -2px rgba(0, 0, 0, 0.12);
+
+  /* ---- typography ---- */
+  --hb-font-sans: -apple-system, "system-ui", "Segoe UI", sans-serif;
+  --hb-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  --hb-text-size-xs: 11px;
+  --hb-text-size-sm: 12px;
+  --hb-text-size-base: 13.3px;
+  --hb-text-size-md: 14px;
+  --hb-text-size-lg: 16px;
+  --hb-text-size-xl: 18px;
+
+  /* ---- motion ---- */
+  --hb-motion-fast: 100ms;
+  --hb-motion-base: 160ms;
+  --hb-motion-slow: 240ms;
+  --hb-motion-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ---- layout constants (see shell/ for the resizable sidebar logic) ---- */
+  --hb-sidebar-width-default: 280px;
+  --hb-sidebar-width-rail: 88px;
+  --hb-titlebar-height: 52px;
+  --hb-avatar-size-md: 44px;
+}
+
+:root[data-theme="dark"] {
+  --hb-bg-app: #070707;
+  --hb-bg-sidebar: #111111;
+  --hb-bg-raised: #1b1b1b;
+  /* A form field in dark theme is a visibly LIGHTER gray than the dialog panel it sits on (#2f2f2f
+   * field vs. #181818-ish dialog) -- the reverse of what a 1px low-alpha hairline border alone could
+   * show, and the reverse of light theme (where field and dialog are the same white and only the
+   * border differs). */
+  --hb-bg-field: #2f2f2f;
+  --hb-border-hairline: rgba(252, 252, 252, 0.08);
+
+  --hb-text-primary: #fcfcfc;
+  --hb-text-secondary: rgba(252, 252, 252, 0.6);
+  --hb-text-tertiary: rgba(252, 252, 252, 0.4);
+
+  --hb-overlay-neutral-hover: rgba(119, 119, 119, 0.14);
+  --hb-overlay-neutral-selected: rgba(119, 119, 119, 0.32);
+  --hb-overlay-neutral-active: rgba(119, 119, 119, 0.4);
+
+  /* In dark mode, the user's own bubble inverts to a near-white fill (exactly --hb-text-primary's dark
+   * value) with near-black text (exactly --hb-bg-app's dark value), not a black pill carried over from
+   * light mode. */
+  --hb-bubble-user-bg: #fcfcfc;
+  --hb-bubble-user-text: #070707;
+  --hb-bubble-user-text-dim: rgba(7, 7, 7, 0.55);
+  --hb-bubble-bot-bg: #2a2a2a;
+  --hb-bubble-bot-text: #f2f2f2;
+  --hb-code-inline-bg: rgba(252, 252, 252, 0.12);
+  --hb-code-block-bg: #000000;
+  --hb-code-block-text: #e9e9e9;
+  --hb-mention-bg: #1d3a21;
+  --hb-mention-text: #bdeec4;
+  --hb-reaction-bg: rgba(16, 132, 254, 0.18);
+  --hb-reaction-border: rgba(16, 132, 254, 0.5);
+  --hb-reaction-bg-mine: rgba(16, 132, 254, 0.26);
+
+  --hb-scrollbar-thumb: rgba(252, 252, 252, 0.18);
+
+  --hb-shadow-dialog: 0 10px 20px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+  --hb-shadow-palette: 0 22px 70px 4px rgba(0, 0, 0, 0.75);
+  --hb-shadow-popover: 0 8px 24px -4px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --hb-bg-app: #070707;
+    --hb-bg-sidebar: #111111;
+    --hb-bg-raised: #1b1b1b;
+    --hb-bg-field: #2f2f2f;
+    --hb-border-hairline: rgba(252, 252, 252, 0.08);
+    --hb-text-primary: #fcfcfc;
+    --hb-text-secondary: rgba(252, 252, 252, 0.6);
+    --hb-text-tertiary: rgba(252, 252, 252, 0.4);
+    --hb-overlay-neutral-hover: rgba(119, 119, 119, 0.14);
+    --hb-overlay-neutral-selected: rgba(119, 119, 119, 0.32);
+    --hb-overlay-neutral-active: rgba(119, 119, 119, 0.4);
+    --hb-bubble-user-bg: #fcfcfc;
+    --hb-bubble-user-text: #070707;
+    --hb-bubble-user-text-dim: rgba(7, 7, 7, 0.55);
+    --hb-bubble-bot-bg: #2a2a2a;
+    --hb-bubble-bot-text: #f2f2f2;
+    --hb-code-block-bg: #000000;
+    --hb-scrollbar-thumb: rgba(252, 252, 252, 0.18);
+  }
+}
+
+/* Bot persona accent colors -- 11 fixed swatches used by the avatar tint picker (see
+ * data/avatar-colors.ts) and bot-name labels in a room transcript. Also used by the bot info panel's
+ * and onboarding flow's color pickers. */
+:root {
+  --hb-persona-black: #1a1a1a;
+  --hb-persona-brown: #8a5a3c;
+  --hb-persona-red: #e5342f;
+  --hb-persona-orange: #f07a2b;
+  --hb-persona-yellow: #f0b429;
+  --hb-persona-green: #4caf6e;
+  --hb-persona-cyan: #2bb6a3;
+  --hb-persona-blue: #2f7af5;
+  --hb-persona-violet: #8a5cf5;
+  --hb-persona-magenta: #e0479e;
+  --hb-persona-gray: #8a8a8a;
+}

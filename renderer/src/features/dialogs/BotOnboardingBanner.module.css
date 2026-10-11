@@ -1,0 +1,27 @@
+.hb-onboarding-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-3);
+  padding: var(--hb-space-3) var(--hb-space-5);
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-secondary);
+  border-bottom: 1px solid var(--hb-border-hairline);
+}
+
+.hb-onboarding-banner--failed {
+  color: var(--hb-danger);
+}
+
+.hb-onboarding-banner-message {
+  flex: 1;
+}
+
+.hb-onboarding-banner-retry {
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: var(--hb-radius-sm);
+  padding: var(--hb-space-1) var(--hb-space-3);
+  color: inherit;
+  cursor: pointer;
+  font-size: var(--hb-text-size-sm);
+}

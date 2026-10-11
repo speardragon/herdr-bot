@@ -1,0 +1,47 @@
+.hb-working {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-2);
+  padding: 0 var(--hb-space-5) var(--hb-space-3);
+}
+
+.hb-working-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-2);
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-tertiary);
+}
+
+.hb-working-dots {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.hb-working-dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: hb-working-bounce 1.2s infinite ease-in-out both;
+}
+
+.hb-working-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.hb-working-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes hb-working-bounce {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}

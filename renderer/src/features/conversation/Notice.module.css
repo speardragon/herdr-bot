@@ -1,0 +1,14 @@
+.hb-notice {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-tertiary);
+  padding: var(--hb-space-1) 0;
+}
+
+.hb-notice-delegation {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hb-space-1);
+}

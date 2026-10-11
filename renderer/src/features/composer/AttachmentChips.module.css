@@ -1,0 +1,56 @@
+/* Staged attachment chips row, inside the composer's unified card (see ComposerSlot.module.css's
+   `.hb-composer-card`) above the text/send row: each chip is its own small rounded card -- filename
+   bold on one line, byte size in tertiary text on the line below, a bordered "x" remove button -- in
+   a horizontal row that wraps. */
+.hb-attachment-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hb-space-2);
+  padding: var(--hb-space-3) var(--hb-space-3) 0;
+}
+
+.hb-attachment-chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--hb-space-2) 30px var(--hb-space-2) var(--hb-space-3);
+  border-radius: var(--hb-radius-sm);
+  border: 1px solid var(--hb-border-hairline);
+  background: var(--hb-overlay-neutral-hover);
+  font-size: var(--hb-text-size-sm);
+  max-width: 220px;
+}
+
+.hb-attachment-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--hb-text-primary);
+  font-weight: 600;
+}
+
+.hb-attachment-chip-size {
+  color: var(--hb-text-tertiary);
+  font-size: var(--hb-text-size-xs);
+}
+
+.hb-attachment-chip-remove {
+  position: absolute;
+  top: 50%;
+  right: var(--hb-space-2);
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--hb-radius-xs);
+  border: 1px solid var(--hb-border-hairline);
+  background: var(--hb-bg-raised);
+  color: var(--hb-text-secondary);
+}
+
+.hb-attachment-chip-remove:hover {
+  background: var(--hb-overlay-neutral-hover);
+}

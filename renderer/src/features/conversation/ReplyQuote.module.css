@@ -1,0 +1,31 @@
+.hb-reply-quote {
+  display: flex;
+  align-items: baseline;
+  gap: var(--hb-space-2);
+  padding: var(--hb-space-1) var(--hb-space-3);
+  margin-bottom: var(--hb-space-1);
+  border-left: 2px solid var(--hb-overlay-neutral-selected);
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-tertiary);
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.hb-reply-quote--mine {
+  color: var(--hb-bubble-user-text-dim);
+  border-left-color: var(--hb-bubble-user-text-dim);
+}
+
+.hb-reply-quote-author {
+  font-weight: 600;
+  flex: none;
+}
+
+.hb-reply-quote-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

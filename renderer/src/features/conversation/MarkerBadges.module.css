@@ -1,0 +1,18 @@
+.hb-marker-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hb-space-2);
+  margin-bottom: var(--hb-space-1);
+}
+
+.hb-marker-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--hb-accent-unread);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: var(--hb-text-size-xs);
+  cursor: pointer;
+}

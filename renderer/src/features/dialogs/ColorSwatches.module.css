@@ -1,0 +1,34 @@
+.hb-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--hb-space-4);
+  justify-items: center;
+}
+
+.hb-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--hb-radius-pill);
+  border: 2px solid transparent;
+  padding: 2px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hb-swatch:focus-visible {
+  outline: none;
+  border-color: var(--hb-focus-ring);
+}
+
+.hb-swatch--selected {
+  border-color: var(--hb-text-secondary);
+}
+
+.hb-swatch-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--hb-radius-pill);
+}

@@ -1,0 +1,27 @@
+.hb-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+}
+
+.hb-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--hb-space-3) var(--hb-space-4);
+  border-radius: var(--hb-radius-sm);
+  font-size: var(--hb-text-size-md);
+  color: var(--hb-text-primary);
+}
+
+.hb-menu-item:hover,
+.hb-menu-item:focus-visible {
+  background: var(--hb-overlay-neutral-hover);
+  outline: none;
+}
+
+.hb-menu-item--danger {
+  color: var(--hb-danger);
+}

@@ -1,0 +1,63 @@
+name: Bug report
+description: Something in herdr-bot doesn't work the way it should.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a room with two Claude Code bots
+        2. Send "@Forge run the tests"
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: herdr-bot version
+      description: "Menu bar → herdr-bot → About herdr-bot, or the commit you built from."
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: herdr-version
+    attributes:
+      label: herdr version
+      description: Output of `herdr --version`.
+      placeholder: herdr 0.9.3
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - DMG from GitHub Releases
+        - herdr plugin install
+        - Built from source
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and chip
+      placeholder: macOS 26.1, Apple M3
+  - type: input
+    id: agents
+    attributes:
+      label: Agent CLIs involved
+      placeholder: Claude Code 2.1, Codex 0.50
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      description: Lines starting with `[herdr-bot:` from the terminal that started the app, and screenshots if the UI is involved. Remove anything private.
+      render: text

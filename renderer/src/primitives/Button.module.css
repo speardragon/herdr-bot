@@ -1,0 +1,71 @@
+.hb-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hb-space-2);
+  border-radius: var(--hb-radius-pill);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--hb-motion-fast) var(--hb-motion-ease), color var(--hb-motion-fast) var(--hb-motion-ease), opacity var(--hb-motion-fast) var(--hb-motion-ease);
+  border: 1px solid transparent;
+}
+
+.hb-button:disabled {
+  opacity: 0.45;
+}
+
+/* ---- sizes ---- */
+.hb-button--sm {
+  height: 28px;
+  padding: 0 var(--hb-space-4);
+  font-size: var(--hb-text-size-sm);
+}
+
+.hb-button--md {
+  height: 36px;
+  padding: 0 var(--hb-space-5);
+  font-size: var(--hb-text-size-md);
+}
+
+.hb-button--lg {
+  height: 44px;
+  padding: 0 var(--hb-space-6);
+  font-size: var(--hb-text-size-md);
+}
+
+/* ---- variants ---- */
+.hb-button--primary {
+  background: var(--hb-bubble-user-bg);
+  color: var(--hb-bubble-user-text);
+}
+
+.hb-button--primary:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.hb-button--secondary {
+  background: var(--hb-overlay-neutral-hover);
+  color: var(--hb-text-primary);
+}
+
+.hb-button--secondary:hover:not(:disabled) {
+  background: var(--hb-overlay-neutral-selected);
+}
+
+.hb-button--ghost {
+  background: transparent;
+  color: var(--hb-text-primary);
+}
+
+.hb-button--ghost:hover:not(:disabled) {
+  background: var(--hb-overlay-neutral-hover);
+}
+
+.hb-button--danger {
+  background: var(--hb-danger);
+  color: #ffffff;
+}
+
+.hb-button--danger:hover:not(:disabled) {
+  background: var(--hb-danger-hover);
+}

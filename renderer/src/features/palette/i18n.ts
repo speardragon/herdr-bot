@@ -1,0 +1,38 @@
+/** Command palette's catalog fragment. */
+export const en = {
+  "palette.tab.all": "All",
+  "palette.tab.messages": "Messages",
+  "palette.tab.bots": "Bots",
+  "palette.tab.groups": "Groups",
+  "palette.tab.actions": "Actions",
+  "palette.empty": "Type to search chats and messages",
+  "palette.noResults": "No results",
+  "palette.placeholder": "Search",
+  "palette.ariaLabel": "Command palette",
+  "palette.action.newBot": "New bot",
+  "palette.action.newRoom": "New room",
+  "palette.action.settings": "Settings",
+  "palette.action.toggleTheme": "Toggle theme",
+  "palette.subtitle.inChat": "In {chat} · {time}",
+  "palette.subtitle.fromBotToYou": "{author} to you · {time}",
+  "palette.subtitle.fromYouToChat": "You to {chat} · {time}",
+} as const;
+
+export const ko = {
+  "palette.tab.all": "전체",
+  "palette.tab.messages": "메시지",
+  "palette.tab.bots": "봇",
+  "palette.tab.groups": "그룹",
+  "palette.tab.actions": "작업",
+  "palette.empty": "채팅과 메시지를 검색해 보세요",
+  "palette.noResults": "결과 없음",
+  "palette.placeholder": "검색",
+  "palette.ariaLabel": "명령어 팔레트",
+  "palette.action.newBot": "새 봇 만들기",
+  "palette.action.newRoom": "새 방 만들기",
+  "palette.action.settings": "설정",
+  "palette.action.toggleTheme": "테마 전환",
+  "palette.subtitle.inChat": "{chat}에서 · {time}",
+  "palette.subtitle.fromBotToYou": "{author}이(가) 나에게 · {time}",
+  "palette.subtitle.fromYouToChat": "내가 {chat}에게 · {time}",
+} satisfies Record<keyof typeof en, string>;

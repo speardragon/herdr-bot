@@ -1,0 +1,6 @@
+.hb-date-separator {
+  text-align: center;
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-tertiary);
+  padding: var(--hb-space-2) 0;
+}

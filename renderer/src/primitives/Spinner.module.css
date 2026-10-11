@@ -1,0 +1,13 @@
+.hb-spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border: 2px solid var(--hb-overlay-neutral-selected);
+  border-top-color: var(--hb-text-secondary);
+  animation: hb-spin 700ms linear infinite;
+}
+
+@keyframes hb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

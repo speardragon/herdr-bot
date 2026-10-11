@@ -1,0 +1,25 @@
+.hb-hover-actions {
+  position: absolute;
+  top: -14px;
+  right: var(--hb-space-3);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--hb-radius-sm);
+  background: var(--hb-bg-raised);
+  box-shadow: var(--hb-shadow-popover);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hb-motion-fast) var(--hb-motion-ease);
+  z-index: 1;
+}
+
+.hb-hover-actions--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hb-hover-actions-anchor {
+  display: inline-flex;
+}

@@ -1,0 +1,51 @@
+.hb-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hb-space-3);
+}
+
+.hb-attachment-image {
+  display: block;
+  padding: 0;
+  border: none;
+  border-radius: var(--hb-radius-sm);
+  overflow: hidden;
+  max-width: 240px;
+  max-height: 200px;
+  cursor: pointer;
+  background: none;
+}
+
+.hb-attachment-image img,
+.hb-attachment-image video {
+  display: block;
+  max-width: 240px;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  border-radius: var(--hb-radius-sm);
+}
+
+.hb-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hb-space-2);
+  padding: var(--hb-space-2) var(--hb-space-3);
+  border-radius: var(--hb-radius-sm);
+  background: var(--hb-overlay-neutral-hover);
+  border: none;
+  color: var(--hb-text-primary);
+  font-size: var(--hb-text-size-sm);
+  cursor: pointer;
+  max-width: 260px;
+}
+
+.hb-attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-attachment-audio {
+  height: 28px;
+}

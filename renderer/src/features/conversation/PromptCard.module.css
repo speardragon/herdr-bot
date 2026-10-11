@@ -1,0 +1,137 @@
+.hb-prompt-card {
+  position: relative;
+  max-width: 85%;
+  background: var(--hb-bubble-bot-bg);
+  color: var(--hb-bubble-bot-text);
+  border-radius: var(--hb-radius-lg);
+  padding: var(--hb-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-3);
+}
+
+.hb-prompt-dismiss {
+  position: absolute;
+  top: var(--hb-space-2);
+  right: var(--hb-space-2);
+}
+
+.hb-prompt-title {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-tertiary);
+}
+
+.hb-prompt-question {
+  font-weight: 700;
+  font-size: var(--hb-text-size-md);
+  display: flex;
+  align-items: baseline;
+  gap: var(--hb-space-2);
+  padding-right: var(--hb-space-7);
+}
+
+.hb-prompt-progress {
+  font-weight: 400;
+  color: var(--hb-text-tertiary);
+  font-size: var(--hb-text-size-sm);
+}
+
+.hb-prompt-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-2);
+}
+
+.hb-prompt-command {
+  font-family: var(--hb-font-mono);
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.hb-prompt-description {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-secondary);
+}
+
+.hb-prompt-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-2);
+}
+
+.hb-prompt-option {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--hb-space-3);
+  border-radius: var(--hb-radius-sm);
+  background: var(--hb-overlay-neutral-hover);
+  border: 1px solid transparent;
+  color: inherit;
+  font-size: var(--hb-text-size-md);
+  cursor: pointer;
+}
+
+.hb-prompt-option:hover:not(:disabled) {
+  background: var(--hb-overlay-neutral-selected);
+}
+
+.hb-prompt-option:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.hb-prompt-option--selected {
+  border-color: var(--hb-focus-ring);
+  background: var(--hb-overlay-neutral-selected);
+}
+
+.hb-prompt-option-label {
+  flex: 1;
+}
+
+.hb-prompt-option-detail {
+  color: var(--hb-text-tertiary);
+  font-size: var(--hb-text-size-sm);
+}
+
+.hb-prompt-checkbox {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--hb-radius-xs);
+  border: 1.5px solid var(--hb-text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hb-prompt-checkbox--checked {
+  background: var(--hb-focus-ring);
+  border-color: var(--hb-focus-ring);
+  color: #fff;
+}
+
+.hb-prompt-freetext {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-2);
+}
+
+.hb-prompt-inert {
+  padding: var(--hb-space-3);
+  border-radius: var(--hb-radius-sm);
+  background: var(--hb-overlay-neutral-hover);
+  color: var(--hb-text-tertiary);
+  font-size: var(--hb-text-size-md);
+}
+
+.hb-prompt-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--hb-space-2);
+}

@@ -1,0 +1,193 @@
+.hb-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* 44px -- the macOS traffic lights sit over this strip, so the component
+ * also adds the global (non-module) "hb-drag" class here: the header background is the window's drag
+ * handle, with its buttons opting back out via "hb-no-drag" same as every other interactive row. */
+.hb-sidebar-header {
+  flex: none;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 var(--hb-space-3);
+}
+
+.hb-sidebar-search {
+  flex: none;
+  margin: 0 var(--hb-space-3) var(--hb-space-3);
+  height: 30px;
+  border-radius: var(--hb-radius-sm);
+  background: var(--hb-overlay-neutral-hover);
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-3);
+  padding: 0 var(--hb-space-4);
+  color: var(--hb-text-secondary);
+  font-size: var(--hb-text-size-sm);
+}
+
+.hb-sidebar-search:hover {
+  background: var(--hb-overlay-neutral-selected);
+}
+
+.hb-sidebar-list {
+  flex: 1;
+  overflow: auto;
+  padding: 0 var(--hb-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hb-sidebar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-3);
+  height: 62px;
+  padding: 0 var(--hb-space-2);
+  border-radius: var(--hb-radius-md);
+  position: relative;
+  text-align: left;
+  width: 100%;
+}
+
+.hb-sidebar-row:hover {
+  background: var(--hb-overlay-neutral-hover);
+}
+
+.hb-sidebar-row--selected {
+  background: var(--hb-overlay-neutral-selected);
+}
+
+.hb-sidebar-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.hb-sidebar-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--hb-space-2);
+}
+
+.hb-sidebar-row-name {
+  font-size: var(--hb-text-size-md);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Time and the unread dot stacked on the right, centered on the row. */
+.hb-sidebar-row-meta {
+  flex: none;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--hb-space-2);
+}
+
+.hb-sidebar-row-time {
+  flex: none;
+  font-size: var(--hb-text-size-xs);
+  color: var(--hb-text-tertiary);
+}
+
+.hb-sidebar-row-preview {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hb-sidebar-row-unread {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.hb-sidebar-row-rename {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--hb-focus-ring);
+  border-radius: var(--hb-radius-xs);
+  background: var(--hb-bg-raised);
+  color: var(--hb-text-primary);
+  font-size: var(--hb-text-size-md);
+  font-weight: 600;
+  padding: 1px var(--hb-space-2);
+}
+
+.hb-sidebar-section-label {
+  flex: none;
+  padding: var(--hb-space-2) var(--hb-space-4) 2px;
+  font-size: var(--hb-text-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--hb-text-tertiary);
+}
+
+.hb-sidebar-footer {
+  flex: none;
+  padding: var(--hb-space-3);
+}
+
+.hb-sidebar-footer-button {
+  width: 100%;
+  height: 40px;
+  border-radius: var(--hb-radius-pill);
+  background: var(--hb-overlay-neutral-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hb-space-3);
+  font-size: var(--hb-text-size-sm);
+  font-weight: 600;
+}
+
+.hb-sidebar-footer-button:hover {
+  background: var(--hb-overlay-neutral-selected);
+}
+
+/* ---- icon rail (collapsed) ---- */
+/* The search button, pinned-section label, and header "+" aren't rendered at all in rail mode (see
+ * SidebarSlot.tsx) -- only the header's drag-strip centering needs a rail-specific rule here. */
+.hb-sidebar--rail .hb-sidebar-header {
+  justify-content: center;
+}
+
+.hb-sidebar--rail .hb-sidebar-row {
+  justify-content: center;
+  height: 64px;
+}
+
+.hb-sidebar-rail-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hb-space-2);
+}
+
+.hb-sidebar-rail-footer-button {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--hb-radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.hb-sidebar-rail-footer-button:hover {
+  background: var(--hb-overlay-neutral-hover);
+}

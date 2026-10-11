@@ -1,0 +1,5 @@
+.hb-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hb-space-2);
+}

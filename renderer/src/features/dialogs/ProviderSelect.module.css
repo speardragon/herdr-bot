@@ -1,0 +1,20 @@
+.hb-provider-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: var(--hb-radius-xs);
+}
+
+.hb-provider-monogram {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: var(--hb-radius-xs);
+  background: var(--hb-persona-black);
+  color: var(--hb-text-on-dark-surface);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

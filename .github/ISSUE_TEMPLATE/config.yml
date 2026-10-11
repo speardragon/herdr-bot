@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/speardragon/herdr-bot/security/advisories/new
+    about: Please report vulnerabilities privately instead of opening a public issue.
+  - name: herdr itself
+    url: https://herdr.dev
+    about: Problems with panes, sessions or the herdr CLI belong to herdr.

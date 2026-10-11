@@ -1,0 +1,17 @@
+/* Shared shape for every plain confirm dialog (delete, relaunch, home-folder). */
+.hb-confirm-title {
+  font-size: var(--hb-text-size-lg);
+  font-weight: 700;
+  margin: 0 0 var(--hb-space-3);
+}
+
+.hb-confirm-body {
+  color: var(--hb-text-secondary);
+  margin: 0 0 var(--hb-space-6);
+}
+
+.hb-confirm-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--hb-space-3);
+}

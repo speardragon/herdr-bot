@@ -1,0 +1,28 @@
+.hb-toast-host {
+  position: fixed;
+  bottom: var(--hb-space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-3);
+  align-items: center;
+}
+
+.hb-toast {
+  background: var(--hb-text-primary);
+  color: var(--hb-bg-app);
+  padding: var(--hb-space-3) var(--hb-space-5);
+  border-radius: var(--hb-radius-pill);
+  font-size: var(--hb-text-size-sm);
+  box-shadow: var(--hb-shadow-popover);
+  animation: hb-toast-in var(--hb-motion-base) var(--hb-motion-ease);
+}
+
+@keyframes hb-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}

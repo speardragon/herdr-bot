@@ -1,0 +1,112 @@
+/* Shared chrome for the bot/room info panels: a "‹ back · Settings · » close" header,
+ * then a scrollable field stack. Both panels use this file. */
+.hb-panel-header {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--hb-space-5);
+  border-bottom: 1px solid var(--hb-border-hairline);
+}
+
+.hb-panel-title {
+  font-weight: 700;
+  font-size: var(--hb-text-size-md);
+}
+
+.hb-panel-body {
+  padding: var(--hb-space-6) var(--hb-space-5) var(--hb-space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-6);
+}
+
+.hb-panel-avatar {
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.hb-panel-avatar-button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: var(--hb-radius-lg);
+}
+
+.hb-panel-avatar-button:focus-visible {
+  outline: 2px solid var(--hb-focus-ring);
+  outline-offset: 2px;
+}
+
+.hb-panel-color-popover {
+  padding: var(--hb-space-5);
+  background: var(--hb-overlay-neutral-hover);
+  border-radius: var(--hb-radius-sm);
+}
+
+.hb-panel-color-popover-title {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-secondary);
+  margin: 0 0 var(--hb-space-4);
+}
+
+.hb-panel-card {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-4);
+  background: var(--hb-overlay-neutral-hover);
+  border-radius: var(--hb-radius-sm);
+  padding: var(--hb-space-4);
+}
+
+.hb-panel-card-title {
+  font-weight: 600;
+}
+
+.hb-panel-card-help {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-tertiary);
+}
+
+.hb-panel-card-text {
+  flex: 1;
+}
+
+.hb-panel-section-header {
+  font-weight: 600;
+  color: var(--hb-text-secondary);
+  border-top: 1px solid var(--hb-border-hairline);
+  padding-top: var(--hb-space-5);
+}
+
+.hb-panel-help {
+  font-size: var(--hb-text-size-sm);
+  color: var(--hb-text-tertiary);
+  margin: calc(var(--hb-space-3) * -1) 0 0;
+}
+
+.hb-panel-full-button button {
+  width: 100%;
+}
+
+.hb-panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hb-space-3);
+}
+
+.hb-panel-error {
+  color: var(--hb-danger);
+  font-size: var(--hb-text-size-sm);
+}
+
+.hb-panel-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-3);
+  border-top: 1px solid var(--hb-border-hairline);
+  padding-top: var(--hb-space-5);
+}

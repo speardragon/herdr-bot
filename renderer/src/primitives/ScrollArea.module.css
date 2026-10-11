@@ -1,0 +1,4 @@
+.hb-scroll-area {
+  overflow: auto;
+  min-height: 0;
+}

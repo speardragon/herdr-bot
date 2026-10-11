@@ -1,0 +1,21 @@
+.hb-empty-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hb-space-2);
+  text-align: center;
+  padding: var(--hb-space-8);
+}
+
+.hb-empty-chat-title {
+  font-size: var(--hb-text-size-lg);
+  font-weight: 600;
+  color: var(--hb-text-primary);
+}
+
+.hb-empty-chat-body {
+  font-size: var(--hb-text-size-md);
+  color: var(--hb-text-tertiary);
+}

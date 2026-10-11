@@ -1,0 +1,20 @@
+.hb-status-dot {
+  display: inline-block;
+  border-radius: 50%;
+}
+
+.hb-status-dot--blocked {
+  background: var(--hb-status-blocked);
+}
+
+.hb-status-dot--working {
+  background: var(--hb-status-working);
+}
+
+.hb-status-dot--unread {
+  background: var(--hb-accent-unread);
+}
+
+.hb-status-dot--ring {
+  box-shadow: 0 0 0 var(--hb-status-ring-width) var(--hb-bg-app);
+}

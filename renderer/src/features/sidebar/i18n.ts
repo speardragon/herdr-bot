@@ -1,0 +1,44 @@
+/** Sidebar's own message catalog fragment. Add new sidebar keys here -- never in
+ * `src/i18n/*` or another feature's file -- and keep the `ko` object's keys matching `en`'s (the
+ * `satisfies` below is what enforces that at compile time). */
+export const en = {
+  "sidebar.search": "Search",
+  "sidebar.newChat": "New chat",
+  "sidebar.settings": "Settings",
+  "sidebar.createFirstBot": "Create your first Bot",
+  "sidebar.pinnedSectionLabel": "Pinned",
+  "sidebar.contextMenu.pin": "Pin",
+  "sidebar.contextMenu.unpin": "Unpin",
+  "sidebar.contextMenu.renameBot": "Rename Bot",
+  "sidebar.contextMenu.renameRoom": "Rename group",
+  "sidebar.contextMenu.editProfile": "Edit Profile",
+  "sidebar.contextMenu.hide": "Hide from sidebar",
+  "sidebar.contextMenu.show": "Show in sidebar",
+  "sidebar.contextMenu.delete": "Delete",
+  "sidebar.contextMenu.openInHerdr": "Open in herdr",
+  "sidebar.waitingForYou.approval": "Waiting for you: approval",
+  "sidebar.waitingForYou.offline": "Waiting for you: offline",
+  "sidebar.waitingForYou.setup": "Waiting for you: setup",
+  "sidebar.renameInput.ariaLabel": "Rename",
+} as const;
+
+export const ko = {
+  "sidebar.search": "검색",
+  "sidebar.newChat": "새 채팅",
+  "sidebar.settings": "설정",
+  "sidebar.createFirstBot": "첫 Bot 만들기",
+  "sidebar.pinnedSectionLabel": "고정됨",
+  "sidebar.contextMenu.pin": "고정",
+  "sidebar.contextMenu.unpin": "고정 해제",
+  "sidebar.contextMenu.renameBot": "봇 이름 변경",
+  "sidebar.contextMenu.renameRoom": "그룹 이름 변경",
+  "sidebar.contextMenu.editProfile": "프로필 수정",
+  "sidebar.contextMenu.hide": "사이드바에서 숨기기",
+  "sidebar.contextMenu.show": "사이드바에 표시",
+  "sidebar.contextMenu.delete": "삭제",
+  "sidebar.contextMenu.openInHerdr": "herdr에서 열기",
+  "sidebar.waitingForYou.approval": "확인이 필요해요: 승인 대기",
+  "sidebar.waitingForYou.offline": "확인이 필요해요: 오프라인",
+  "sidebar.waitingForYou.setup": "확인이 필요해요: 설정 필요",
+  "sidebar.renameInput.ariaLabel": "이름 변경",
+} satisfies Record<keyof typeof en, string>;

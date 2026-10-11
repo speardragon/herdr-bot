@@ -1,0 +1,50 @@
+.hb-directory-row {
+  display: flex;
+  gap: var(--hb-space-3);
+  align-items: flex-start;
+  position: relative;
+}
+
+.hb-directory-row > :first-child {
+  flex: 1;
+}
+
+.hb-directory-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 56px;
+  margin-top: var(--hb-space-1);
+  background: var(--hb-bg-raised);
+  border: 1px solid var(--hb-border-hairline);
+  border-radius: var(--hb-radius-sm);
+  box-shadow: var(--hb-shadow-popover);
+  max-height: 160px;
+  overflow: auto;
+  z-index: 1;
+  padding: var(--hb-space-2);
+}
+
+.hb-directory-suggestion {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--hb-text-primary);
+  font-size: var(--hb-text-size-sm);
+  font-family: var(--hb-font-mono);
+  padding: var(--hb-space-2) var(--hb-space-3);
+  border-radius: var(--hb-radius-xs);
+  cursor: pointer;
+}
+
+.hb-directory-suggestion:hover,
+.hb-directory-suggestion:focus-visible {
+  background: var(--hb-overlay-neutral-hover);
+  outline: none;
+}
+
+.hb-directory-row input {
+  font-family: var(--hb-font-mono);
+}

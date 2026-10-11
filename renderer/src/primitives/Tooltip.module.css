@@ -1,0 +1,11 @@
+.hb-tooltip {
+  position: fixed;
+  z-index: 400;
+  pointer-events: none;
+  background: var(--hb-text-primary);
+  color: var(--hb-bg-app);
+  font-size: var(--hb-text-size-sm);
+  padding: var(--hb-space-2) var(--hb-space-3);
+  border-radius: var(--hb-radius-sm);
+  max-width: 260px;
+}

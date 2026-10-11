@@ -1,0 +1,17 @@
+.hb-popover {
+  position: fixed;
+  z-index: 300;
+  background: var(--hb-bg-raised);
+  border-radius: var(--hb-radius-md);
+  box-shadow: var(--hb-shadow-popover);
+  border: 1px solid var(--hb-border-hairline);
+  padding: var(--hb-space-2);
+  animation: hb-popover-in var(--hb-motion-fast) var(--hb-motion-ease);
+}
+
+@keyframes hb-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}

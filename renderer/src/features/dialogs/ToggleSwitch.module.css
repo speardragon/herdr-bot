@@ -1,0 +1,33 @@
+/* A pill switch -- not a shared primitive (not in primitives/index.ts), just this folder's own control
+ * for the bot info panel's Notifications row. */
+.hb-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 40px;
+  height: 24px;
+  border-radius: var(--hb-radius-pill);
+  border: none;
+  padding: 2px;
+  background: var(--hb-overlay-neutral-active);
+  cursor: pointer;
+  flex: none;
+  transition: background var(--hb-motion-base) var(--hb-motion-ease);
+}
+
+.hb-toggle--on {
+  background: var(--hb-text-primary);
+}
+
+.hb-toggle-knob {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--hb-radius-pill);
+  background: var(--hb-bg-raised);
+  transform: translateX(0);
+  transition: transform var(--hb-motion-base) var(--hb-motion-ease);
+}
+
+.hb-toggle--on .hb-toggle-knob {
+  transform: translateX(16px);
+}

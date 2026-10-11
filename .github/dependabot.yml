@@ -1,0 +1,8 @@
+version: 2
+updates:
+  # Keep the workflow actions current. npm dependencies are updated by hand: Electron and Tiptap are
+  # pinned on purpose and need testing in the app.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

@@ -1,0 +1,19 @@
+.hb-panel {
+  flex: none;
+  width: 0;
+  overflow: hidden;
+  border-left: 1px solid transparent;
+  background: var(--hb-bg-app);
+  transition: width var(--hb-motion-base) var(--hb-motion-ease);
+}
+
+.hb-panel--open {
+  width: 320px;
+  border-left-color: var(--hb-border-hairline);
+}
+
+.hb-panel-inner {
+  width: 320px;
+  height: 100%;
+  overflow: auto;
+}

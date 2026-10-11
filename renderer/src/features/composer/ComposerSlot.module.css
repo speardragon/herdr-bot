@@ -1,0 +1,86 @@
+.hb-composer-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: var(--hb-space-2);
+  padding-bottom: var(--hb-space-5);
+}
+
+/* The unified bordered panel: the staged-attachment chip row and the text/send row share
+   ONE outer rounded border, not two separate floating pills. `.hb-composer` itself becomes borderless/
+   transparent and just sits inside this card; `.hb-attachment-chips` likewise loses its own border. */
+.hb-composer-card {
+  flex: none;
+  margin: var(--hb-space-5);
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--hb-radius-xl);
+  border: 1px solid var(--hb-border-hairline);
+  background: var(--hb-bg-raised);
+  overflow: hidden;
+}
+
+.hb-composer {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--hb-space-3);
+  padding: var(--hb-space-2) var(--hb-space-2) var(--hb-space-2) var(--hb-space-5);
+}
+
+.hb-composer-file-input {
+  display: none;
+}
+
+.hb-composer-editor {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The actual contentEditable ProseMirror element (passed as `editorProps.attributes.class`) --
+   an auto-growing input bar that grows with content up to a max height, then scrolls. */
+.hb-composer-editable {
+  max-height: 160px;
+  overflow-y: auto;
+  padding: var(--hb-space-2) 0;
+  color: var(--hb-text-primary);
+  font-size: var(--hb-text-size-md);
+  line-height: 1.45;
+  outline: none;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.hb-composer-editable p {
+  margin: 0;
+}
+
+/* Tiptap's Placeholder extension (`@tiptap/extensions`) marks the empty paragraph with this class and
+   a `data-placeholder` attribute -- this is the standard way to render it (no inline text node).
+   `:global(...)` is required: Tiptap applies the literal, unscoped class name `is-editor-empty` to the
+   DOM, but CSS Modules would otherwise hash it like any other class in this file, and the selector would
+   silently never match. */
+.hb-composer-editable :global(.is-editor-empty):first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--hb-text-tertiary);
+  pointer-events: none;
+}
+
+.hb-composer-send {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hb-bubble-user-bg);
+  color: var(--hb-bubble-user-text);
+}
+
+.hb-composer-send:disabled {
+  opacity: 0.35;
+}

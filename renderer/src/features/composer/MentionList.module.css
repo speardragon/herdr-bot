@@ -1,0 +1,33 @@
+.hb-mention-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  max-width: 280px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.hb-mention-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-2);
+  padding: var(--hb-space-2) var(--hb-space-2);
+  border-radius: var(--hb-radius-sm);
+  text-align: left;
+  color: var(--hb-text-primary);
+  font-size: var(--hb-text-size-md);
+}
+
+.hb-mention-list-item--active {
+  background: var(--hb-overlay-neutral-selected);
+}
+
+.hb-mention-list-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--hb-text-secondary);
+}
