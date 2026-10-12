@@ -4,6 +4,7 @@
  * `openInTerminal` touches the system.
  */
 import { execFile } from "node:child_process";
+import { attachedTtys, focusTabScript, paneForTtys } from "./existing-tab.ts";
 
 export const TERMINALS = ["kaku", "wezterm", "ghostty", "iterm", "terminal"] as const;
 export type Terminal = (typeof TERMINALS)[number];
@@ -123,8 +124,9 @@ function run(file: string, args: readonly string[]): Promise<string> {
   });
 }
 
-async function runningProcesses(): Promise<readonly string[]> {
-  return (await run("ps", ["-axo", "comm="])).split("\n");
+/** `ps` output as "tty args" lines: the args say which terminals run, the TTY where a command runs. */
+async function processTable(): Promise<string> {
+  return run("ps", ["-axo", "tty=,args="]);
 }
 
 async function bundleExecutable(terminal: Terminal): Promise<string | undefined> {
@@ -137,10 +139,47 @@ async function bundleExecutable(terminal: Terminal): Promise<string | undefined>
   }
 }
 
-/** Runs `command` in a new tab of the chosen (or detected) terminal and brings that terminal to the front. */
-export async function openInTerminal(choice: TerminalChoice, command: readonly string[]): Promise<Terminal> {
-  const processes = await runningProcesses();
+/** Brings forward the tab of `terminal` that owns one of `ttys`; false when it has none (or can't tell, like Ghostty). */
+async function focusExistingTab(terminal: Terminal, ttys: readonly string[]): Promise<boolean> {
+  try {
+    if (terminal === "kaku" || terminal === "wezterm") {
+      const cli = (await bundleExecutable(terminal)) ?? terminal;
+      const paneId = paneForTtys(await run(cli, ["cli", "--no-auto-start", "list", "--format", "json"]), ttys);
+      if (paneId == null) return false;
+      await run(cli, ["cli", "activate-pane", "--pane-id", String(paneId)]);
+      await run("open", ["-a", APPS[terminal].appName]);
+      return true;
+    }
+    if (terminal === "iterm" || terminal === "terminal") {
+      return (await run("osascript", ["-e", focusTabScript(terminal, ttys)])).trim() === "found";
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export interface OpenResult {
+  readonly terminal: Terminal;
+  /** True when a tab already running `command` was brought forward instead of opening a new one. */
+  readonly reused: boolean;
+}
+
+/**
+ * Brings forward a tab that is already running `command`, in any running terminal (the chosen one
+ * first); otherwise runs it in a new tab of the chosen (or detected) terminal.
+ */
+export async function openInTerminal(choice: TerminalChoice, command: readonly string[]): Promise<OpenResult> {
+  const table = await processTable();
+  const processes = table.split("\n");
   const terminal = pickTerminal(choice, processes);
+  const ttys = attachedTtys(table, command);
+  if (ttys.length > 0) {
+    const candidates = [terminal, ...TERMINALS.filter((other) => other !== terminal)].filter((candidate) => isRunning(candidate, processes));
+    for (const candidate of candidates) {
+      if (await focusExistingTab(candidate, ttys)) return { terminal: candidate, reused: true };
+    }
+  }
   const cliPath = await bundleExecutable(terminal);
   const plan: LaunchPlan = {
     terminal,
@@ -150,5 +189,5 @@ export async function openInTerminal(choice: TerminalChoice, command: readonly s
     ...(cliPath == null ? {} : { cliPath }),
   };
   for (const step of launchSteps(plan)) await run(step.file, step.args);
-  return terminal;
+  return { terminal, reused: false };
 }

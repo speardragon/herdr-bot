@@ -140,7 +140,7 @@ format. Common `kind`s:
 | `bot.quickCreate` | `{ requestId: string (uuid), locale: "ko"\|"en", name?, avatarColor? }` | `{ chat: ChatSummary }` -- reserves instantly; spawn/brief/greeting finish in the background (`chat.bot.onboarding.stage` tracks progress via `chat.changed`) |
 | `bot.retrySetup` | `{ botId }` | `{ chat: ChatSummary }` -- only from a `failed` onboarding stage |
 | `bot.updateLaunchSettings` | `{ botId, cwd?, permissionMode?: "ask"\|"auto"\|null, model?: string\|null, reasoningEffort?: Reasoning\|null, allowHomeCwd? }` | `{ chat: ChatSummary }` -- relaunches the bot's agent |
-| `bot.focus` | `{ botId }` | `void` -- focuses the bot's pane in herdr, then opens a terminal tab attached to the bots' herdr session |
+| `bot.focus` | `{ botId }` | `void` -- focuses the bot's pane in herdr, then brings forward a terminal tab already attached to the bots' herdr session, or opens one |
 | `bot.listAdoptable` | `void` | `AdoptableAgent[]` -- herdr agents not already a known bot |
 | `bot.listModels` | `{ provider: string }` | `ModelCatalogResult` |
 | `bot.defaults` | `void` | `BotDefaults` -- `{ cwd, provider, permissionMode, homeDir }`, for the New Bot dialog |

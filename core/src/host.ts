@@ -50,7 +50,7 @@ export interface Host {
   stop(): Promise<void>;
   sendUserMessage(chatId: string, args: SendUserMessageArgs): StoredEntry;
   status(): HostStatus;
-  /** Opens a terminal tab attached to the bots' herdr session, in the terminal from the app settings. */
+  /** Brings forward a terminal tab attached to the bots' herdr session, or opens one in the terminal from the app settings. */
   attachSessionInTerminal(): Promise<void>;
 }
 
