@@ -6,6 +6,28 @@ All notable changes to herdr-bot are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-12
+
+### Added
+
+- "Open in herdr" opens a new tab in your terminal attached to the bots' herdr session. It works with
+  Kaku, WezTerm, Ghostty, iTerm2 and Terminal, detected automatically or chosen in Settings. If a tab
+  is already attached, that tab is brought forward instead of opening another one.
+
+### Changed
+
+- Mentions are a gray pill with the bot's avatar and its name in the bot's colour, the same in the
+  compose box and in sent messages, and they no longer make a line taller.
+- Provider logos in the New Bot dialog are shown in colour.
+- Sidebar rows show a pointer cursor, and their text and avatars can no longer be selected or dragged.
+
+### Fixed
+
+- The "Open herdr-bot" plugin action launches the app reliably.
+- The terminal tab no longer closes immediately when the app itself was started inside herdr.
+- Text in fields and the compose box's placeholder are vertically centred, the compose box shows no
+  focus ring, and the folder picker's Choose button lines up with its field.
+
 ## [1.0.0] - 2026-10-12
 
 First public release.
@@ -32,5 +54,6 @@ First public release.
   releases.
 - herdr plugin manifest, so the app is listed in the herdr plugin index.
 
-[Unreleased]: https://github.com/speardragon/herdr-bot/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/speardragon/herdr-bot/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/speardragon/herdr-bot/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/speardragon/herdr-bot/releases/tag/v1.0.0

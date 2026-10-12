@@ -1,6 +1,6 @@
 {
   "name": "herdr-bot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/speardragon/herdr-bot.git" },

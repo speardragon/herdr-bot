@@ -24,7 +24,7 @@ body:
     attributes:
       label: herdr-bot version
       description: "Menu bar → herdr-bot → About herdr-bot, or the commit you built from."
-      placeholder: 1.0.0
+      placeholder: 1.1.0
     validations:
       required: true
   - type: input
