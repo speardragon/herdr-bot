@@ -36,13 +36,12 @@
   border-radius: var(--hb-radius-sm);
   background: var(--hb-bg-field);
   color: var(--hb-text-primary);
-  /* A fixed height (matching the md Button) instead of vertical padding keeps text and placeholders
-   * centred whatever the font's metrics, and lines the control up with a button beside it. */
-  height: 36px;
-  padding: 0 var(--hb-space-4);
-  line-height: normal;
+  /* 36px tall, like the md Button, from line-height + padding + border. Never give an input a fixed
+   * height: Chromium then centres its text separately and rounds it half a pixel low, so text and
+   * placeholders sit visibly lower than a button's label. */
+  padding: var(--hb-space-3) var(--hb-space-4);
+  line-height: 18px;
   font-size: var(--hb-text-size-md);
-  transition: border-color var(--hb-motion-fast) var(--hb-motion-ease), box-shadow var(--hb-motion-fast) var(--hb-motion-ease);
 }
 
 .hb-field-control::placeholder {
@@ -51,13 +50,6 @@
 
 .hb-field-control:focus-visible {
   outline: none;
-  border-color: color-mix(in srgb, var(--hb-focus-ring) 60%, var(--hb-border-hairline));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hb-focus-ring) 18%, transparent);
-}
-
-.hb-field-control--invalid:focus-visible {
-  border-color: var(--hb-danger);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hb-danger) 18%, transparent);
 }
 
 .hb-field-control--invalid {
@@ -74,8 +66,6 @@
 }
 
 textarea.hb-field-control {
-  height: auto;
-  padding: var(--hb-space-3) var(--hb-space-4);
   resize: vertical;
   min-height: 64px;
   line-height: 1.45;

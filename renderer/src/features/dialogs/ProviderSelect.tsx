@@ -12,7 +12,9 @@ function ProviderGlyph({ slug, color, label }: { readonly slug: string | null; r
   if (slug == null) {
     return <span className={styles["hb-provider-monogram"]}>{label.slice(0, 1).toUpperCase()}</span>;
   }
-  const style = { "--hb-provider-glyph": `url("${ICON_BASE}${slug}.svg")`, "--hb-provider-color": color ?? "currentColor" } as CSSProperties;
+  // Absolute, because a relative url() in a custom property resolves against the stylesheet that uses it (assets/), not the page.
+  const iconUrl = new URL(`${ICON_BASE}${slug}.svg`, document.baseURI).href;
+  const style = { "--hb-provider-glyph": `url("${iconUrl}")`, "--hb-provider-color": color ?? "currentColor" } as CSSProperties;
   return <span className={styles["hb-provider-icon"]} style={style} aria-hidden />;
 }
 
