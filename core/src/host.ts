@@ -15,7 +15,7 @@ import { RosterService } from "./services/roster-service.ts";
 import { RunQueue } from "./services/run-queue.ts";
 import { BotExecutionLock, TurnService } from "./services/turn-service.ts";
 import { AppSettingsStore } from "./store/app-settings-store.ts";
-import { openInTerminal, type TerminalChoice } from "./terminal/open-terminal.ts";
+import { openInTerminal, type OpenOptions, type TerminalChoice } from "./terminal/open-terminal.ts";
 import { ProfileStore } from "./store/profile-store.ts";
 import { RoomStore } from "./store/room-store.ts";
 import type { StoredEntry } from "./store/transcript-store.ts";
@@ -61,7 +61,7 @@ export interface HostOverrides {
   /** How start() makes sure the herdr session exists; `null` skips it (tests against the fake herdr). */
   readonly ensureSession?: (() => Promise<string>) | null;
   /** How attachSessionInTerminal() runs a command in a terminal (tests record the call instead). */
-  readonly openInTerminal?: (choice: TerminalChoice, command: readonly string[]) => Promise<unknown>;
+  readonly openInTerminal?: (choice: TerminalChoice, command: readonly string[], options: OpenOptions) => Promise<unknown>;
 }
 
 function withAttachments(content: string, paths: readonly string[] | undefined): string {
@@ -206,7 +206,7 @@ export function createHost(config: HostConfig, overrides: HostOverrides = {}): H
     },
     async attachSessionInTerminal() {
       const open = overrides.openInTerminal ?? openInTerminal;
-      await open(roster.getAppSettings().terminal, [config.herdrBin, "session", "attach", config.herdrSession]);
+      await open(roster.getAppSettings().terminal, [config.herdrBin, "session", "attach", config.herdrSession], { herdrSession: config.herdrSession });
     },
     status() {
       return { home: config.home, session: config.herdrSession, bots: profiles.list().length, rooms: rooms.list().length, runningTurns: [...profiles.list().map((p) => p.id), ...rooms.list().map((r) => r.id)].filter((id) => turnService.isTurnActive(id)) };

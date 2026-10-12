@@ -4,7 +4,7 @@
  * `openInTerminal` touches the system.
  */
 import { execFile } from "node:child_process";
-import { attachedTtys, focusTabScript, paneForTtys } from "./existing-tab.ts";
+import { attachedTtys, focusGhosttyScript, focusTabScript, paneForTtys } from "./existing-tab.ts";
 
 export const TERMINALS = ["kaku", "wezterm", "ghostty", "iterm", "terminal"] as const;
 export type Terminal = (typeof TERMINALS)[number];
@@ -57,6 +57,14 @@ export function terminalEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return Object.fromEntries(Object.entries(env).filter(([key]) => !key.startsWith("HERDR_")));
 }
 
+/**
+ * Runs `commandLine` with herdr's pane variables cleared. A terminal app that was itself started from
+ * a herdr pane passes them to every tab it opens, whatever environment we launch it with.
+ */
+export function withoutHerdrEnv(commandLine: string): string {
+  return `unset $(env | sed -n 's/^\\(HERDR_[A-Za-z0-9_]*\\)=.*/\\1/p'); ${commandLine}`;
+}
+
 /** Keeps the tab open with the exit status when the command fails, instead of it closing before anyone can read the error. */
 export function keepOpenOnFailure(commandLine: string): string {
   return `${commandLine} || { rc=$?; printf '\\n[herdr-bot] The command failed (exit %s). Press Enter to close.' "$rc"; read -r _; }`;
@@ -78,7 +86,7 @@ export interface LaunchPlan {
   readonly cliPath?: string;
 }
 
-/** The commands that open `commandLine` in a new tab (or a new window, where the terminal has no way to add a tab). */
+/** The commands that open `commandLine` in a new tab (a new window in Terminal, which cannot add a tab). */
 export function launchSteps(plan: LaunchPlan): readonly Step[] {
   const { appName } = APPS[plan.terminal];
   const shellCommand = [plan.shell, "-lc", plan.commandLine];
@@ -92,8 +100,22 @@ export function launchSteps(plan: LaunchPlan): readonly Step[] {
         { file: "open", args: ["-a", appName] },
       ];
     }
-    case "ghostty":
-      return [{ file: "open", args: ["-na", appName, "--args", "-e", ...shellCommand] }];
+    case "ghostty": {
+      const command = appleScriptString(shellCommand.map(shellQuote).join(" "));
+      const script = [
+        'tell application "Ghostty"',
+        "  set config to new surface configuration",
+        `  set command of config to ${command}`,
+        "  if (count of windows) = 0 then",
+        "    new window with configuration config",
+        "  else",
+        "    new tab in front window with configuration config",
+        "  end if",
+        "  activate",
+        "end tell",
+      ].join("\n");
+      return [{ file: "osascript", args: ["-e", script] }];
+    }
     case "iterm": {
       const command = appleScriptString(shellCommand.map(shellQuote).join(" "));
       const script = [
@@ -139,8 +161,8 @@ async function bundleExecutable(terminal: Terminal): Promise<string | undefined>
   }
 }
 
-/** Brings forward the tab of `terminal` that owns one of `ttys`; false when it has none (or can't tell, like Ghostty). */
-async function focusExistingTab(terminal: Terminal, ttys: readonly string[]): Promise<boolean> {
+/** Brings forward the tab of `terminal` attached to the session (see existing-tab.ts); false when it has none. */
+async function focusExistingTab(terminal: Terminal, ttys: readonly string[], herdrSession: string | undefined): Promise<boolean> {
   try {
     if (terminal === "kaku" || terminal === "wezterm") {
       const cli = (await bundleExecutable(terminal)) ?? terminal;
@@ -153,7 +175,8 @@ async function focusExistingTab(terminal: Terminal, ttys: readonly string[]): Pr
     if (terminal === "iterm" || terminal === "terminal") {
       return (await run("osascript", ["-e", focusTabScript(terminal, ttys)])).trim() === "found";
     }
-    return false;
+    if (herdrSession == null) return false;
+    return (await run("osascript", ["-e", focusGhosttyScript(herdrSession)])).trim() === "found";
   } catch {
     return false;
   }
@@ -169,7 +192,12 @@ export interface OpenResult {
  * Brings forward a tab that is already running `command`, in any running terminal (the chosen one
  * first); otherwise runs it in a new tab of the chosen (or detected) terminal.
  */
-export async function openInTerminal(choice: TerminalChoice, command: readonly string[]): Promise<OpenResult> {
+export interface OpenOptions {
+  /** The herdr session `command` attaches to, for terminals that can only recognise its tab by title (Ghostty). */
+  readonly herdrSession?: string;
+}
+
+export async function openInTerminal(choice: TerminalChoice, command: readonly string[], options: OpenOptions = {}): Promise<OpenResult> {
   const table = await processTable();
   const processes = table.split("\n");
   const terminal = pickTerminal(choice, processes);
@@ -177,14 +205,14 @@ export async function openInTerminal(choice: TerminalChoice, command: readonly s
   if (ttys.length > 0) {
     const candidates = [terminal, ...TERMINALS.filter((other) => other !== terminal)].filter((candidate) => isRunning(candidate, processes));
     for (const candidate of candidates) {
-      if (await focusExistingTab(candidate, ttys)) return { terminal: candidate, reused: true };
+      if (await focusExistingTab(candidate, ttys, options.herdrSession)) return { terminal: candidate, reused: true };
     }
   }
   const cliPath = await bundleExecutable(terminal);
   const plan: LaunchPlan = {
     terminal,
     running: isRunning(terminal, processes),
-    commandLine: keepOpenOnFailure(command.map(shellQuote).join(" ")),
+    commandLine: keepOpenOnFailure(withoutHerdrEnv(command.map(shellQuote).join(" "))),
     shell: process.env.SHELL ?? "/bin/zsh",
     ...(cliPath == null ? {} : { cliPath }),
   };

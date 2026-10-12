@@ -1,8 +1,9 @@
 /**
  * Finding a terminal tab that is already attached to the bots' session, so "Open in herdr" can bring
  * it forward instead of opening another one. A tab is matched by its TTY: `ps` says which TTY runs
- * the attach command, and each terminal can say which of its tabs owns that TTY. Tab titles are not
- * used, since users can change them. Everything here is pure; open-terminal.ts runs the commands.
+ * the attach command, and each terminal can say which of its tabs owns that TTY. Ghostty cannot say,
+ * so there the title herdr gives an attached tab ("host: <session>: <workspace>") is used, and only
+ * while an attach process is running. Everything here is pure; open-terminal.ts runs the commands.
  */
 import { basename } from "node:path";
 import type { Terminal } from "./open-terminal.ts";
@@ -42,8 +43,12 @@ export function paneForTtys(listJson: string, ttys: readonly string[]): number |
   }
 }
 
+function appleScriptString(text: string): string {
+  return `"${text.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+}
+
 function appleScriptList(values: readonly string[]): string {
-  return `{${values.map((value) => `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`).join(", ")}}`;
+  return `{${values.map(appleScriptString).join(", ")}}`;
 }
 
 /** AppleScript that selects the iTerm2 or Terminal tab owning one of `ttys` and prints "found", or prints nothing. */
@@ -81,6 +86,24 @@ export function focusTabScript(terminal: Extract<Terminal, "iterm" | "terminal">
     '        return "found"',
     "      end if",
     "    end repeat",
+    "  end repeat",
+    "end tell",
+  ].join("\n");
+}
+
+/** AppleScript that focuses the Ghostty terminal whose title shows herdr session `session` and prints "found", or prints nothing. */
+export function focusGhosttyScript(session: string): string {
+  const prefix = appleScriptString(`${session}: `);
+  const infix = appleScriptString(`: ${session}: `);
+  return [
+    'tell application "Ghostty"',
+    "  repeat with term in terminals",
+    "    set title to name of term",
+    `    if title starts with ${prefix} or title contains ${infix} then`,
+    "      focus term",
+    "      activate",
+    '      return "found"',
+    "    end if",
     "  end repeat",
     "end tell",
   ].join("\n");

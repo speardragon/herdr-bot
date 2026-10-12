@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { attachedTtys, focusTabScript, paneForTtys } from "../src/terminal/existing-tab.ts";
+import { attachedTtys, focusGhosttyScript, focusTabScript, paneForTtys } from "../src/terminal/existing-tab.ts";
 
 const ATTACH = ["/opt/homebrew/bin/herdr", "session", "attach", "herdr-bot"];
 
@@ -34,4 +34,10 @@ test("focusTabScript looks the tab up by TTY in iTerm2 and Terminal", () => {
   assert.match(iterm, /if wanted contains \(tty of s\) then/);
   const terminal = focusTabScript("terminal", ["/dev/ttys004"]);
   assert.match(terminal, /set selected of t to true/);
+});
+
+test("focusGhosttyScript finds the attached terminal by the title herdr gives it", () => {
+  const script = focusGhosttyScript("herdr-bot");
+  assert.match(script, /if title starts with "herdr-bot: " or title contains ": herdr-bot: " then/);
+  assert.match(script, /focus term/);
 });
