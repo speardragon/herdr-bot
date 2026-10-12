@@ -98,7 +98,7 @@ export function Avatar(props: AvatarProps) {
   if (props.kind === "bot") {
     return (
       <span className={styles["hb-avatar"]} style={{ width: px, height: px }}>
-        <img className={`${styles["hb-avatar-image"]} ${styles[`hb-avatar--shape-${shape}`]}`} src={personaAssetFor(props.color, px)} alt={props.name} />
+        <img draggable={false} className={`${styles["hb-avatar-image"]} ${styles[`hb-avatar--shape-${shape}`]}`} src={personaAssetFor(props.color, px)} alt={props.name} />
         {props.statusDot != null && (
           <span className={styles["hb-avatar-dot"]}>
             <StatusDot tone={props.statusDot} size={dotSize} ring aria-label={props.statusDot === "blocked" ? "needs approval" : "working"} />
@@ -120,7 +120,7 @@ export function Avatar(props: AvatarProps) {
           const slot = layout[index]!;
           const style = { top: slot.top, left: slot.left, width: slot.size, height: slot.size };
           if (cell.kind === "member") {
-            return <img key={`${cell.member.name}-${index}`} className={styles["hb-avatar-stack-item"]} style={style} src={personaAssetFor(cell.member.color, px * 0.6)} alt={cell.member.name} />;
+            return <img draggable={false} key={`${cell.member.name}-${index}`} className={styles["hb-avatar-stack-item"]} style={style} src={personaAssetFor(cell.member.color, px * 0.6)} alt={cell.member.name} />;
           }
           const fontSize = Math.max(7, Math.round(px * (cell.kind === "me" ? 0.18 : 0.22)));
           return (

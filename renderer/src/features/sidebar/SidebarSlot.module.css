@@ -54,6 +54,9 @@
   position: relative;
   text-align: left;
   width: 100%;
+  /* A row is a button, not text: a press-and-drag on it must not select its name or preview. */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .hb-sidebar-row:hover {
@@ -117,6 +120,8 @@
 
 .hb-sidebar-row-rename {
   flex: 1;
+  -webkit-user-select: text;
+  user-select: text;
   min-width: 0;
   border: 1px solid var(--hb-focus-ring);
   border-radius: var(--hb-radius-xs);
