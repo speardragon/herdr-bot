@@ -2,14 +2,15 @@ import { useId } from "react";
 import type { InputHTMLAttributes } from "react";
 import styles from "./Field.module.css";
 
-export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "className" | "id"> {
+export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "className"> {
   readonly label?: string;
   readonly helperText?: string;
   readonly invalid?: boolean;
 }
 
-export function TextField({ label, helperText, invalid = false, ...rest }: TextFieldProps) {
-  const id = useId();
+export function TextField({ id: idProp, label, helperText, invalid = false, ...rest }: TextFieldProps) {
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
   const helperId = helperText != null ? `${id}-helper` : undefined;
   return (
     <div className={styles["hb-field"]}>

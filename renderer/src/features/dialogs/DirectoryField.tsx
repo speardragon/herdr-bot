@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useBridge } from "../../data/BridgeContext.tsx";
 import { useStoreContext } from "../../data/store/StoreProvider.tsx";
 import { useT } from "../../i18n/TranslationProvider.tsx";
 import { Button, TextField } from "../../primitives/index.ts";
 import { useEscapeOwnership } from "../../primitives/useEscapeOwnership.ts";
+import fieldStyles from "../../primitives/Field.module.css";
 import type { DirectoryCheck } from "./bot-form.ts";
 import styles from "./DirectoryField.module.css";
 
@@ -29,6 +30,8 @@ export function DirectoryField({ label, value, onChange, onCheckChange, invalidM
   const { client } = useStoreContext();
   const bridge = useBridge();
   const { t } = useT();
+  const inputId = useId();
+  const helperId = `${inputId}-helper`;
   const [suggestions, setSuggestions] = useState<readonly string[]>([]);
   const [focused, setFocused] = useState(false);
   // Escape hides the suggestions until the next keystroke, without closing the dialog around the field.
@@ -60,32 +63,45 @@ export function DirectoryField({ label, value, onChange, onCheckChange, invalidM
     if (picked != null) onChange(picked);
   }
 
+  // The label and the error line sit outside the input row, so the Choose button always lines up with the input itself.
   return (
-    <div className={styles["hb-directory-row"]}>
-      <TextField
-        label={label}
-        value={value}
-        placeholder={placeholder}
-        disabled={disabled}
-        invalid={invalidMessage != null}
-        helperText={invalidMessage ?? undefined}
-        onChange={(event) => {
-          setDismissed(false);
-          onChange(event.target.value);
-        }}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setTimeout(() => setFocused(false), 120)}
-      />
-      <Button type="button" onClick={choose} disabled={disabled}>
-        {t("common.choose")}
-      </Button>
-      {showSuggestions && (
-        <div className={styles["hb-directory-suggestions"]} role="listbox" aria-label={label}>
-          {suggestions.slice(0, 20).map((entry) => (
-            <button key={entry} type="button" role="option" aria-selected={false} className={styles["hb-directory-suggestion"]} onMouseDown={(event) => event.preventDefault()} onClick={() => onChange(entry)}>
-              {entry}
-            </button>
-          ))}
+    <div className={fieldStyles["hb-field"]}>
+      <label className={fieldStyles["hb-field-label"]} htmlFor={inputId}>
+        {label}
+      </label>
+      <div className={styles["hb-directory-row"]}>
+        <div className={styles["hb-directory-input"]}>
+          <TextField
+            id={inputId}
+            value={value}
+            placeholder={placeholder}
+            disabled={disabled}
+            invalid={invalidMessage != null}
+            aria-describedby={invalidMessage != null ? helperId : undefined}
+            onChange={(event) => {
+              setDismissed(false);
+              onChange(event.target.value);
+            }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setTimeout(() => setFocused(false), 120)}
+          />
+          {showSuggestions && (
+            <div className={styles["hb-directory-suggestions"]} role="listbox" aria-label={label}>
+              {suggestions.slice(0, 20).map((entry) => (
+                <button key={entry} type="button" role="option" aria-selected={false} className={styles["hb-directory-suggestion"]} onMouseDown={(event) => event.preventDefault()} onClick={() => onChange(entry)}>
+                  {entry}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <Button type="button" onClick={choose} disabled={disabled}>
+          {t("common.choose")}
+        </Button>
+      </div>
+      {invalidMessage != null && (
+        <div id={helperId} className={`${fieldStyles["hb-field-helper"]} ${fieldStyles["hb-field-helper--invalid"]}`}>
+          {invalidMessage}
         </div>
       )}
     </div>
