@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createHost } from "../src/host.ts";
 import { resolveConfig } from "../src/config.ts";
 import { createHerdrCli } from "../src/herdr/cli.ts";
-import { launchSteps, pickTerminal, shellQuote, type LaunchPlan, type TerminalChoice } from "../src/terminal/open-terminal.ts";
+import { keepOpenOnFailure, launchSteps, pickTerminal, shellQuote, terminalEnv, type LaunchPlan, type TerminalChoice } from "../src/terminal/open-terminal.ts";
 import { installFakeHerdr } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
 
@@ -73,4 +73,15 @@ test("attachSessionInTerminal attaches the bots' session in the terminal from th
   } finally {
     temp.cleanup();
   }
+});
+
+test("terminalEnv drops herdr's pane variables, so the new tab is not treated as nested herdr", () => {
+  const env = terminalEnv({ HOME: "/Users/me", HERDR_ENV: "1", HERDR_SOCKET_PATH: "/x.sock", HERDR_PANE_ID: "w1:p1", PATH: "/usr/bin" });
+  assert.deepEqual(env, { HOME: "/Users/me", PATH: "/usr/bin" });
+});
+
+test("keepOpenOnFailure leaves a failed command's tab open until Enter", () => {
+  const line = keepOpenOnFailure("herdr session attach herdr-bot");
+  assert.ok(line.startsWith("herdr session attach herdr-bot || {"));
+  assert.match(line, /read -r _; }$/);
 });

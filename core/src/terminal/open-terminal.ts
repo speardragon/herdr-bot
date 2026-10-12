@@ -47,6 +47,20 @@ function appleScriptString(text: string): string {
   return `"${text.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
 }
 
+/**
+ * The environment for the launched terminal. herdr marks every pane it runs (HERDR_ENV, the pane's
+ * socket, ...), and an app started from such a pane inherits that; Kaku and WezTerm then forward it
+ * into the new tab, where herdr refuses to attach ("nested herdr is disabled").
+ */
+export function terminalEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return Object.fromEntries(Object.entries(env).filter(([key]) => !key.startsWith("HERDR_")));
+}
+
+/** Keeps the tab open with the exit status when the command fails, instead of it closing before anyone can read the error. */
+export function keepOpenOnFailure(commandLine: string): string {
+  return `${commandLine} || { rc=$?; printf '\\n[herdr-bot] The command failed (exit %s). Press Enter to close.' "$rc"; read -r _; }`;
+}
+
 export interface Step {
   readonly file: string;
   readonly args: readonly string[];
@@ -102,7 +116,7 @@ export function launchSteps(plan: LaunchPlan): readonly Step[] {
 
 function run(file: string, args: readonly string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile(file, [...args], { timeout: 15_000 }, (error, stdout, stderr) => {
+    execFile(file, [...args], { timeout: 15_000, env: terminalEnv(process.env) }, (error, stdout, stderr) => {
       if (error != null) reject(new Error(`${file} failed: ${stderr.trim() || error.message}`));
       else resolve(stdout);
     });
@@ -131,7 +145,7 @@ export async function openInTerminal(choice: TerminalChoice, command: readonly s
   const plan: LaunchPlan = {
     terminal,
     running: isRunning(terminal, processes),
-    commandLine: command.map(shellQuote).join(" "),
+    commandLine: keepOpenOnFailure(command.map(shellQuote).join(" ")),
     shell: process.env.SHELL ?? "/bin/zsh",
     ...(cliPath == null ? {} : { cliPath }),
   };
