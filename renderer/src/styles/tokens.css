@@ -51,6 +51,9 @@
    * bubble (the reply-quote strip) -- the page's usual --hb-text-tertiary assumes a light/raised
    * background and is nearly invisible against the solid user bubble, which is the opposite color. */
   --hb-bubble-user-text-dim: rgba(255, 255, 255, 0.6);
+  /* Mention pill: the same light/dark gray everywhere, even inside the user's black bubble, so the
+   * bot-coloured name on it reads the same in every message and in the composer. */
+  --hb-mention-bg: #ebebeb;
   --hb-bubble-bot-bg: #ececec;
   --hb-bubble-bot-text: #141414;
   --hb-code-inline-text: rgb(235, 87, 87);
@@ -135,6 +138,7 @@
   --hb-bubble-user-bg: #fcfcfc;
   --hb-bubble-user-text: #070707;
   --hb-bubble-user-text-dim: rgba(7, 7, 7, 0.55);
+  --hb-mention-bg: #333333;
   --hb-bubble-bot-bg: #2a2a2a;
   --hb-bubble-bot-text: #f2f2f2;
   --hb-code-inline-bg: rgba(252, 252, 252, 0.12);
@@ -167,6 +171,7 @@
     --hb-bubble-user-bg: #fcfcfc;
     --hb-bubble-user-text: #070707;
     --hb-bubble-user-text-dim: rgba(7, 7, 7, 0.55);
+    --hb-mention-bg: #333333;
     --hb-bubble-bot-bg: #2a2a2a;
     --hb-bubble-bot-text: #f2f2f2;
     --hb-code-block-bg: #000000;

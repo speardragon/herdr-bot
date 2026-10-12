@@ -1,11 +1,16 @@
-/* Mention in a sent message: the bot's avatar and its name in bold, no pill, in the bubble's own text
-   colour. One line tall (1lh, top-aligned) with the avatar smaller than the line, so a mention never
-   makes its line taller than the text around it. Matches the composer's mention. */
+/* Mention in a sent message: a gray pill with the bot's avatar and its name in the bot's colour, the
+   same as the composer's mention. One line tall (1lh, top-aligned, no vertical padding) with an avatar
+   smaller than the line, so a mention never makes its line taller than the text around it. */
 .hb-mention {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   height: 1lh;
+  padding: 0 6px 0 2px;
+  border-radius: var(--hb-radius-pill);
+  background: var(--hb-mention-bg);
+  /* The persona hue pulled toward the theme's text colour (see the composer's MentionChip.module.css). */
+  color: color-mix(in oklab, var(--hb-mention-hue, var(--hb-text-primary)) 70%, var(--hb-text-primary));
   vertical-align: top;
   font-weight: 600;
   white-space: nowrap;
