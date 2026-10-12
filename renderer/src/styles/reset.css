@@ -77,7 +77,9 @@ p {
   font-size: inherit;
 }
 
-:focus-visible {
+/* :where() keeps this at zero specificity, so a component's own `outline: none` always wins, whatever
+ * order the bundler puts the stylesheets in. */
+:where(:focus-visible) {
   outline: 2px solid var(--hb-focus-ring);
   outline-offset: 1px;
 }

@@ -39,14 +39,16 @@
 }
 
 /* The actual contentEditable ProseMirror element (passed as `editorProps.attributes.class`) --
-   an auto-growing input bar that grows with content up to a max height, then scrolls. */
+   an auto-growing input bar that grows with content up to a max height, then scrolls. One line is
+   34px (20px line + 7px padding each side), the send button's height, so a single line and its
+   placeholder sit level with the button instead of on its lower edge. */
 .hb-composer-editable {
   max-height: 160px;
   overflow-y: auto;
-  padding: var(--hb-space-2) 0;
+  padding: 7px 0;
   color: var(--hb-text-primary);
   font-size: var(--hb-text-size-md);
-  line-height: 1.45;
+  line-height: 20px;
   outline: none;
   white-space: pre-wrap;
   overflow-wrap: break-word;
