@@ -153,13 +153,15 @@ test("bot.quickCreate reserves instantly and bot.retrySetup reuses the same prof
   }
 });
 
-test("settings.get/settings.update round-trip and reject an unsupported provider", async () => {
+test("settings.get/settings.update round-trip and reject an unsupported provider or terminal", async () => {
   const h = await harness();
   try {
-    const updated = await h.call("settings.update", { defaultWorkingFolder: "/tmp/repo", defaultProvider: "codex", defaultPermissionMode: "auto" });
-    assert.deepEqual(updated, { defaultWorkingFolder: "/tmp/repo", defaultProvider: "codex", defaultPermissionMode: "auto" });
+    const updated = await h.call("settings.update", { defaultWorkingFolder: "/tmp/repo", defaultProvider: "codex", defaultPermissionMode: "auto", terminal: "ghostty" });
+    assert.deepEqual(updated, { defaultWorkingFolder: "/tmp/repo", defaultProvider: "codex", defaultPermissionMode: "auto", terminal: "ghostty" });
     assert.deepEqual(await h.call("settings.get"), updated);
+    assert.equal((await h.call("settings.update", { terminal: null })).terminal, null);
     await expectError(h.call("settings.update", { defaultProvider: "not-a-provider" }), "unsupported_kind");
+    await expectError(h.call("settings.update", { terminal: "hyper" as never }), "invalid_args");
   } finally {
     await h.cleanup();
   }

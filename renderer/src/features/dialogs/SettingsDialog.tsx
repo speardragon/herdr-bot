@@ -3,6 +3,7 @@ import { useBridge } from "../../data/BridgeContext.tsx";
 import { useSettings } from "../../data/hooks/useSettings.ts";
 import { useTheme } from "../../data/hooks/useTheme.ts";
 import type { UpdateStatus } from "../../data/bridge.ts";
+import type { Terminal } from "../../data/types.ts";
 import { useT } from "../../i18n/TranslationProvider.tsx";
 import { Button, Select } from "../../primitives/index.ts";
 import { DirectoryField } from "./DirectoryField.tsx";
@@ -97,6 +98,21 @@ export function SettingsDialog() {
           { value: "auto", label: t("dialogs.new.permissions.auto") },
         ]}
       />
+      <Select
+        layout="inline"
+        label={t("dialogs.settings.terminal")}
+        value={settings?.terminal ?? ""}
+        onChange={(value) => void update({ terminal: value.length > 0 ? (value as Terminal) : null })}
+        options={[
+          { value: "", label: t("dialogs.settings.terminal.auto") },
+          { value: "kaku", label: "Kaku" },
+          { value: "wezterm", label: "WezTerm" },
+          { value: "ghostty", label: "Ghostty" },
+          { value: "iterm", label: "iTerm2" },
+          { value: "terminal", label: "Terminal" },
+        ]}
+      />
+      <p className={styles["hb-settings-help"]}>{t("dialogs.settings.terminalHelp")}</p>
 
       <div className={styles["hb-settings-version-row"]}>
         <span>{t("dialogs.settings.version", { version: version ?? "…" })}</span>

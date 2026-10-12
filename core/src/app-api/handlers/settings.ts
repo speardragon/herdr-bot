@@ -3,6 +3,7 @@ import type { Host } from "../../host.ts";
 import { isSupportedKind } from "../../bots/launch-args.ts";
 import { isHomeDirectory, listDirectories } from "../../services/directory-browser.ts";
 import type { PermissionMode } from "../../store/profile-store.ts";
+import { isTerminal } from "../../terminal/open-terminal.ts";
 import { AppApiError } from "../errors.ts";
 import type { AppSettings, DirectoryListing, HostStatusSummary } from "../types.ts";
 import { optStr, record } from "../validate.ts";
@@ -16,11 +17,13 @@ export function updateAppSettings(host: Host, raw: unknown): AppSettings {
   const folder = optStr(params, "defaultWorkingFolder");
   const provider = optStr(params, "defaultProvider");
   if (provider != null && !isSupportedKind(provider)) throw new AppApiError("unsupported_kind", `herdr does not support agent kind "${provider}"`);
+  if (params.terminal != null && !isTerminal(params.terminal)) throw new AppApiError("invalid_args", `unknown terminal "${String(params.terminal)}"`);
   const mode = params.defaultPermissionMode === "ask" || params.defaultPermissionMode === "auto" ? (params.defaultPermissionMode as PermissionMode) : null;
   return host.roster.updateAppSettings({
     ...("defaultWorkingFolder" in params ? { defaultWorkingFolder: folder ?? null } : {}),
     ...("defaultProvider" in params ? { defaultProvider: provider ?? null } : {}),
     ...("defaultPermissionMode" in params ? { defaultPermissionMode: mode } : {}),
+    ...("terminal" in params ? { terminal: isTerminal(params.terminal) ? params.terminal : null } : {}),
   });
 }
 

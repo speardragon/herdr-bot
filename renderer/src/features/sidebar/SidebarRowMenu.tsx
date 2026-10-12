@@ -2,7 +2,7 @@ import { ExternalLink, EyeOff, Eye, Pencil, Pin, PinOff, SquarePen, Trash2 } fro
 import { useStoreContext } from "../../data/store/StoreProvider.tsx";
 import type { ChatSummary } from "../../data/types.ts";
 import { useT } from "../../i18n/TranslationProvider.tsx";
-import { ContextMenu, MenuItem } from "../../primitives/index.ts";
+import { ContextMenu, MenuItem, useToast } from "../../primitives/index.ts";
 import type { ContextMenuState } from "../../primitives/index.ts";
 import { useDialogs } from "../dialogs/useDialogs.tsx";
 
@@ -23,6 +23,7 @@ export function SidebarRowMenu({ chat, state, isPinned, onTogglePin, onStartRena
   const { t } = useT();
   const { client } = useStoreContext();
   const dialogs = useDialogs();
+  const toast = useToast();
 
   function toggleHidden() {
     void client.call("chat.setHidden", { chatId: chat.id, isHidden: !chat.isHiddenFromSidebar });
@@ -41,8 +42,10 @@ export function SidebarRowMenu({ chat, state, isPinned, onTogglePin, onStartRena
   }
 
   function openInHerdr() {
-    void client.call("bot.focus", { botId: chat.id });
     state.close();
+    client.call("bot.focus", { botId: chat.id }).catch((error: unknown) => {
+      toast.show(t("sidebar.contextMenu.openInHerdrFailed", { message: error instanceof Error ? error.message : String(error) }));
+    });
   }
 
   return (

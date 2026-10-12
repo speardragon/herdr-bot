@@ -132,7 +132,7 @@ test("room-form: requires a name and at least one member", () => {
 
 test("quick-create-defaults: settings fields override host defaults field by field", () => {
   const hostDefaults = { cwd: "/Users/ray/work/shop", provider: "claude", permissionMode: "ask" as const, homeDir: "/Users/ray" };
-  const resolved = resolveBotFormDefaults(hostDefaults, { defaultWorkingFolder: "/Users/ray/work/other", defaultProvider: null, defaultPermissionMode: "auto" });
+  const resolved = resolveBotFormDefaults(hostDefaults, { defaultWorkingFolder: "/Users/ray/work/other", defaultProvider: null, defaultPermissionMode: "auto", terminal: null });
   assert.equal(resolved.cwd, "/Users/ray/work/other");
   assert.equal(resolved.provider, "claude");
   assert.equal(resolved.permissionMode, "auto");
@@ -145,7 +145,7 @@ test("quick-create-defaults: null settings falls back to host defaults for cwd/p
 
 test("quick-create-defaults: an explicit AppSettings.defaultPermissionMode: null is passed through as agent's default, not coalesced to the host's default", () => {
   const hostDefaults = { cwd: "/Users/ray/work/shop", provider: "claude", permissionMode: "auto" as const, homeDir: "/Users/ray" };
-  const resolved = resolveBotFormDefaults(hostDefaults, { defaultWorkingFolder: null, defaultProvider: null, defaultPermissionMode: null });
+  const resolved = resolveBotFormDefaults(hostDefaults, { defaultWorkingFolder: null, defaultProvider: null, defaultPermissionMode: null, terminal: null });
   assert.equal(resolved.permissionMode, null);
 });
 

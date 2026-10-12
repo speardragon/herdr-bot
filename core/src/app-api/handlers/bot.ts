@@ -95,7 +95,9 @@ export async function updateLaunchSettings(host: Host, raw: unknown): Promise<{ 
 export async function focusBot(host: Host, raw: unknown): Promise<void> {
   const params = record(raw);
   const botId = str(params, "botId");
+  // Make the bot's pane the active one first, so the terminal opens straight onto it.
   await host.roster.focus(host.mirror.get(botId).paneId ?? botId);
+  await host.attachSessionInTerminal();
 }
 
 export async function listAdoptable(host: Host): Promise<readonly AdoptableAgent[]> {

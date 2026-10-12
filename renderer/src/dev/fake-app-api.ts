@@ -20,7 +20,7 @@ function clone<T>(value: T): T {
 export function createFakeAppApi(): AppApiTransport {
   const chats = new Map<string, ChatSummary>(DEMO_CHATS.map((chat) => [chat.id, clone(chat)]));
   const transcripts = new Map<string, TranscriptEntry[]>(Object.entries(DEMO_TRANSCRIPTS).map(([id, entries]) => [id, clone([...entries])]));
-  let settings: AppSettings = { defaultWorkingFolder: null, defaultProvider: null, defaultPermissionMode: "ask" };
+  let settings: AppSettings = { defaultWorkingFolder: null, defaultProvider: null, defaultPermissionMode: "ask", terminal: null };
 
   let eventSeq = 0;
   const listeners = new Set<(event: AppApiEvent) => void>();
@@ -257,6 +257,7 @@ export function createFakeAppApi(): AppApiTransport {
         defaultWorkingFolder: params.defaultWorkingFolder !== undefined ? params.defaultWorkingFolder : settings.defaultWorkingFolder,
         defaultProvider: params.defaultProvider !== undefined ? params.defaultProvider : settings.defaultProvider,
         defaultPermissionMode: params.defaultPermissionMode !== undefined ? params.defaultPermissionMode : settings.defaultPermissionMode,
+        terminal: params.terminal !== undefined ? params.terminal : settings.terminal,
       };
       return { ...settings };
     },

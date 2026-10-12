@@ -12,6 +12,8 @@
 
 export type ChatKind = "bot" | "room";
 export type PermissionMode = "ask" | "auto";
+/** A terminal "Open in herdr" can open a tab in. */
+export type Terminal = "kaku" | "wezterm" | "ghostty" | "iterm" | "terminal";
 export type ReasoningEffort = "low" | "medium" | "high" | "xhigh" | "max";
 export type OnboardingStage = "provisioning" | "briefing" | "greeting" | "ready" | "failed";
 export type OnboardingLocale = "ko" | "en";
@@ -153,6 +155,8 @@ export interface AppSettings {
   readonly defaultWorkingFolder: string | null;
   readonly defaultProvider: string | null;
   readonly defaultPermissionMode: PermissionMode | null;
+  /** The terminal "Open in herdr" uses; `null` picks a running one. */
+  readonly terminal: Terminal | null;
 }
 
 export interface BotDefaults {

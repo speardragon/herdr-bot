@@ -28,6 +28,7 @@ export type {
   HostStatusSummary,
   MessageSearchHit,
   ModelCatalogResult,
+  Terminal,
   ModelCatalogSource,
   ModelEntry,
   OnboardingLocale,
