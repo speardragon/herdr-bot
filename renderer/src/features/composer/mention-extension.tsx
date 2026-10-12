@@ -1,6 +1,5 @@
 /**
- * The inserted mention chip: an inline pill, pale green, rounded person/mention icon plus the mentioned
- * bot's name. Extends the stock `@tiptap/extension-mention` node with an `everyone` attr (the
+ * The inserted mention chip: the mentioned bot's avatar and its name in bold, inline, no pill. Extends the stock `@tiptap/extension-mention` node with an `everyone` attr (the
  * "@everyone" pseudo-mention gets a people-group icon instead of a bot avatar) and a React node view so
  * the chip always shows the bot's CURRENT avatar/name -- looked up live via `useChat(id)` every render,
  * never a snapshot frozen at the moment the mention was typed. A bot renamed or recolored after this
@@ -27,7 +26,7 @@ function MentionChipView({ node }: NodeViewProps) {
   return (
     <NodeViewWrapper as="span" className={styles["hb-mention-chip"]} contentEditable={false} data-testid="composer-mention-chip">
       <span className={styles["hb-mention-chip-icon"]} aria-hidden>
-        {everyone ? <Users size={12} /> : <Avatar kind="bot" size="xs" color={resolvePersonaColor(chat?.avatarColor)} name={displayName} />}
+        {everyone ? <Users size={14} /> : <Avatar kind="bot" size="2xs" color={resolvePersonaColor(chat?.avatarColor)} name={displayName} />}
       </span>
       <span>{everyone ? "everyone" : displayName}</span>
     </NodeViewWrapper>

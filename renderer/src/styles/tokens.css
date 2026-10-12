@@ -44,7 +44,7 @@
   --hb-danger-hover: #c92a26;
   --hb-focus-ring: rgb(16, 132, 254);
 
-  /* ---- bubbles / code / mentions ---- */
+  /* ---- bubbles / code ---- */
   --hb-bubble-user-bg: #000000;
   --hb-bubble-user-text: #ffffff;
   /* A dimmed variant of --hb-bubble-user-text, for secondary content nested inside the user's own
@@ -57,8 +57,6 @@
   --hb-code-inline-bg: rgba(20, 20, 20, 0.1);
   --hb-code-block-bg: #1a1a1a;
   --hb-code-block-text: #e9e9e9;
-  --hb-mention-bg: #dcf2de;
-  --hb-mention-text: #16401d;
   --hb-reaction-bg: rgba(16, 132, 254, 0.12);
   --hb-reaction-border: rgba(16, 132, 254, 0.45);
   --hb-reaction-bg-mine: rgba(16, 132, 254, 0.18);
@@ -142,8 +140,6 @@
   --hb-code-inline-bg: rgba(252, 252, 252, 0.12);
   --hb-code-block-bg: #000000;
   --hb-code-block-text: #e9e9e9;
-  --hb-mention-bg: #1d3a21;
-  --hb-mention-text: #bdeec4;
   --hb-reaction-bg: rgba(16, 132, 254, 0.18);
   --hb-reaction-border: rgba(16, 132, 254, 0.5);
   --hb-reaction-bg-mine: rgba(16, 132, 254, 0.26);

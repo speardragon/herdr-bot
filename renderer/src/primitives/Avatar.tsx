@@ -5,13 +5,13 @@ import type { StackMember } from "./room-cells.ts";
 import { StatusDot } from "./StatusDot.tsx";
 import styles from "./Avatar.module.css";
 
-export type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
+export type AvatarSize = "2xs" | "xs" | "sm" | "md" | "lg" | "xl";
 export type AvatarShape = "squircle" | "circle";
 /** Only the two tones an avatar's corner badge ever shows -- distinct from
  * `StatusDot`'s own `StatusDotTone`, which also covers the unrelated plain "unread" dot. */
 export type AvatarStatusTone = "blocked" | "working" | null;
 
-const SIZE_PX: Record<AvatarSize, number> = { xs: 20, sm: 28, md: 44, lg: 64, xl: 96 };
+const SIZE_PX: Record<AvatarSize, number> = { "2xs": 16, xs: 20, sm: 28, md: 44, lg: 64, xl: 96 };
 
 interface BaseProps {
   readonly size?: AvatarSize;

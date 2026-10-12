@@ -88,8 +88,7 @@ string) whenever the message has no mention at all, so a plain message stays lea
 
 **For `features/conversation` (owns rendering a sent message's mention chips):** parse this JSON and walk
 `content[].content[]`; render a `text` node verbatim, a `hardBreak` as a line break, and a `mention` node
-as the same pale-green chip this composer renders (reuse the same "pale green pill + mascot avatar + name"
-look) -- look the bot up live by `attrs.id` for its current avatar, falling back to
+as the same chip this composer renders (mascot avatar + bold name, no background, one line tall) -- look the bot up live by `attrs.id` for its current avatar, falling back to
 `attrs.label` if it's been deleted since. If richText is absent or fails to parse, fall back to the plain
 `content`/`text` field (it's still fully readable prose, just without a live chip). Since this schema is
 a strict subset of real Tiptap JSONContent, `@tiptap/html`'s `generateHTML()` with this same minimal

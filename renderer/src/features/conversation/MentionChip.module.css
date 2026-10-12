@@ -1,13 +1,12 @@
+/* Mention in a sent message: the bot's avatar and its name in bold, no pill, in the bubble's own text
+   colour. One line tall (1lh, top-aligned) with the avatar smaller than the line, so a mention never
+   makes its line taller than the text around it. Matches the composer's mention. */
 .hb-mention {
   display: inline-flex;
   align-items: center;
-  gap: var(--hb-space-1);
-  padding: 1px var(--hb-space-2) 1px 1px;
-  border-radius: var(--hb-radius-pill);
-  background: var(--hb-mention-bg);
-  color: var(--hb-mention-text);
+  gap: 3px;
+  height: 1lh;
+  vertical-align: top;
   font-weight: 600;
-  font-size: 0.95em;
-  line-height: 1.6;
-  vertical-align: -2px;
+  white-space: nowrap;
 }

@@ -1,19 +1,16 @@
-/* Mention chip: pale green pill, dark text, small icon -- shown identically while
-   composing and once rendered inside a sent message bubble. */
+/* Mention in the compose box: the bot's avatar and its name in bold, no pill. Exactly one line tall
+   (1lh, top-aligned) and the avatar smaller than the line, so adding a mention never changes the
+   height of its line -- the composer's single line stays level with the send button. */
 .hb-mention-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 1px 8px 1px 4px;
-  border-radius: var(--hb-radius-pill);
-  background: var(--hb-mention-bg);
-  color: var(--hb-mention-text);
+  gap: 3px;
+  height: 1lh;
+  vertical-align: top;
   font-weight: 600;
   white-space: nowrap;
-  vertical-align: middle;
 }
 
 .hb-mention-chip-icon {
   display: inline-flex;
-  color: var(--hb-mention-text);
 }
