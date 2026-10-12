@@ -35,6 +35,13 @@ test("provider-catalog: grok has no icon slug (falls back to a monogram)", () =>
   assert.equal(findProvider("grok").iconSlug, null);
 });
 
+test("provider-catalog: coloured marks carry their brand colour, black marks follow the text colour", () => {
+  assert.equal(findProvider("claude").iconColor, "#D97757");
+  assert.equal(findProvider("gemini").iconColor, "#8E75B2");
+  assert.equal(findProvider("codex").iconColor, null);
+  assert.equal(findProvider("opencode").iconColor, null);
+});
+
 test("provider-catalog: unknown id falls back to the default provider", () => {
   assert.equal(findProvider("not-a-real-kind").id, "claude");
   assert.equal(findProvider(undefined).id, "claude");
