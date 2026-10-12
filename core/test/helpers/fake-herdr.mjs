@@ -9,7 +9,7 @@ const statePath = process.env.FAKE_HERDR_STATE;
 const logPath = process.env.FAKE_HERDR_LOG;
 if (!statePath) fail("fake_config", "FAKE_HERDR_STATE is not set");
 
-// A1 (C-02) dispatches different bots' turns concurrently, so two of these fake-binary processes can
+// The host dispatches different bots' turns concurrently, so two of these fake-binary processes can
 // now genuinely race on the shared state file (each is its own process with its own in-memory `state`
 // snapshot; without this lock, whichever saves last silently clobbers the other's update -- e.g. a lost
 // `state.prompts.push`). `wx` is an atomic exclusive-create at the OS level, so it doubles as a mutex;

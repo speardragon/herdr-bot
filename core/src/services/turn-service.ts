@@ -26,7 +26,7 @@ export interface TurnServiceDeps {
   readonly now?: () => number;
 }
 
-// A8/C-19: loop guard for bot<->bot `message` -- caps how many messages either direction of one pair
+// Loop guard for bot<->bot `message` -- caps how many messages either direction of one pair
 // can exchange in a short window, so two bots cannot volley indefinitely without a human noticing.
 export const LOOP_GUARD_MAX_MESSAGES = 3;
 export const LOOP_GUARD_WINDOW_MS = 5 * 60 * 1000;
@@ -58,7 +58,7 @@ export function outcomeNotice(member: RoomMember, result: MemberTurnResult, pane
 export class BotExecutionLock {
   readonly #chains = new Map<string, Promise<unknown>>();
   /** Count of calls to `run(botId, ...)` that have started but not yet finished -- lets a caller peek
-   * "would this botId have to wait right now" (A1/C-02) without acquiring the lock itself. */
+   * "would this botId have to wait right now" without acquiring the lock itself. */
   readonly #pending = new Map<string, number>();
 
   run<T>(botId: string, fn: () => Promise<T>): Promise<T> {
@@ -129,7 +129,7 @@ export class TurnService {
   }
 
   /**
-   * A2/C-03: called ONLY for a real user message (never for a bot-to-bot `message` -- `handleMessage`
+   * Called ONLY for a real user message (never for a bot-to-bot `message` -- `handleMessage`
    * does not call this), right after it is stored. Delivers it immediately into the terminal of every
    * bot whose turn in this chat is currently open, so that bot's next `say` can react to it instead of
    * answering only the instruction its turn started with. Fire-and-forget: a delivery failure is logged,
@@ -165,16 +165,16 @@ export class TurnService {
     const result = this.#deps.inbox.accept(chatId, bot.id, text);
     if (result.mode === "over-cap") throw new ControlError("over_cap", "you already said the maximum number of messages this turn; wait for your next turn");
     const fields: Record<string, unknown> = {};
-    // A6/C-06(a): a say that arrives after its turn already closed is kept (never discarded) but tagged
+    // A say that arrives after its turn already closed is kept (never discarded) but tagged
     // `late` so the UI can mark it, and the chat gets a one-line notice -- the timeout notice earlier
     // said "did not finish"; this says it actually did, later.
     if (result.mode === "late") {
       fields.late = true;
       if (result.lateAfterMs != null) fields.lateAfterMs = result.lateAfterMs;
     }
-    // A2/C-03: this say answers an instruction a newer user message has since superseded.
+    // This say answers an instruction a newer user message has since superseded.
     if (result.staleFor != null) fields.staleFor = result.staleFor;
-    // A6/C-06(b): this say addresses a question the bot had to skip earlier while busy.
+    // This say addresses a question the bot had to skip earlier while busy.
     if (result.answersHeld != null) fields.answersHeld = result.answersHeld;
     const entry = this.#deps.chat.appendBot(chatId, { id: bot.id, name: bot.name }, text, Object.keys(fields).length > 0 ? fields : undefined);
     if (result.answersHeld != null) this.#deps.chat.clearHeld(chatId, result.answersHeld, bot.id);
@@ -203,7 +203,7 @@ export class TurnService {
       throw new ControlError("not_a_member", `${sender.id} is not a member of ${chatId}`);
     }
     if (kind === "bot" && targetBot == null) throw new ControlError("bot_not_ready", `${chatId} is not ready`);
-    // A8/C-19: only a bot<->bot DM message is subject to the loop guard (a room post has a human
+    // Only a bot<->bot DM message is subject to the loop guard (a room post has a human
     // audience and other members watching, so it is not the "two bots volleying alone" failure mode).
     if (kind === "bot" && targetBot != null) this.#checkLoopGuard(sender, targetBot);
 
@@ -214,7 +214,7 @@ export class TurnService {
   }
 
   /**
-   * A8/C-19: rejects the 4th `message` within {@link LOOP_GUARD_WINDOW_MS} between the same two bots
+   * Rejects the 4th `message` within {@link LOOP_GUARD_WINDOW_MS} between the same two bots
    * (either direction counts toward the same pair). Throwing here means `handleMessage` never calls
    * `appendBot`, so the message is never delivered -- the rejection itself is the only trace, surfaced
    * both as the thrown error (to the CLI caller) and as a notice in the sender's own source chat so a
@@ -311,7 +311,7 @@ export class TurnService {
         readHistory: () => this.#deps.chat.history(chatId),
         isCurrent: () => this.#deps.runQueue.currentEpoch(chatId) === epoch,
         runMemberTurn: ({ member, peers, newMessages }) => this.#memberTurn(chatId, kind, member, peers, newMessages),
-        // A1/C-02: a member currently holding its own execution lock (busy in some other chat) or
+        // A member currently holding its own execution lock (busy in some other chat) or
         // reported "working" by the mirror is peeked as busy WITHOUT waiting for that lock, so the
         // round can dispatch every other (available) member concurrently instead of queuing behind it.
         peekAvailability: (memberId) => (this.#deps.mirror.get(memberId).status === "working" || this.#botLocks.isHeld(memberId) ? "busy" : "available"),
@@ -319,7 +319,7 @@ export class TurnService {
           const runtime = this.#deps.mirror.get(member.id);
           const notice = outcomeNotice(member, result, runtime.paneId, this.#deps.config.turnTimeoutMs, runtime.prompt != null);
           if (notice != null) this.#deps.chat.appendNotice(chatId, notice);
-          // A6/C-06(b): the user message this busy-skip just dropped is not discarded -- mark it held so
+          // The user message this busy-skip just dropped is not discarded -- mark it held so
           // this bot's NEXT turn in this chat (whatever triggers it) surfaces it explicitly.
           if (result.outcome === "busy") this.#markBusyHeld(chatId, member.id);
         },
@@ -340,7 +340,7 @@ export class TurnService {
       if (current == null) return Promise.resolve({ outcome: "offline" as const, spoken: [] });
       const latestPeers = peers.flatMap((peer) => { const latest = this.#deps.roster.memberIdFor(peer.id); return latest == null ? [] : [latest]; });
       const cliPath = this.#deps.config.cliPath;
-      // A6/C-06(b): questions this bot was busy-skipped for earlier in this chat, oldest first --
+      // Questions this bot was busy-skipped for earlier in this chat, oldest first --
       // surfaced explicitly in the prompt so the reply is not context-free, and carried into
       // runBotTurn/inbox.open so the first say this turn gets tagged `answersHeld`.
       const heldEntries = this.#deps.chat.heldEntriesFor(chatId, member.id);
@@ -353,7 +353,7 @@ export class TurnService {
     });
   }
 
-  /** The most recent user message in `chatId`, marked held for `memberId` (A6/C-06(b)): this busy-skip
+  /** The most recent user message in `chatId`, marked held for `memberId`: this busy-skip
    * did not discard that question, it will resurface explicitly the next time this bot speaks here. */
   #markBusyHeld(chatId: string, memberId: string): void {
     const history = this.#deps.chat.history(chatId);

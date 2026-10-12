@@ -91,7 +91,7 @@ test("parses the review screen as an ordinary question with the answer summary a
   assert.equal(prompt.freeTextKey, null);
 });
 
-test("B10/C-28: a compact Bash-permission screen (lettered options, no title/question text) still parses as a permission prompt", () => {
+test("a compact Bash-permission screen (lettered options, no title/question text) still parses as a permission prompt", () => {
   const prompt = parseBlockedPrompt(COMPACT_BASH_PERMISSION);
   assert.ok(prompt);
   assert.equal(prompt.kind, "permission");

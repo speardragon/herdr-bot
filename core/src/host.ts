@@ -198,7 +198,7 @@ export function createHost(config: HostConfig, overrides: HostOverrides = {}): H
         ...(args.richText == null ? {} : { richText: args.richText }),
         ...(args.replyTo == null ? {} : { replyTo: args.replyTo }),
       });
-      // A2/C-03: deliver this into any already-open turn in the same chat BEFORE scheduling the next
+      // Deliver this into any already-open turn in the same chat BEFORE scheduling the next
       // one, so a bot mid-turn gets the chance to fold it in rather than only learn about it next turn.
       turnService.onUserMessage(chatId, entry.id, args.content);
       void turnService.schedule(chatId);

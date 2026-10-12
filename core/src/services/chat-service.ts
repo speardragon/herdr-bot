@@ -105,7 +105,7 @@ export class ChatService {
   }
 
   /**
-   * A6/C-06(b): user `message`-kind entries in `chatId` currently marked as held for `botId` (busy-
+   * User `message`-kind entries in `chatId` currently marked as held for `botId` (busy-
    * skipped questions this bot has not yet addressed), oldest first. Fed into the bot's next turn
    * prompt so its reply is not context-free; see turn-service.ts `#memberTurn`.
    */
@@ -114,7 +114,7 @@ export class ChatService {
     return this.transcript(chatId).readAll().filter((entry) => entry.kind === "message" && Array.isArray(entry.heldFor) && (entry.heldFor as unknown[]).includes(botId));
   }
 
-  /** Marks a user entry as held for `botId` (A6/C-06(b)): recorded when that bot's turn is busy-skipped. */
+  /** Marks a user entry as held for `botId`: recorded when that bot's turn is busy-skipped. */
   markHeld(chatId: string, entryId: string, botId: string): void {
     this.updateEntry(chatId, entryId, (entry) => {
       const current = Array.isArray(entry.heldFor) ? (entry.heldFor as string[]) : [];

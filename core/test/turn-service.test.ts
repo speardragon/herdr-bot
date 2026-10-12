@@ -299,7 +299,7 @@ test("bot A and bot B exchange DM messages, and bot B also posts to their shared
   }
 });
 
-test("handleSay enforces pane identity and membership; late says are appended, tagged, and announced (A6/C-06(a))", async () => {
+test("handleSay enforces pane identity and membership; late says are appended, tagged, and announced", async () => {
   const h = await harness({ agents: [agent("a")], workspaces: [] });
   try {
     assert.throws(() => h.turns.handleSay("w9:p9", "room-1", "x"), (e: unknown) => e instanceof ControlError && e.code === "unknown_pane");
@@ -320,7 +320,7 @@ test("handleSay enforces pane identity and membership; late says are appended, t
   }
 });
 
-test("A2/C-03: a new user message is delivered into an already-open turn immediately, and the next say is tagged staleFor it", async () => {
+test("a new user message is delivered into an already-open turn immediately, and the next say is tagged staleFor it", async () => {
   const h = await harness({ agents: [agent("a")], workspaces: [] });
   try {
     const turn = h.inbox.open("room-1", "a");
@@ -349,7 +349,7 @@ test("A2/C-03: a new user message is delivered into an already-open turn immedia
   }
 });
 
-test("A2/C-03: onUserMessage does nothing when nobody's turn is open in that chat (no false interrupt)", async () => {
+test("onUserMessage does nothing when nobody's turn is open in that chat (no false interrupt)", async () => {
   const h = await harness({ agents: [agent("a")], workspaces: [] });
   try {
     h.turns.onUserMessage("room-1", "e1", "hello");
@@ -382,7 +382,7 @@ test("A2: onUserMessage never types a mid-turn interrupt into a bot blocked on a
   }
 });
 
-test("A6/C-06(b): a busy-skipped user message is held, then surfaced and tagged answersHeld when the bot next speaks in that chat", async () => {
+test("a busy-skipped user message is held, then surfaced and tagged answersHeld when the bot next speaks in that chat", async () => {
   const h = await harness({ agents: [agent("a", "working")], workspaces: [], onPrompt: { a: { say: ["sorry, to answer: it's 4"], sayOnce: true, finalStatus: "idle" } } });
   try {
     h.chat.appendUser("room-1", { content: "quick one: what's 2+2?" });
@@ -410,7 +410,7 @@ test("A6/C-06(b): a busy-skipped user message is held, then surfaced and tagged 
   }
 });
 
-test("A8/C-19: a 4th bot<->bot message within 5 minutes is rejected with a loop-guard notice in the sender's own chat, and the reply direction counts toward the same pair", async () => {
+test("a 4th bot<->bot message within 5 minutes is rejected with a loop-guard notice in the sender's own chat, and the reply direction counts toward the same pair", async () => {
   let now = 0;
   const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [] }, [], { now: () => now });
   try {
@@ -434,7 +434,7 @@ test("A8/C-19: a 4th bot<->bot message within 5 minutes is rejected with a loop-
   }
 });
 
-test("A8/C-19: the loop-guard window expires, and a room post is never subject to it", async () => {
+test("the loop-guard window expires, and a room post is never subject to it", async () => {
   let now = 0;
   const h = await harness({ agents: [agent("a"), agent("b")], workspaces: [] }, ["a", "b"], { now: () => now });
   try {

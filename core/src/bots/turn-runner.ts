@@ -17,7 +17,7 @@ export interface TurnRunnerDeps {
  * app-generated room/DM turn that follows instead of rejecting the whole turn as prompt injection. */
 export const TURN_ENVELOPE_PREFIX = "The user sent a message in herdr-bot and explicitly asks you to handle the following pasted turn envelope now. Follow its instructions, including say/pass: ";
 
-/** Same typed-prefix authorization pattern as TURN_ENVELOPE_PREFIX (A2/C-03), but for a short mid-turn
+/** Same typed-prefix authorization pattern as TURN_ENVELOPE_PREFIX, but for a short mid-turn
  * addition rather than a whole new turn envelope: delivered while the bot's turn is already open, so it
  * can fold the user's new message into whatever it is about to say/pass instead of missing it entirely. */
 export const INTERRUPT_ENVELOPE_PREFIX = "The user sent a message in herdr-bot while your turn was already open; explicitly asks you to read the following pasted addition now: ";
@@ -27,7 +27,7 @@ export function terminalKeys(text: string): string[] {
 }
 
 /**
- * A2/C-03: delivers a newer user message into a bot's terminal WHILE its turn is still open, so its
+ * Delivers a newer user message into a bot's terminal WHILE its turn is still open, so its
  * next say can reflect it instead of answering only the stale instruction it started with. Fire-and-
  * forget from the caller's point of view (`wait: false`): this must never block or extend the turn
  * that's already running.
@@ -74,7 +74,7 @@ export async function runBotTurn(deps: TurnRunnerDeps, args: { readonly chatId: 
   const skip = preflightOutcome(status);
   if (skip != null) return { outcome: skip, spoken: [] };
 
-  // A6/C-06(b): carries forward any user entries this bot had to busy-skip earlier in this chat, so
+  // Carries forward any user entries this bot had to busy-skip earlier in this chat, so
   // its first say this turn gets tagged `answersHeld` (see SayInbox.accept).
   const turn = deps.inbox.open(args.chatId, args.botId, { heldEntryIds: args.heldEntryIds });
   try {

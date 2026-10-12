@@ -76,7 +76,7 @@ test("bot relay prompt identifies the requester and explains both handoffs", () 
   assert.equal(formatRoomLine({ speaker: { kind: "member", id: "bot-a", name: "Ava" }, content: "Done" }, "bot-a"), "Ava (bot id: bot-a) (you): Done");
 });
 
-test("A3/C-05: room and DM turn prompts both tell the bot to pass instead of repeating an answer already given this round", () => {
+test("room and DM turn prompts both tell the bot to pass instead of repeating an answer already given this round", () => {
   const room = buildRoomTurnPrompt({ room: { id: "room-x-1", name: "x", description: "" }, member: reviewer, peers: [fixer], newMessages: [], cliPath: cli });
   const dm = buildDmTurnPrompt({ bot: reviewer, chatId: "reviewer", userName: "ray", cliPath: cli, newMessages: [] });
   for (const prompt of [room, dm]) {
@@ -85,7 +85,7 @@ test("A3/C-05: room and DM turn prompts both tell the bot to pass instead of rep
   }
 });
 
-test("A7/C-13: every prompt clarifies that a request addressed to this bot by name is addressed to it, not forwarded", () => {
+test("every prompt clarifies that a request addressed to this bot by name is addressed to it, not forwarded", () => {
   const room = buildRoomTurnPrompt({ room: { id: "room-x-1", name: "x", description: "" }, member: reviewer, peers: [fixer], newMessages: [], cliPath: cli });
   const dm = buildDmTurnPrompt({ bot: reviewer, chatId: "reviewer", userName: "ray", cliPath: cli, newMessages: [] });
   for (const prompt of [room, dm]) {

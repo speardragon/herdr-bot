@@ -9,13 +9,13 @@ export type SayMode = "in-turn" | "late" | "over-cap";
 
 /**
  * Result of accepting a `say`. Beyond the plain mode, callers (TurnService.handleSay) use these to tag
- * the stored entry (see model/entries.ts' marker-field contract in the A2/A6 doc comments there):
+ * the stored entry (see model/entries.ts' marker-field doc comments there):
  * - `lateAfterMs`: only on `mode: "late"` -- how long after this turn closed the say arrived.
  * - `staleFor`: only on `mode: "in-turn"` -- the newer user entry id that arrived while this turn was
- *   already open (A2/C-03). Tagged on only the FIRST say after that newer message, since later says in
+ *   already open. Tagged on only the FIRST say after that newer message, since later says in
  *   the same turn had the chance to react to the interrupt delivered to the bot's terminal.
  * - `answersHeld`: only on `mode: "in-turn"` -- the id of an earlier user entry this bot had to skip
- *   while busy (A6/C-06), being addressed now that the bot can finally speak in this chat again.
+ *   while busy, being addressed now that the bot can finally speak in this chat again.
  */
 export interface AcceptResult {
   readonly mode: SayMode;
@@ -25,7 +25,7 @@ export interface AcceptResult {
 }
 
 export interface OpenTurnContext {
-  /** User entries this bot was busy-skipped for in this chat, oldest first (A6/C-06). */
+  /** User entries this bot was busy-skipped for in this chat, oldest first. */
   readonly heldEntryIds?: readonly string[];
 }
 
@@ -48,7 +48,7 @@ function key(chatId: string, botId: string): string {
 /** Collects `say` calls that arrive while a bot's turn is open; everything else is a late message. */
 export class SayInbox {
   readonly #turns = new Map<string, TurnRecord>();
-  /** Close time of the last turn for each (chat, bot), so a late say can report `lateAfterMs` (A6/C-06). */
+  /** Close time of the last turn for each (chat, bot), so a late say can report `lateAfterMs`. */
   readonly #closedAt = new Map<string, number>();
   readonly #now: () => number;
 
@@ -93,7 +93,7 @@ export class SayInbox {
     return null;
   }
 
-  /** Every bot with a currently open turn in `chatId` (A2/C-03: who to deliver a mid-turn interrupt to).
+  /** Every bot with a currently open turn in `chatId` (who to deliver a mid-turn interrupt to).
    * Under A1 more than one member's turn can be open in the same room at once. */
   openBotsFor(chatId: string): string[] {
     const ids: string[] = [];
@@ -104,7 +104,7 @@ export class SayInbox {
     return ids;
   }
 
-  /** A newer user message arrived in `chatId` while `botId`'s turn is open (A2/C-03): its next say, if
+  /** A newer user message arrived in `chatId` while `botId`'s turn is open: its next say, if
    * any, is tagged `staleFor` this entry id. A no-op if that bot has no open turn there. */
   markInterrupted(chatId: string, botId: string, userEntryId: string): void {
     const record = this.#turns.get(key(chatId, botId));
