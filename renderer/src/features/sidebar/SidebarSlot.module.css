@@ -57,6 +57,8 @@
   /* A row is a button, not text: a press-and-drag on it must not select its name or preview. */
   -webkit-user-select: none;
   user-select: none;
+  /* A <div role="option">, so it does not get the pointer that reset.css gives every <button>. */
+  cursor: pointer;
 }
 
 .hb-sidebar-row:hover {
