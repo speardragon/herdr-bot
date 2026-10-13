@@ -6,6 +6,22 @@ All notable changes to herdr-bot are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-13
+
+### Added
+
+- Install with Homebrew: `brew install --cask speardragon/tap/herdr-bot`. The cask clears macOS's
+  quarantine flag, so the unsigned app opens without being blocked.
+- Update from inside the app: **herdr-bot → Check for Updates…** in the menu bar, or **Install update**
+  in Settings, downloads the new version, checks it against the release's checksums and restarts into
+  it. The Dock icon shows the download's progress.
+- Releases also publish a zip per architecture, which the in-app updater downloads.
+
+### Changed
+
+- The app has its own menu bar (in Korean or English, following the app's language), with Check for
+  Updates… under About.
+
 ## [1.1.0] - 2026-10-12
 
 ### Added
@@ -54,6 +70,7 @@ First public release.
   releases.
 - herdr plugin manifest, so the app is listed in the herdr plugin index.
 
-[Unreleased]: https://github.com/speardragon/herdr-bot/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/speardragon/herdr-bot/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/speardragon/herdr-bot/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/speardragon/herdr-bot/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/speardragon/herdr-bot/releases/tag/v1.0.0
