@@ -91,7 +91,7 @@ export function swapScript(plan: SwapPlan): string {
     "tries=0",
     `while kill -0 ${plan.pid} 2>/dev/null; do`,
     "  tries=$((tries + 1))",
-    '  if [ "$tries" -gt 300 ]; then echo "the app did not quit; update abandoned"; exit 1; fi',
+    `  if [ "$tries" -gt 300 ]; then echo "the app did not quit; update abandoned"; rm -rf ${q.workDir}; exit 1; fi`,
     "  sleep 0.2",
     "done",
     `rm -rf ${q.backup}`,
