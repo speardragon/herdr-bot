@@ -16,6 +16,7 @@ test("electron-builder.yml packages both arm64 and x64 DMGs, unsigned, into .bui
   const yaml = readFileSync(new URL("../electron-builder.yml", import.meta.url), "utf8");
   assert.match(yaml, /output: \.\.\/\.build\/desktop/);
   assert.match(yaml, /target: dmg/);
+  assert.match(yaml, /target: zip/); // what the in-app updater downloads
   assert.match(yaml, /arch: \[arm64, x64\]/);
   assert.match(yaml, /identity: null/);
   assert.match(yaml, /artifactName: herdr-bot-\$\{version\}-\$\{arch\}\.\$\{ext\}/);

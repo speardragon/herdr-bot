@@ -38,7 +38,7 @@ export function SettingsDialog() {
     }
   }
 
-  const available = status?.state.type === "available" ? status.state : null;
+  const state = status?.state ?? null;
 
   return (
     <div className={styles["hb-settings"]}>
@@ -116,16 +116,37 @@ export function SettingsDialog() {
 
       <div className={styles["hb-settings-version-row"]}>
         <span>{t("dialogs.settings.version", { version: version ?? "…" })}</span>
-        {available != null ? (
-          <button type="button" className={styles["hb-settings-update-available"]} onClick={() => void bridge.openExternal(available.releaseUrl)}>
-            {t("dialogs.settings.updateAvailable", { version: available.version })}
-          </button>
-        ) : (
-          <Button variant="secondary" size="sm" disabled={checking} onClick={checkForUpdates}>
-            {t("dialogs.settings.checkForUpdates")}
-          </Button>
-        )}
+        <UpdateControl state={state} checking={checking} onCheck={checkForUpdates} onInstall={() => void bridge.version.update.install()} />
       </div>
+      {state?.type === "available" && state.installError != null && (
+        <p className={styles["hb-settings-help"]}>{t("dialogs.settings.updateFailed", { message: state.installError })}</p>
+      )}
     </div>
+  );
+}
+
+interface UpdateControlProps {
+  readonly state: UpdateStatus["state"] | null;
+  readonly checking: boolean;
+  readonly onCheck: () => void;
+  readonly onInstall: () => void;
+}
+
+/** The version row's right side: check, install a newer version, or that install's progress. */
+function UpdateControl({ state, checking, onCheck, onInstall }: UpdateControlProps) {
+  const { t } = useT();
+  if (state?.type === "downloading") return <span>{t("dialogs.settings.updateDownloading", { percent: String(Math.round(state.progress * 100)) })}</span>;
+  if (state?.type === "restarting") return <span>{t("dialogs.settings.updateRestarting")}</span>;
+  if (state?.type === "available") {
+    return (
+      <button type="button" className={styles["hb-settings-update-available"]} onClick={onInstall}>
+        {t("dialogs.settings.updateAvailable", { version: state.version })}
+      </button>
+    );
+  }
+  return (
+    <Button variant="secondary" size="sm" disabled={checking} onClick={onCheck}>
+      {t("dialogs.settings.checkForUpdates")}
+    </Button>
   );
 }

@@ -69,9 +69,10 @@ the call sites.
   stack, so this had to live inside the same form), and real inline host error display (`invalid_args`,
   `bot_exists`, `home_cwd_requires_confirmation`, etc. -- whatever `AppApiError.message` says).
 - **Settings dialog** (`SettingsDialog.tsx`): Language/Appearance (commit immediately, no Save button),
-  Defaults (working folder/provider/permission mode), app version + "Check for updates" (there's no way
-  to force an "available" state for testing; both states are implemented from the `UpdateStatus` type,
-  but only the non-available one has been visually verified).
+  Defaults (working folder/provider/permission mode), app version + "Check for updates". When a newer
+  version is available the button becomes "Install update", which shows the download's percentage and
+  then "Restarting…" (desktop/src/app-update.ts does the work); a failed install shows its error under
+  the row. The demo's fake bridge never reports an update, so only the idle state is visible there.
 - **Bot info panel** (`BotInfoPanel.tsx`): avatar + "Change color" popover (`ColorSwatches.tsx`, 11
   swatches, no shape picker), name/label/description (autosave on blur), Notifications toggle
   (`ToggleSwitch.tsx`, a feature-local control -- no `Switch` primitive exists), launch settings with a

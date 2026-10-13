@@ -1,6 +1,7 @@
 name: Release
 
-# Pushing a tag like v1.2.3 builds the macOS DMGs and publishes a GitHub release with them.
+# Pushing a tag like v1.2.3 builds the macOS DMGs (for installing) and zips (for the in-app updater)
+# and publishes a GitHub release with them.
 # The tag must match the version in package.json; the release notes come from CHANGELOG.md.
 on:
   push:
@@ -42,7 +43,7 @@ jobs:
       - name: Typecheck and test
         run: npm run check
 
-      - name: Build the DMGs
+      - name: Build the DMGs and zips
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npm run desktop:package -- --publish never
@@ -50,8 +51,8 @@ jobs:
       - name: Collect artifacts
         run: |
           mkdir -p release
-          cp .build/desktop/*.dmg release/
-          (cd release && shasum -a 256 *.dmg > SHA256SUMS.txt)
+          cp .build/desktop/*.dmg .build/desktop/*.zip release/
+          (cd release && shasum -a 256 *.dmg *.zip > SHA256SUMS.txt)
           ls -la release
 
       - name: Write release notes
@@ -63,7 +64,7 @@ jobs:
         run: |
           prerelease=""
           case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease" ;; esac
-          gh release create "$GITHUB_REF_NAME" release/*.dmg release/SHA256SUMS.txt \
+          gh release create "$GITHUB_REF_NAME" release/*.dmg release/*.zip release/SHA256SUMS.txt \
             --title "herdr-bot ${GITHUB_REF_NAME#v}" \
             --notes-file release/NOTES.md \
             --verify-tag $prerelease

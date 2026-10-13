@@ -80,17 +80,23 @@ herdr-bot は、[herdr](https://herdr.dev) のペインで動くエージェン�
 
 **必要なもの：** macOS、[herdr](https://herdr.dev) 0.9.0 以上（`brew install herdr`）、ボットにしたいエージェント CLI（`claude`、`codex`、`grok` など、ログイン済みのもの）。
 
-### アプリをダウンロード
+### アプリをインストール
 
-[最新リリース](https://github.com/speardragon/herdr-bot/releases/latest)からお使いの Mac に合った DMG を入手してください。Apple シリコンは `arm64`、Intel は `x64` です。**herdr-bot** を「アプリケーション」にドラッグすれば完了です。
+```bash
+brew install --cask speardragon/tap/herdr-bot
+```
 
-まだコード署名をしていないため、初回起動は macOS にブロックされます。アプリを右クリックして **開く** を選んで確認するか、次のコマンドを実行してください。
+または[最新リリース](https://github.com/speardragon/herdr-bot/releases/latest)からお使いの Mac に合った DMG を入手してください。Apple シリコンは `arm64`、Intel は `x64` です。**herdr-bot** を「アプリケーション」にドラッグすれば完了です。まだコード署名をしていないため、ダウンロードしたアプリは初回起動時に macOS にブロックされます。**システム設定 → プライバシーとセキュリティ** で **このまま開く** をクリックするか、次のコマンドを実行してください。
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/herdr-bot.app
 ```
 
-新しいリリースが出るとアプリが知らせてくれます。
+Homebrew でインストールした場合、この手順は不要です。
+
+### アップデート
+
+メニューバーの **herdr-bot → Check for Updates…** を選んでください（設定の **Check for updates** も同じです）。アプリが新しいバージョンをダウンロードし、リリースのチェックサムで検証してから、新しいバージョンで再起動します。Homebrew の場合は `brew upgrade --cask herdr-bot` でも構いません。
 
 ### herdr プラグインとしてインストール
 

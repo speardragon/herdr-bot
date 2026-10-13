@@ -116,6 +116,7 @@ const herdrBot = {
     update: {
       getStatus: () => desktopCall("update.getStatus"),
       check: () => desktopCall("update.check"),
+      install: () => desktopCall("update.install"),
       onStatusChanged: onDesktopEvent("update-status"),
     },
   },

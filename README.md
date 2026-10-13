@@ -78,17 +78,23 @@ The palette searches chat names, bots and the full text of every transcript, and
 
 **You need** macOS, [herdr](https://herdr.dev) 0.9.0 or newer (`brew install herdr`), and the agent CLIs you want as bots (`claude`, `codex`, `grok`, …), already signed in.
 
-### Download the app
+### Install the app
 
-Get the DMG for your Mac from the [latest release](https://github.com/speardragon/herdr-bot/releases/latest) — `arm64` for Apple silicon, `x64` for Intel — and drag **herdr-bot** into Applications.
+```bash
+brew install --cask speardragon/tap/herdr-bot
+```
 
-The app isn't code-signed yet, so macOS blocks the first launch. Right-click the app, choose **Open** and confirm, or run:
+Or get the DMG for your Mac from the [latest release](https://github.com/speardragon/herdr-bot/releases/latest) — `arm64` for Apple silicon, `x64` for Intel — and drag **herdr-bot** into Applications. The app isn't code-signed yet, so macOS blocks a downloaded copy the first time: open **System Settings → Privacy & Security** and click **Open Anyway**, or run:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/herdr-bot.app
 ```
 
-The app tells you when a newer release is out.
+Homebrew installs skip this step.
+
+### Update
+
+Choose **herdr-bot → Check for Updates…** in the menu bar (or **Check for updates** in Settings). The app downloads the new version, checks it against the release's checksums, and restarts into it. With Homebrew, `brew upgrade --cask herdr-bot` works too.
 
 ### Or install it as a herdr plugin
 

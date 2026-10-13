@@ -27,7 +27,9 @@ export type StageAttachmentResult = { readonly ok: true; readonly path: string }
 
 export type UpdateCheckState =
   | { readonly type: "idle"; readonly lastCheck?: { readonly at: number; readonly result: "up-to-date" | "error"; readonly errorMessage?: string } }
-  | { readonly type: "available"; readonly version: string; readonly releaseUrl: string };
+  | { readonly type: "available"; readonly version: string; readonly releaseUrl: string; readonly installError?: string }
+  | { readonly type: "downloading"; readonly version: string; readonly releaseUrl: string; readonly progress: number }
+  | { readonly type: "restarting"; readonly version: string };
 export interface UpdateStatus {
   readonly state: UpdateCheckState;
   readonly currentVersion: string;
@@ -76,6 +78,8 @@ export interface HerdrBridge {
     readonly update: {
       getStatus(): Promise<UpdateStatus>;
       check(): Promise<UpdateStatus>;
+      /** Downloads and installs the available version, then restarts the app (or opens the release page when this build cannot update itself). */
+      install(): Promise<UpdateStatus>;
       onStatusChanged(listener: (status: UpdateStatus) => void): () => void;
     };
   };

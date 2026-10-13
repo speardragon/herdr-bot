@@ -7,6 +7,7 @@
 import type { BrowserWindow, Dialog, IpcMain, NativeTheme } from "electron";
 import { createAttachmentService, type AttachmentService } from "./attachments.ts";
 import { isNewerVersion } from "./version-check.ts";
+import type { ReleaseAsset, Updater } from "./app-update.ts";
 import type { SettingsStore } from "./settings-store.ts";
 import { log } from "../../core/src/log.ts";
 
@@ -22,7 +23,9 @@ export interface ThemeState {
 
 export type UpdateCheckState =
   | { readonly type: "idle"; readonly lastCheck?: { readonly at: number; readonly result: "up-to-date" | "error"; readonly errorMessage?: string } }
-  | { readonly type: "available"; readonly version: string; readonly releaseUrl: string };
+  | { readonly type: "available"; readonly version: string; readonly releaseUrl: string; readonly installError?: string }
+  | { readonly type: "downloading"; readonly version: string; readonly releaseUrl: string; readonly progress: number }
+  | { readonly type: "restarting"; readonly version: string };
 
 export interface UpdateStatus {
   readonly state: UpdateCheckState;
@@ -40,6 +43,10 @@ export interface DesktopBridgeDeps {
   readonly userDataDir: string;
   /** GitHub `owner/repo` the update checker compares the running version's tag against. */
   readonly updateCheckRepo?: string;
+  /** Installs a newer release in place (see app-update.ts). Without one, installing opens the release page. */
+  readonly updater?: Updater;
+  /** Called after the language changes, so the native menu can follow it. */
+  readonly onLocaleChanged?: (locale: string | null) => void;
 }
 
 type Handler = (args: Record<string, unknown>) => Promise<unknown> | unknown;
@@ -54,29 +61,38 @@ function themeState(settings: SettingsStore, nativeTheme: NativeTheme): ThemeSta
   return { preference, resolved };
 }
 
-// No code-signing certificate, so there is no silent background download/install (Squirrel.Mac
-// refuses to run against an unsigned build; an unsigned Windows installer trades that failure for an
-// unverifiable one). "Check for Updates" compares the running version against the latest GitHub release
-// tag; when one is newer, the UI opens that release's page for the user to download and install manually.
-async function fetchLatestRelease(repo: string): Promise<{ readonly tag: string; readonly url: string } | null> {
+interface LatestRelease {
+  readonly tag: string;
+  readonly url: string;
+  readonly assets: readonly ReleaseAsset[];
+}
+
+function releaseAssets(value: unknown): ReleaseAsset[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((asset: unknown) => (isRecord(asset) && typeof asset.name === "string" && typeof asset.browser_download_url === "string" ? [{ name: asset.name, url: asset.browser_download_url }] : []));
+}
+
+// "Check for Updates" compares the running version against the latest GitHub release tag. Installing
+// it is app-update.ts's job (no code-signing certificate, so not Squirrel.Mac's).
+async function fetchLatestRelease(repo: string): Promise<LatestRelease | null> {
   const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers: { accept: "application/vnd.github+json" }, signal: AbortSignal.timeout(10_000) });
   if (response.status === 404) return null; // no release published yet
   if (!response.ok) throw new Error(`GitHub returned ${response.status}`);
-  const body = (await response.json()) as { tag_name?: unknown; html_url?: unknown };
+  const body = (await response.json()) as { tag_name?: unknown; html_url?: unknown; assets?: unknown };
   if (typeof body.tag_name !== "string" || body.tag_name.length === 0) return null;
-  return { tag: body.tag_name, url: typeof body.html_url === "string" ? body.html_url : `https://github.com/${repo}/releases` };
+  return { tag: body.tag_name, url: typeof body.html_url === "string" ? body.html_url : `https://github.com/${repo}/releases`, assets: releaseAssets(body.assets) };
 }
 
-async function checkForAppUpdate(appVersion: string, repo: string): Promise<UpdateStatus> {
+async function checkForAppUpdate(appVersion: string, repo: string): Promise<{ readonly status: UpdateStatus; readonly release: LatestRelease | null }> {
   const now = Date.now();
   try {
     const release = await fetchLatestRelease(repo);
     if (release != null && isNewerVersion(appVersion, release.tag)) {
-      return { currentVersion: appVersion, state: { type: "available", version: release.tag.replace(/^v/i, ""), releaseUrl: release.url } };
+      return { release, status: { currentVersion: appVersion, state: { type: "available", version: release.tag.replace(/^v/i, ""), releaseUrl: release.url } } };
     }
-    return { currentVersion: appVersion, state: { type: "idle", lastCheck: { at: now, result: "up-to-date" } } };
+    return { release: null, status: { currentVersion: appVersion, state: { type: "idle", lastCheck: { at: now, result: "up-to-date" } } } };
   } catch (error) {
-    return { currentVersion: appVersion, state: { type: "idle", lastCheck: { at: now, result: "error", errorMessage: error instanceof Error ? error.message : String(error) } } };
+    return { release: null, status: { currentVersion: appVersion, state: { type: "idle", lastCheck: { at: now, result: "error", errorMessage: error instanceof Error ? error.message : String(error) } } } };
   }
 }
 
@@ -89,6 +105,45 @@ export function createDesktopBridgeHandlers(deps: DesktopBridgeDeps, attachments
   // Cached so re-opening Settings does not re-hit the network; `update.check` is the one
   // that actually performs the GitHub lookup.
   let lastUpdateStatus: UpdateStatus = { currentVersion: deps.appVersion, state: { type: "idle" } };
+  let lastRelease: LatestRelease | null = null;
+  const setUpdateStatus = (state: UpdateCheckState): UpdateStatus => {
+    lastUpdateStatus = { currentVersion: deps.appVersion, state };
+    push("update-status", lastUpdateStatus);
+    // The Dock icon shows the download's progress, so a menu-started update is visible without Settings open.
+    if (!window.isDestroyed()) window.setProgressBar?.(state.type === "downloading" ? state.progress : -1);
+    return lastUpdateStatus;
+  };
+
+  async function installUpdate(): Promise<UpdateStatus> {
+    const state = lastUpdateStatus.state;
+    if (state.type !== "available" || lastRelease == null) return lastUpdateStatus;
+    const { version, releaseUrl } = state;
+    const target = deps.updater == null ? null : await deps.updater.target();
+    if (deps.updater == null || target == null) {
+      await shell.openExternal(releaseUrl);
+      return lastUpdateStatus;
+    }
+    let shown = 0;
+    setUpdateStatus({ type: "downloading", version, releaseUrl, progress: 0 });
+    try {
+      await deps.updater.install({
+        version,
+        assets: lastRelease.assets,
+        target,
+        // Whole percents only, so a fast download does not flood the renderer with events.
+        onProgress: (fraction) => {
+          const percent = Math.floor(fraction * 100);
+          if (percent > shown) { shown = percent; setUpdateStatus({ type: "downloading", version, releaseUrl, progress: percent / 100 }); }
+        },
+      });
+    } catch (error) {
+      log("desktop-bridge", "update install failed", error instanceof Error ? error.message : String(error));
+      return setUpdateStatus({ type: "available", version, releaseUrl, installError: error instanceof Error ? error.message : String(error) });
+    }
+    const restarting = setUpdateStatus({ type: "restarting", version });
+    deps.updater.quit();
+    return restarting;
+  }
 
   return {
     "theme.get": () => themeState(settings, nativeTheme),
@@ -106,6 +161,7 @@ export function createDesktopBridgeHandlers(deps: DesktopBridgeDeps, attachments
       const value = typeof locale === "string" && locale.length > 0 ? locale : null;
       settings.set("locale.preference", value);
       push("locale-changed", value);
+      deps.onLocaleChanged?.(value);
       return value;
     },
     "window.minimize": () => { window.minimize(); },
@@ -131,7 +187,14 @@ export function createDesktopBridgeHandlers(deps: DesktopBridgeDeps, attachments
     "update.getStatus": () => lastUpdateStatus,
     // Pushed too, not just returned -- a UI element (e.g. a settings panel or command
     // palette entry) watching `update.onStatusChanged` only learns of a new status via the event.
-    "update.check": async () => { lastUpdateStatus = await checkForAppUpdate(deps.appVersion, repo); push("update-status", lastUpdateStatus); return lastUpdateStatus; },
+    "update.check": async () => {
+      // A download already under way keeps its status; checking again must not reset it to "available".
+      if (lastUpdateStatus.state.type === "downloading" || lastUpdateStatus.state.type === "restarting") return lastUpdateStatus;
+      const result = await checkForAppUpdate(deps.appVersion, repo);
+      lastRelease = result.release;
+      return setUpdateStatus(result.status.state);
+    },
+    "update.install": () => installUpdate(),
     ...attachments.handlers,
     // internal: pushed by registerDesktopBridge's native event listeners, not reachable from the renderer.
     "_pushTheme": () => { push("theme-changed", themeState(settings, nativeTheme)); },
@@ -158,7 +221,8 @@ export async function callDesktopBridge(handlers: Record<string, Handler>, reque
   }
 }
 
-export function registerDesktopBridge(deps: DesktopBridgeDeps): void {
+/** Registers the bridge and returns its handlers, so the native menu can drive the same update flow. */
+export function registerDesktopBridge(deps: DesktopBridgeDeps): Record<string, Handler> {
   const attachments = createAttachmentService({ dialog: deps.dialog, window: deps.window, userDataDir: deps.userDataDir });
   const handlers = createDesktopBridgeHandlers(deps, attachments);
   deps.ipcMain.handle(DESKTOP_CALL_CHANNEL, (_event, request: unknown) => callDesktopBridge(handlers, request));
@@ -177,4 +241,5 @@ export function registerDesktopBridge(deps: DesktopBridgeDeps): void {
   deps.window.on("maximize", pushWindowState);
   deps.window.on("unmaximize", pushWindowState);
   deps.window.webContents.on("zoom-changed", () => handlers._pushZoom!({}));
+  return handlers;
 }

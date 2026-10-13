@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from "electron";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,10 +8,13 @@ import { resolveConfig } from "../../core/src/config.ts";
 import { createHost, type Host } from "../../core/src/host.ts";
 import { log } from "../../core/src/log.ts";
 import { registerAppApiBridge } from "./app-api-bridge.ts";
+import { appMenuTemplate, menuLanguage, updateText } from "./app-menu.ts";
+import { createUpdater } from "./app-update.ts";
 import { registerDesktopBridge } from "./desktop-bridge.ts";
 import { FALLBACK_PATH_DIRS, mergePath, resolveLoginShellPath } from "./login-shell-path.ts";
 import { SettingsStore } from "./settings-store.ts";
 import { hostReferenceFiles, sweepStagedAttachments } from "./staged-attachment-sweep.ts";
+import { checkForUpdatesFromMenu } from "./update-dialog.ts";
 import { DEFAULT_WINDOW_SIZE, MIN_WINDOW_SIZE, shouldHideInsteadOfClose, shouldQuitOnWindowAllClosed, windowBackground, windowChromeOptions } from "./window-chrome.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -106,7 +109,9 @@ function createWindow(host: Host): BrowserWindow {
   });
   appApiServer = createAppApiServer(host);
   registerAppApiBridge(ipcMain, window, appApiServer);
-  registerDesktopBridge({ ipcMain, window, settings, nativeTheme, shell, dialog, appVersion: app.getVersion(), userDataDir: app.getPath("userData") });
+  const updater = createUpdater({ isPackaged: app.isPackaged, exePath: app.getPath("exe"), arch: process.arch, pid: process.pid, logFile: join(app.getPath("userData"), "update.log"), quit: () => app.quit() });
+  const handlers = registerDesktopBridge({ ipcMain, window, settings, nativeTheme, shell, dialog, appVersion: app.getVersion(), userDataDir: app.getPath("userData"), updater, onLocaleChanged: (locale) => installMenu(window, handlers, locale) });
+  installMenu(window, handlers, settings.get<string | null>("locale.preference", null));
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) void shell.openExternal(url);
     return { action: "deny" };
@@ -128,6 +133,16 @@ function createWindow(host: Host): BrowserWindow {
     });
   });
   return window;
+}
+
+/** The menu bar, in the app's language; rebuilt when the language changes. */
+function installMenu(window: BrowserWindow, handlers: ReturnType<typeof registerDesktopBridge>, localePreference: string | null): void {
+  const language = menuLanguage(localePreference, app.getLocale());
+  const onCheckForUpdates = () => {
+    checkForUpdatesFromMenu({ handlers, dialog, window, text: updateText(language), openExternal: (url) => shell.openExternal(url) })
+      .catch((error: unknown) => log("desktop", "menu update check failed", error instanceof Error ? error.message : String(error)));
+  };
+  Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate("herdr-bot", language, onCheckForUpdates)));
 }
 
 async function loadRenderer(window: BrowserWindow): Promise<void> {

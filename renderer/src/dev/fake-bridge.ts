@@ -103,6 +103,7 @@ export function createFakeBridge(): HerdrBridge {
       update: {
         getStatus: async () => ({ state: { type: "idle" }, currentVersion: "0.0.0-demo" }),
         check: async () => ({ state: { type: "idle" }, currentVersion: "0.0.0-demo" }),
+        install: async () => ({ state: { type: "idle" }, currentVersion: "0.0.0-demo" }),
         onStatusChanged: updateStatusEmitter.on,
       },
     },

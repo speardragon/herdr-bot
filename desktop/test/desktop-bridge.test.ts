@@ -123,3 +123,77 @@ test("openExternal only opens http(s) URLs", async () => {
     temp.cleanup();
   }
 });
+
+function stubLatestRelease(tag: string): () => void {
+  const original = globalThis.fetch;
+  globalThis.fetch = (async () => new Response(JSON.stringify({
+    tag_name: tag,
+    html_url: `https://github.com/speardragon/herdr-bot/releases/tag/${tag}`,
+    assets: [{ name: `herdr-bot-${tag.slice(1)}-arm64.zip`, browser_download_url: "https://example.test/a.zip" }],
+  }), { status: 200 })) as typeof fetch;
+  return () => { globalThis.fetch = original; };
+}
+
+test("update.install downloads through the updater, reports progress, then restarts", async () => {
+  const temp = makeTempHome();
+  const restore = stubLatestRelease("v9.0.0");
+  try {
+    let quit = false;
+    let installed: { version: string; assets: readonly unknown[]; target: string } | null = null;
+    const deps = fakeDeps(temp.home, {
+      updater: {
+        target: async () => "/Applications/herdr-bot.app",
+        install: async (args) => { installed = args; args.onProgress(0.5); args.onProgress(0.504); args.onProgress(1); },
+        quit: () => { quit = true; },
+      },
+    });
+    const handlers = createDesktopBridgeHandlers(deps, createAttachmentService({ dialog: null, window: null, userDataDir: temp.home }));
+    const checked = await callDesktopBridge(handlers, { method: "update.check", params: {} }) as { state: { type: string } };
+    assert.equal(checked.state.type, "available");
+    const result = await callDesktopBridge(handlers, { method: "update.install", params: {} }) as { state: { type: string; version: string } };
+    assert.deepEqual(result.state, { type: "restarting", version: "9.0.0" });
+    assert.equal(installed!.version, "9.0.0");
+    assert.equal(installed!.target, "/Applications/herdr-bot.app");
+    assert.equal(installed!.assets.length, 1);
+    assert.equal(quit, true);
+    // webContents.send(channel, { event, payload }) -- the fake records the channel as `event`.
+    const sent = (deps as unknown as { __sent: { payload: { event: string; payload: { state: { type: string; progress?: number } } } }[] }).__sent.map((call) => call.payload);
+    const progress = sent.filter((e) => e.event === "update-status" && e.payload.state.type === "downloading").map((e) => e.payload.state.progress);
+    assert.deepEqual(progress, [0, 0.5, 1]); // whole percents only
+  } finally {
+    restore();
+    temp.cleanup();
+  }
+});
+
+test("update.install keeps the version available with the error when installing fails", async () => {
+  const temp = makeTempHome();
+  const restore = stubLatestRelease("v9.0.0");
+  try {
+    const deps = fakeDeps(temp.home, { updater: { target: async () => "/Applications/herdr-bot.app", install: async () => { throw new Error("checksum mismatch"); }, quit: () => assert.fail("must not quit") } });
+    const handlers = createDesktopBridgeHandlers(deps, createAttachmentService({ dialog: null, window: null, userDataDir: temp.home }));
+    await callDesktopBridge(handlers, { method: "update.check", params: {} });
+    const result = await callDesktopBridge(handlers, { method: "update.install", params: {} }) as { state: unknown };
+    assert.deepEqual(result.state, { type: "available", version: "9.0.0", releaseUrl: "https://github.com/speardragon/herdr-bot/releases/tag/v9.0.0", installError: "checksum mismatch" });
+  } finally {
+    restore();
+    temp.cleanup();
+  }
+});
+
+test("update.install opens the release page when this build cannot update itself", async () => {
+  const temp = makeTempHome();
+  const restore = stubLatestRelease("v9.0.0");
+  try {
+    const opened: string[] = [];
+    const deps = fakeDeps(temp.home, { shell: { openExternal: async (url) => { opened.push(url); } }, updater: { target: async () => null, install: async () => assert.fail("must not install"), quit: () => {} } });
+    const handlers = createDesktopBridgeHandlers(deps, createAttachmentService({ dialog: null, window: null, userDataDir: temp.home }));
+    await callDesktopBridge(handlers, { method: "update.check", params: {} });
+    const result = await callDesktopBridge(handlers, { method: "update.install", params: {} }) as { state: { type: string } };
+    assert.equal(result.state.type, "available");
+    assert.deepEqual(opened, ["https://github.com/speardragon/herdr-bot/releases/tag/v9.0.0"]);
+  } finally {
+    restore();
+    temp.cleanup();
+  }
+});

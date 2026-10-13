@@ -80,17 +80,23 @@ bot 通过 `herdr-bot` CLI 发言。`say` 回复到调用它的聊天，`message
 
 **环境要求：** macOS、[herdr](https://herdr.dev) 0.9.0 或更高版本（`brew install herdr`），以及想用作 bot 的智能体 CLI（`claude`、`codex`、`grok` 等，并已登录）。
 
-### 下载应用
+### 安装应用
 
-从[最新版本](https://github.com/speardragon/herdr-bot/releases/latest)下载适合你的 Mac 的 DMG —— Apple 芯片选 `arm64`，Intel 选 `x64` —— 然后把 **herdr-bot** 拖进“应用程序”。
+```bash
+brew install --cask speardragon/tap/herdr-bot
+```
 
-应用目前还没有代码签名，首次打开会被 macOS 拦截。右键点击应用，选择 **打开** 并确认，或者运行：
+或者从[最新版本](https://github.com/speardragon/herdr-bot/releases/latest)下载适合你的 Mac 的 DMG —— Apple 芯片选 `arm64`，Intel 选 `x64` —— 然后把 **herdr-bot** 拖进“应用程序”。应用目前还没有代码签名，下载的副本首次打开会被 macOS 拦截：打开 **系统设置 → 隐私与安全性**，点击 **仍要打开**，或者运行：
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/herdr-bot.app
 ```
 
-有新版本时应用会提醒你。
+用 Homebrew 安装则不需要这一步。
+
+### 更新
+
+在菜单栏选择 **herdr-bot → Check for Updates…**（设置里的 **Check for updates** 也一样）。应用会下载新版本，用发布的校验和核对后重启到新版本。用 Homebrew 安装的话，`brew upgrade --cask herdr-bot` 也可以。
 
 ### 作为 herdr 插件安装
 

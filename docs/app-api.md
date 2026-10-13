@@ -259,7 +259,7 @@ window.herdrBot = {
     stage(filename, bytes), commit(paths), discard(path),
     resolveMedia(source), readText(path), readBytes(path, maxBytes), download(path, suggestedName),
   },
-  version: { get(), update: { getStatus(), check(), onStatusChanged(listener) } },
+  version: { get(), update: { getStatus(), check(), install(), onStatusChanged(listener) } },
   onboarding: { getSeen(), setSeen(seen) },
   pins: { get(), set(chatIds) },          // pinned-chat ids -- a desktop-local UI preference, not host state
 };
@@ -271,9 +271,15 @@ attachments handlers and `desktop/src/version-check.ts`'s pure version compariso
 
 Theme/locale/onboarding-seen/pinned-chat-ids persist via `desktop/src/settings-store.ts` (a flat JSON
 file at `<userData>/herdr-bot-desktop.json`). `update.check` does a live GitHub
-releases lookup (`speardragon/herdr-bot`); "Update Track" and "auto-update when idle" are permanently
-inert (no code-signing certificate makes a silent background install non-viable -- "Check for Updates"
-just compares versions and opens the release page for a manual download).
+releases lookup (`speardragon/herdr-bot`) and reports `available` when the latest tag is newer.
+`update.install` installs it in place (`desktop/src/app-update.ts`): it downloads the release's
+`herdr-bot-<version>-<arch>.zip`, checks it against `SHA256SUMS.txt`, unpacks it with `ditto`, and
+starts a detached script that swaps the bundle once the app has quit and opens the new one. The status
+moves through `downloading` (with `progress`, 0..1) to `restarting`; a failure returns to `available`
+with `installError`. There is no code-signing certificate, so Squirrel.Mac (Electron's own updater) is
+not an option; a build that cannot replace itself (a source or herdr-plugin run, or an `.app` in a
+folder it cannot write to) opens the release page instead. The app menu's "Check for Updates…"
+(`desktop/src/app-menu.ts`, `update-dialog.ts`) drives the same two handlers with native dialogs.
 
 The single-instance lock, userData pinning, window show/hide-on-close, and login-shell PATH merging in
 `desktop/src/main.ts` are independent of the UI<->host connection described here.
