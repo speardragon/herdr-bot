@@ -6,6 +6,27 @@ All notable changes to herdr-bot are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-21
+
+### Added
+
+- Antigravity CLI (`agy`) as an AI provider, with its models listed from `agy models`. Gemini 4 Argon
+  is always offered.
+- Claude Code bots can run on Fable.
+
+### Changed
+
+- Creating a bot always asks for its AI provider, model and reasoning effort (where the provider has
+  one). Nothing is picked for you any more, in the New Bot dialog, the quick "+" create, and
+  `herdr-bot bot create` (which now needs `--kind`, `--model` and `--reasoning`).
+- Antigravity CLI replaces Gemini CLI in the provider list. Bots already running on Gemini CLI keep
+  working.
+
+### Fixed
+
+- Creating a second bot whose name has no Latin letters (for example a Korean name) no longer fails
+  with `bot "bot" already exists`.
+
 ## [1.2.0] - 2026-10-13
 
 ### Added
@@ -70,7 +91,8 @@ First public release.
   releases.
 - herdr plugin manifest, so the app is listed in the herdr plugin index.
 
-[Unreleased]: https://github.com/speardragon/herdr-bot/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/speardragon/herdr-bot/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/speardragon/herdr-bot/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/speardragon/herdr-bot/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/speardragon/herdr-bot/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/speardragon/herdr-bot/releases/tag/v1.0.0
