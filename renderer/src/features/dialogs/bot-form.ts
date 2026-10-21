@@ -5,17 +5,33 @@
  * this module only encodes the inline, pre-submit rules the form already knows about client-side.
  */
 import type { PermissionMode, ReasoningEffort } from "../../data/types.ts";
+import { isSelectableProvider, providerSupportsModel, providerSupportsReasoning } from "./provider-catalog.ts";
 
-export interface BotFormState {
+/** A new bot's provider and launch options. `provider` is `""` until the user picks one; `model`/
+ * `reasoningEffort` stay `null` until picked -- none of them is ever prefilled with a default. */
+export interface LaunchChoice {
+  readonly provider: string;
+  readonly model: string | null;
+  readonly reasoningEffort: ReasoningEffort | null;
+}
+
+export const EMPTY_LAUNCH_CHOICE: LaunchChoice = { provider: "", model: null, reasoningEffort: null };
+
+/** True once the provider is picked, plus its model and reasoning effort wherever the provider supports them. */
+export function isLaunchChoiceComplete(choice: LaunchChoice): boolean {
+  if (!isSelectableProvider(choice.provider)) return false;
+  if (providerSupportsModel(choice.provider) && (choice.model == null || choice.model.length === 0)) return false;
+  if (providerSupportsReasoning(choice.provider) && choice.reasoningEffort == null) return false;
+  return true;
+}
+
+export interface BotFormState extends LaunchChoice {
   readonly name: string;
   readonly persona: string;
-  readonly provider: string;
   readonly cwd: string;
   /** `null` means "agent's default" -- the host resolves its own effective default permission mode
    * (and `bot.create` omits the field entirely) rather than this form pinning a concrete mode. */
   readonly permissionMode: PermissionMode | null;
-  readonly model: string | null;
-  readonly reasoningEffort: ReasoningEffort | null;
   /** Non-empty when "adopt a running agent" is selected -- launch fields (cwd/provider/model/reasoning)
    * are disabled and ignored in that mode, since adopting reuses the pane's own setup. */
   readonly adoptPaneId: string | null;
@@ -35,6 +51,8 @@ export interface BotFormValidation {
    * explicit `allowHomeCwd` confirmation -- the form should show the confirmation step instead of
    * submitting (docs/app-api.md: `bot.create` rejects with `home_cwd_requires_confirmation` otherwise). */
   readonly needsHomeConfirmation: boolean;
+  /** False until the provider/model/reasoning pickers are all filled in (always true when adopting). */
+  readonly launchComplete: boolean;
   readonly canSubmit: boolean;
 }
 
@@ -53,24 +71,25 @@ export function validateBotForm(state: BotFormState, cwdCheck: DirectoryCheck | 
   }
 
   const needsHomeConfirmation = !adopting && cwdError == null && (cwdCheck?.isHome ?? false) && !allowHomeCwd;
+  const launchComplete = adopting || isLaunchChoiceComplete(state);
 
   return {
     nameError,
     cwdError,
     needsHomeConfirmation,
-    canSubmit: nameError == null && cwdError == null && !needsHomeConfirmation,
+    launchComplete,
+    canSubmit: nameError == null && cwdError == null && !needsHomeConfirmation && launchComplete,
   };
 }
 
-export function emptyBotFormState(defaults: { readonly cwd: string; readonly provider: string; readonly permissionMode: PermissionMode | null }): BotFormState {
+/** Seeds the folder and permission mode from the defaults; the provider/model/reasoning start unpicked. */
+export function emptyBotFormState(defaults: { readonly cwd: string; readonly permissionMode: PermissionMode | null }): BotFormState {
   return {
     name: "",
     persona: "",
-    provider: defaults.provider,
+    ...EMPTY_LAUNCH_CHOICE,
     cwd: defaults.cwd,
     permissionMode: defaults.permissionMode,
-    model: null,
-    reasoningEffort: null,
     adoptPaneId: null,
   };
 }

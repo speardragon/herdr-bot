@@ -10,7 +10,7 @@
  * bodies here would add a lot of ceremony for code that exists only to feed a dev harness.
  */
 import { AppApiError } from "../data/types.ts";
-import type { AppApiEvent, AppApiEventType, AppApiTransport, AppSettings, ChatSummary, TranscriptEntry } from "../data/types.ts";
+import type { AppApiEvent, AppApiEventType, AppApiTransport, AppSettings, ChatSummary, ReasoningEffort, TranscriptEntry } from "../data/types.ts";
 import { DEMO_CHATS, DEMO_TRANSCRIPTS } from "./demo-data.ts";
 
 function clone<T>(value: T): T {
@@ -205,8 +205,8 @@ export function createFakeAppApi(): AppApiTransport {
       emit("chat.listChanged", [...chats.values()]);
       return { chat };
     },
-    "bot.quickCreate": (params: { requestId: string; name?: string; avatarColor?: string }) =>
-      methods["bot.create"]!({ name: params.name ?? "New Bot", id: `bot-${params.requestId}`, avatarColor: params.avatarColor }),
+    "bot.quickCreate": (params: { requestId: string; provider: string; model?: string; reasoningEffort?: ReasoningEffort; name?: string; avatarColor?: string }) =>
+      methods["bot.create"]!({ name: params.name ?? "New Bot", id: `bot-${params.requestId}`, provider: params.provider, model: params.model, reasoningEffort: params.reasoningEffort, avatarColor: params.avatarColor }),
     "bot.retrySetup": (params: { botId: string }) => ({ chat: requireChat(params.botId) }),
     "bot.updateLaunchSettings": (params) => {
       const chat = requireChat(params.botId);

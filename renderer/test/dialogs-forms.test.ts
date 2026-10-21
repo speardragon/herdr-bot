@@ -1,15 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { emptyBotFormState, validateBotForm } from "../src/features/dialogs/bot-form.ts";
+import { EMPTY_LAUNCH_CHOICE, emptyBotFormState, isLaunchChoiceComplete, validateBotForm } from "../src/features/dialogs/bot-form.ts";
 import type { BotFormState } from "../src/features/dialogs/bot-form.ts";
 import { canToggleMember, MAX_ROOM_MEMBERS, toggleMember, validateRoomForm } from "../src/features/dialogs/room-form.ts";
 import { resolveBotFormDefaults } from "../src/features/dialogs/quick-create-defaults.ts";
 import { diffLaunchSettings, launchSettingsFormFromFacts } from "../src/features/dialogs/launch-settings-diff.ts";
-import { findProvider, providerSupportsModel, providerSupportsReasoning, PROVIDERS } from "../src/features/dialogs/provider-catalog.ts";
+import { findProvider, isSelectableProvider, providerSupportsModel, providerSupportsReasoning, PROVIDERS } from "../src/features/dialogs/provider-catalog.ts";
 import type { BotFacts } from "../src/data/types.ts";
 
 function botForm(patch: Partial<BotFormState> = {}): BotFormState {
-  return { name: "Code Reviewer", persona: "", provider: "claude", cwd: "/Users/ray/work/shop", permissionMode: "ask", model: null, reasoningEffort: null, adoptPaneId: null, ...patch };
+  return { name: "Code Reviewer", persona: "", provider: "claude", cwd: "/Users/ray/work/shop", permissionMode: "ask", model: "opus", reasoningEffort: "high", adoptPaneId: null, ...patch };
 }
 
 // ---- provider-catalog ----
@@ -17,22 +17,31 @@ function botForm(patch: Partial<BotFormState> = {}): BotFormState {
 test("provider-catalog: exposes exactly the 5 curated providers", () => {
   assert.deepEqual(
     PROVIDERS.map((p) => p.id),
-    ["claude", "codex", "grok", "gemini", "opencode"],
+    ["claude", "codex", "grok", "agy", "opencode"],
   );
+});
+
+test("provider-catalog: Antigravity CLI (agy) replaces Gemini CLI in the picker; gemini bots keep their own descriptor", () => {
+  assert.equal(findProvider("agy").label, "Antigravity CLI");
+  assert.equal(isSelectableProvider("agy"), true);
+  assert.equal(isSelectableProvider("gemini"), false);
+  assert.equal(findProvider("gemini").id, "gemini");
+  assert.equal(providerSupportsReasoning("gemini"), false);
 });
 
 test("provider-catalog: model is meaningful for all 5, reasoning only for claude/codex/grok", () => {
   assert.equal(providerSupportsModel("claude"), true);
-  assert.equal(providerSupportsModel("gemini"), true);
+  assert.equal(providerSupportsModel("agy"), true);
   assert.equal(providerSupportsReasoning("claude"), true);
   assert.equal(providerSupportsReasoning("codex"), true);
   assert.equal(providerSupportsReasoning("grok"), true);
-  assert.equal(providerSupportsReasoning("gemini"), false);
+  assert.equal(providerSupportsReasoning("agy"), false);
   assert.equal(providerSupportsReasoning("opencode"), false);
 });
 
-test("provider-catalog: grok has no icon slug (falls back to a monogram)", () => {
+test("provider-catalog: grok and agy have no icon slug (fall back to a monogram)", () => {
   assert.equal(findProvider("grok").iconSlug, null);
+  assert.equal(findProvider("agy").iconSlug, null);
 });
 
 test("provider-catalog: coloured marks carry their brand colour, black marks follow the text colour", () => {
@@ -90,16 +99,37 @@ test("bot-form: adopting a running agent skips every cwd rule", () => {
   assert.equal(result.canSubmit, true);
 });
 
-test("bot-form: emptyBotFormState seeds launch fields from the resolved defaults", () => {
-  const state = emptyBotFormState({ cwd: "/Users/ray/work/shop", provider: "codex", permissionMode: "auto" });
+test("bot-form: emptyBotFormState seeds folder/permissions but leaves provider, model and reasoning unpicked", () => {
+  const state = emptyBotFormState({ cwd: "/Users/ray/work/shop", permissionMode: "auto" });
   assert.equal(state.name, "");
   assert.equal(state.cwd, "/Users/ray/work/shop");
-  assert.equal(state.provider, "codex");
   assert.equal(state.permissionMode, "auto");
+  assert.equal(state.provider, "");
+  assert.equal(state.model, null);
+  assert.equal(state.reasoningEffort, null);
+  assert.equal(validateBotForm({ ...state, name: "Reviewer" }, null, false).canSubmit, false);
+});
+
+test("bot-form: a new bot cannot be submitted until its provider, model and reasoning effort are picked", () => {
+  assert.equal(validateBotForm(botForm({ provider: "" }), null, false).canSubmit, false);
+  assert.equal(validateBotForm(botForm({ model: null }), null, false).canSubmit, false);
+  const noEffort = validateBotForm(botForm({ reasoningEffort: null }), null, false);
+  assert.equal(noEffort.launchComplete, false);
+  assert.equal(noEffort.canSubmit, false);
+  // agy/opencode have no reasoning picker, so a model alone completes them.
+  assert.equal(validateBotForm(botForm({ provider: "agy", model: "gemini-4-argon-high", reasoningEffort: null }), null, false).canSubmit, true);
+  // Adopting reuses the running agent's own setup.
+  assert.equal(validateBotForm(botForm({ ...EMPTY_LAUNCH_CHOICE, adoptPaneId: "w1:p1" }), null, false).canSubmit, true);
+});
+
+test("bot-form: isLaunchChoiceComplete rejects an unpicked or no-longer-offered provider", () => {
+  assert.equal(isLaunchChoiceComplete(EMPTY_LAUNCH_CHOICE), false);
+  assert.equal(isLaunchChoiceComplete({ provider: "gemini", model: "pro", reasoningEffort: null }), false);
+  assert.equal(isLaunchChoiceComplete({ provider: "claude", model: "fable", reasoningEffort: "max" }), true);
 });
 
 test("bot-form: emptyBotFormState accepts a null permissionMode default (agent's default)", () => {
-  const state = emptyBotFormState({ cwd: "/Users/ray/work/shop", provider: "codex", permissionMode: null });
+  const state = emptyBotFormState({ cwd: "/Users/ray/work/shop", permissionMode: null });
   assert.equal(state.permissionMode, null);
 });
 

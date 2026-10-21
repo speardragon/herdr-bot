@@ -41,6 +41,9 @@
 }
 
 .hb-quick-create-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-6);
   width: 100%;
   text-align: left;
 }

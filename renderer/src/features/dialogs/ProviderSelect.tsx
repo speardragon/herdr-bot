@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { Select } from "../../primitives/index.ts";
 import type { SelectOption } from "../../primitives/index.ts";
-import { findProvider, PROVIDERS } from "./provider-catalog.ts";
+import { isSelectableProvider, PROVIDERS } from "./provider-catalog.ts";
 import styles from "./ProviderSelect.module.css";
 
 const ICON_BASE = `${import.meta.env.BASE_URL}provider-icons/`;
@@ -25,15 +25,17 @@ const PROVIDER_OPTIONS: readonly SelectOption[] = PROVIDERS.map((provider) => ({
 }));
 
 export interface ProviderSelectProps {
+  /** `""` while nothing is picked yet -- shown as `placeholder`, never as a preselected provider. */
   readonly value: string;
   readonly onChange: (providerId: string) => void;
   readonly label?: string;
+  readonly placeholder?: string;
 }
 
 /** The AI provider picker: a small icon + label per option, a checkmark on the current
  * selection. A thin wrapper over the shared `Select` primitive (content-width panel, narrower than the
- * field) rather than its own popover. `findProvider` normalizes
- * an unrecognized `value` to the default provider for display. */
-export function ProviderSelect({ value, onChange, label }: ProviderSelectProps) {
-  return <Select label={label} value={findProvider(value).id} onChange={onChange} options={PROVIDER_OPTIONS} panelWidth="content" />;
+ * field) rather than its own popover. An unrecognized `value` shows as unselected, so a new bot always
+ * needs an explicit provider pick. */
+export function ProviderSelect({ value, onChange, label, placeholder }: ProviderSelectProps) {
+  return <Select label={label} value={isSelectableProvider(value) ? value : ""} placeholder={placeholder} onChange={onChange} options={PROVIDER_OPTIONS} panelWidth="content" />;
 }

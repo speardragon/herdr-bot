@@ -5,6 +5,8 @@
  * the async state machine lives in ../services/bot-onboarding-service.ts.
  */
 
+import type { ReasoningEffort } from "./launch-args.ts";
+
 export type OnboardingStage = "provisioning" | "briefing" | "greeting" | "ready" | "failed";
 export type OnboardingLocale = "ko" | "en";
 
@@ -18,6 +20,11 @@ export interface BotOnboarding {
 export interface QuickCreateRequest {
   readonly requestId: string;
   readonly locale: OnboardingLocale;
+  /** The provider (herdr agent kind) and launch options the user explicitly picked -- quick create no
+   * longer falls back to the default provider or the CLI's own default model. */
+  readonly kind: string;
+  readonly model: string | null;
+  readonly reasoningEffort: ReasoningEffort | null;
   /** Trimmed, non-empty name typed into the "+" combobox before an untitled create; omitted (or
    * blank) falls back to a plain "새 Bot"/"New Bot" the user renames later. */
   readonly name?: string;

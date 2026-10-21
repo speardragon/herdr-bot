@@ -1,7 +1,7 @@
 import type { Host } from "../host.ts";
 import type { ReasoningEffort } from "../bots/launch-args.ts";
 import { entryText, projectAuthor } from "../model/entries.ts";
-import { RosterError, type RosterErrorCode } from "../services/roster-service.ts";
+import { RosterError, requireNewBotLaunch, type RosterErrorCode } from "../services/roster-service.ts";
 import type { AgentSummary } from "../model/summaries.ts";
 import type { PermissionMode } from "../store/profile-store.ts";
 import type { ControlHandler } from "./server.ts";
@@ -86,6 +86,11 @@ function ownProfile(host: Host, params: Params, update = false): unknown {
 }
 
 async function botCreate(host: Host, params: Params): Promise<unknown> {
+  requireNewBotLaunch({
+    kind: optionalString(params, "kind"),
+    model: params.model == null ? null : requireString(params, "model"),
+    reasoningEffort: params.reasoningEffort == null ? null : requireString(params, "reasoningEffort") as ReasoningEffort,
+  });
   const profile = await host.roster.createBot({
     ...(optionalString(params, "id") == null ? {} : { id: optionalString(params, "id")! }),
     name: requireString(params, "name"),

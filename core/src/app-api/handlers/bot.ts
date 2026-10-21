@@ -6,6 +6,7 @@ import { isSupportedKind } from "../../bots/launch-args.ts";
 import { listBotModels } from "../../bots/model-catalog.ts";
 import { isValidRequestId } from "../../bots/onboarding.ts";
 import type { PermissionMode } from "../../store/profile-store.ts";
+import { requireNewBotLaunch } from "../../services/roster-service.ts";
 import { AppApiError } from "../errors.ts";
 import { toAdoptableAgent, toChatSummary } from "../mapping.ts";
 import type { AdoptableAgent, BotDefaults, ChatSummary, ModelCatalogResult, ReasoningEffort } from "../types.ts";
@@ -34,6 +35,9 @@ function permissionModePatch(raw: Record<string, unknown>): { permissionMode?: P
 
 export async function createBot(host: Host, raw: unknown): Promise<{ readonly chat: ChatSummary }> {
   const params = record(raw);
+  if (optStr(params, "adoptPaneId") == null) {
+    requireNewBotLaunch({ kind: optStr(params, "provider"), model: optStr(params, "model"), reasoningEffort: optStr(params, "reasoningEffort") as ReasoningEffort | undefined });
+  }
   const profile = await host.roster.createBot({
     name: str(params, "name"),
     ...(optStr(params, "id") == null ? {} : { id: optStr(params, "id")! }),
@@ -59,9 +63,11 @@ export function quickCreateBot(host: Host, raw: unknown): { readonly chat: ChatS
   if (params.locale !== "ko" && params.locale !== "en") throw new AppApiError("invalid_args", 'locale must be "ko" or "en"');
   const name = optStr(params, "name");
   const avatarColor = optStr(params, "avatarColor");
+  const launch = requireNewBotLaunch({ kind: optStr(params, "provider"), model: optStr(params, "model"), reasoningEffort: optStr(params, "reasoningEffort") as ReasoningEffort | undefined });
   const profile = host.onboarding.create({
     requestId,
     locale: params.locale,
+    ...launch,
     ...(name == null ? {} : { name }),
     ...(avatarColor == null ? {} : { avatarColor }),
   });

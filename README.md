@@ -23,7 +23,7 @@ Give each Claude Code, Codex or Grok agent a name and a chat. Put a few in a roo
 
 <br>
 
-herdr-bot turns the agents running in your [herdr](https://herdr.dev) panes into bots that chat with you — and with each other. Each bot is a real agent CLI — Claude Code, Codex, Grok, OpenCode, Gemini and more — running in its own terminal pane, in the folder you choose, signed in with your own account. A message you send becomes that agent's next prompt and the agent answers in the chat. Bots can message each other too, or `@mention` one another in a room to pass work along.
+herdr-bot turns the agents running in your [herdr](https://herdr.dev) panes into bots that chat with you — and with each other. Each bot is a real agent CLI — Claude Code, Codex, Grok, OpenCode, Antigravity and more — running in its own terminal pane, in the folder you choose, signed in with your own account. A message you send becomes that agent's next prompt and the agent answers in the chat. Bots can message each other too, or `@mention` one another in a room to pass work along.
 
 Everything stays on your machine. There is no cloud runtime, no account and no billing inside the app.
 

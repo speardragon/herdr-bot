@@ -8,7 +8,8 @@ import { isTerminal, type TerminalChoice } from "../terminal/open-terminal.ts";
  * New Bot dialog -- a default working folder (so neither path silently spawns an agent in the user's
  * home directory), a default AI provider, and a default permission mode. All three
  * are optional: `null` means "no explicit override", and callers (RosterService) fall back further
- * (env override, then the most recently used bot's cwd, then nothing).
+ * (env override, then the most recently used bot's cwd, then nothing). `defaultProvider` no longer picks
+ * a new bot's provider -- every create states one explicitly (see `requireNewBotLaunch`).
  */
 export interface AppSettings {
   readonly defaultWorkingFolder: string | null;

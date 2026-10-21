@@ -107,6 +107,6 @@ the call sites.
 
 `renderer/test/dialogs-forms.test.ts` -- pure logic, zero DOM: `provider-catalog.ts` (the 5 curated
 providers + model/reasoning capability flags), `bot-form.ts` (name/cwd/home-confirmation validation,
-adopt-mode bypass), `room-form.ts` (member cap toggle/validate), `quick-create-defaults.ts` (Settings
+the required provider/model/reasoning launch choice, adopt-mode bypass), `room-form.ts` (member cap toggle/validate), `quick-create-defaults.ts` (Settings
 overlay on host defaults), `launch-settings-diff.ts` (touched-fields-only diffing, tri-state
 model/reasoning clearing). 21 tests, all passing alongside the existing 407.

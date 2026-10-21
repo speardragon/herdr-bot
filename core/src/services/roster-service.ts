@@ -1,14 +1,14 @@
 import { basename } from "node:path";
 import type { HostConfig } from "../config.ts";
 import { buildIdentityBrief } from "../bots/prompts.ts";
-import { REASONING_EFFORTS, isSupportedKind, launchArgsFor, providerLaunchCapabilities, type AgentLaunchOptions, type ReasoningEffort } from "../bots/launch-args.ts";
+import { REASONING_EFFORTS, isSupportedKind, launchArgsFor, missingLaunchChoices, providerLaunchCapabilities, type AgentLaunchOptions, type ReasoningEffort } from "../bots/launch-args.ts";
 import { MAX_ROOM_MEMBERS, type RoomMember } from "../rooms/index.ts";
 import type { HerdrCli } from "../herdr/cli.ts";
 import type { StatusMirror } from "../herdr/status-mirror.ts";
 import { HerdrError, type HerdrAgentInfo } from "../herdr/types.ts";
 import { log } from "../log.ts";
 import type { BotSystemEvent } from "../model/bot-system-events.ts";
-import { isValidBotId, makeRoomId, suggestBotId } from "../model/ids.ts";
+import { isValidBotId, makeRoomId, randomSuffix, suggestBotId } from "../model/ids.ts";
 import { randomAvatarColor } from "../model/avatar-colors.ts";
 import type { BotProfile, PermissionMode, ProfileStore } from "../store/profile-store.ts";
 import type { RoomConfig, RoomStore } from "../store/room-store.ts";
@@ -111,6 +111,20 @@ function normalizeLaunchOptions(kind: string, args: Pick<CreateBotArgs, "model" 
   return { model, reasoningEffort };
 }
 
+/**
+ * The launch choice every newly spawned bot must state explicitly -- its provider, plus its model and
+ * reasoning effort wherever that provider supports them. Checked at the app/CLI boundary (`bot.create`,
+ * `bot.quickCreate`, the control socket's `bot.create`) so no create silently falls back to a default;
+ * adopting an existing pane is exempt, since that agent is already running with its own setup.
+ */
+export function requireNewBotLaunch(choice: Pick<CreateBotArgs, "kind" | "model" | "reasoningEffort">): AgentLaunchOptions & { readonly kind: string } {
+  const missing = missingLaunchChoices(choice);
+  if (missing.length > 0) throw new RosterError("invalid_launch_options", `a new bot needs an explicit ${missing.join(" and ")}`);
+  const kind = choice.kind!.trim();
+  if (!isSupportedKind(kind)) throw new RosterError("unsupported_kind", `herdr does not support agent kind "${kind}"`);
+  return { kind, ...normalizeLaunchOptions(kind, choice) };
+}
+
 export class RosterService {
   readonly #deps: RosterServiceDeps;
   readonly #workspaces: WorkspaceRegistry;
@@ -135,7 +149,7 @@ export class RosterService {
    * still receives ordinary turn prompts whether or not the brief itself was confirmed.
    */
   async createBot(args: CreateBotArgs): Promise<BotProfile> {
-    const id = args.id ?? suggestBotId(args.name);
+    const id = args.id ?? this.#freeBotId(args.name);
     if (!isValidBotId(id)) throw new RosterError("invalid_bot_id", `"${id}" must match ^[a-z][a-z0-9_-]{0,31}$ and not start with "room-"`);
     if (this.#deps.profiles.get(id) != null) throw new RosterError("bot_exists", `bot "${id}" already exists`);
     const profile = args.adoptPaneId == null ? await this.#spawn(id, args) : await this.#adopt(id, args, args.adoptPaneId);
@@ -143,6 +157,20 @@ export class RosterService {
     await this.#deps.mirror.refresh();
     this.#trackBrief(profile.id, this.#sendBrief(profile));
     return profile;
+  }
+
+  /**
+   * An unused id derived from the display name. Names with no ASCII letters (e.g. Korean) all slug to
+   * the same "bot", so a taken slug gets a random suffix instead of failing the create with `bot_exists`.
+   */
+  #freeBotId(name: string): string {
+    const base = suggestBotId(name);
+    if (this.#deps.profiles.get(base) == null) return base;
+    for (;;) {
+      const suffix = randomSuffix();
+      const candidate = `${base.slice(0, 31 - suffix.length).replace(/-+$/g, "")}-${suffix}`;
+      if (this.#deps.profiles.get(candidate) == null) return candidate;
+    }
   }
 
   /** Awaits the in-flight identity-brief send for a bot (tests use this before asserting on it; normal

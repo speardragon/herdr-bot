@@ -8,7 +8,7 @@ import { StatusMirror } from "../src/herdr/status-mirror.ts";
 import { setLogSink } from "../src/log.ts";
 import { ProfileStore } from "../src/store/profile-store.ts";
 import { RoomStore } from "../src/store/room-store.ts";
-import { RosterError, RosterService } from "../src/services/roster-service.ts";
+import { RosterError, RosterService, requireNewBotLaunch } from "../src/services/roster-service.ts";
 import { HerdrError } from "../src/herdr/types.ts";
 import { installFakeHerdr, type FakeHerdrState } from "./helpers/fake-herdr-state.ts";
 import { makeTempHome } from "./helpers/temp-home.ts";
@@ -279,6 +279,33 @@ test("createBot rejects bad ids, duplicates, unsupported kinds", async () => {
   } finally {
     await h.cleanup();
   }
+});
+
+test("createBot without an explicit id gives every Korean-named bot its own id instead of failing with bot_exists", async () => {
+  const h = harness();
+  try {
+    const first = await h.service.createBot({ name: "클로드", kind: "claude", model: "opus", reasoningEffort: "high" });
+    const second = await h.service.createBot({ name: "코덱스", kind: "codex", model: "gpt-5.4", reasoningEffort: "high" });
+    assert.equal(first.id, "bot");
+    assert.match(second.id, /^bot-[0-9a-f]{4}$/);
+    assert.equal(second.kind, "codex");
+    assert.deepEqual(h.profiles.list().map((bot) => bot.id).sort(), [first.id, second.id].sort());
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("requireNewBotLaunch demands a provider, plus a model and reasoning effort wherever the provider supports them", () => {
+  const rejects = (choice: Parameters<typeof requireNewBotLaunch>[0], code: string) =>
+    assert.throws(() => requireNewBotLaunch(choice), (e: unknown) => e instanceof RosterError && e.code === code);
+  rejects({}, "invalid_launch_options");
+  rejects({ kind: "claude" }, "invalid_launch_options");
+  rejects({ kind: "claude", model: "fable" }, "invalid_launch_options");
+  rejects({ kind: "agy" }, "invalid_launch_options");
+  rejects({ kind: "agy", model: "gemini-4-argon-high", reasoningEffort: "high" }, "invalid_launch_options");
+  rejects({ kind: "notreal" }, "unsupported_kind");
+  assert.deepEqual(requireNewBotLaunch({ kind: "claude", model: "fable", reasoningEffort: "max" }), { kind: "claude", model: "fable", reasoningEffort: "max" });
+  assert.deepEqual(requireNewBotLaunch({ kind: "agy", model: "gemini-4-argon-high" }), { kind: "agy", model: "gemini-4-argon-high", reasoningEffort: null });
 });
 
 test("a bot blocked during startup is saved with a setup notice", async () => {

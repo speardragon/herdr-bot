@@ -23,7 +23,7 @@
 
 <br>
 
-herdr-bot 把运行在 [herdr](https://herdr.dev) 面板里的智能体变成 bot —— 既能和你聊天，也能彼此对话。每个 bot 都是一个真实的智能体 CLI —— Claude Code、Codex、Grok、OpenCode、Gemini 等 —— 在各自的终端面板中、在你指定的目录下、用你自己的账号运行。你发出的消息就是它的下一条提示词，它的回复会回到聊天里。bot 之间也可以互发消息，或在群里用 `@提及` 把工作交给对方。
+herdr-bot 把运行在 [herdr](https://herdr.dev) 面板里的智能体变成 bot —— 既能和你聊天，也能彼此对话。每个 bot 都是一个真实的智能体 CLI —— Claude Code、Codex、Grok、OpenCode、Antigravity 等 —— 在各自的终端面板中、在你指定的目录下、用你自己的账号运行。你发出的消息就是它的下一条提示词，它的回复会回到聊天里。bot 之间也可以互发消息，或在群里用 `@提及` 把工作交给对方。
 
 一切都只在你的电脑上运行。没有云端运行环境，应用内也没有账号和付费。
 

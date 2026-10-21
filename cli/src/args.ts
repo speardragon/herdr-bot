@@ -1,4 +1,4 @@
-import { REASONING_EFFORTS, type ReasoningEffort } from "../../core/src/bots/launch-args.ts";
+import { REASONING_EFFORTS, missingLaunchChoices, type ReasoningEffort } from "../../core/src/bots/launch-args.ts";
 
 export type CliOutput = "json" | "transcript";
 
@@ -10,6 +10,8 @@ export type CliCommand =
 export type CliParse = CliCommand | { readonly error: string };
 
 const USAGE = "usage: herdr-bot <say|message|pass|read|rooms|whoami|send|bot|room|status|serve|install-shim> ...\nexample: herdr-bot bot create reviewer --cwd /work/repo --kind codex --model gpt-5.4 --reasoning high";
+
+const LAUNCH_CHOICE_FLAGS: Readonly<Record<string, string>> = { provider: "--kind", model: "--model", reasoningEffort: "--reasoning" };
 
 function parseReasoningEffort(value: string): ReasoningEffort | null {
   return REASONING_EFFORTS.includes(value as ReasoningEffort) ? value as ReasoningEffort : null;
@@ -49,6 +51,8 @@ function parseBot(argv: readonly string[]): CliParse {
       if (id == null) return { error: "bot create needs <id>" };
       if ("reasoning" in options && parseReasoningEffort(options.reasoning!) == null) return { error: `--reasoning must be one of: ${REASONING_EFFORTS.join(", ")}` };
       if ("model" in options && (options.model!.trim().length === 0 || options.model!.startsWith("--"))) return { error: "--model needs a non-empty value" };
+      const missing = missingLaunchChoices({ kind: options.kind, model: options.model, reasoningEffort: options.reasoning });
+      if (missing.length > 0) return { error: `bot create needs ${missing.map((choice) => LAUNCH_CHOICE_FLAGS[choice]).join(" and ")}` };
       return control("bot.create", withOptional({ id, name: options.name ?? id }, options, { kind: "kind", cwd: "cwd", permission: "permissionMode", description: "description", model: "model", reasoning: "reasoningEffort" }));
     }
     case "adopt": {

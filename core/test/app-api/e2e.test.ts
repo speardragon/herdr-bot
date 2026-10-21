@@ -32,7 +32,7 @@ test("app-api end to end: create bot, create room, send a message, receive event
 
   try {
     // Create a bot.
-    const bot = await client.call("bot.create", { name: "Reviewer", id: "reviewer", provider: "claude", cwd: "/tmp/repo", permissionMode: "ask" });
+    const bot = await client.call("bot.create", { name: "Reviewer", id: "reviewer", provider: "claude", model: "opus", reasoningEffort: "high", cwd: "/tmp/repo", permissionMode: "ask" });
     assert.equal(bot.chat.id, "reviewer");
     assert.equal(bot.chat.kind, "bot");
     // Let the background identity-brief send finish before anything else touches this bot's pane, so
@@ -63,7 +63,7 @@ test("app-api end to end: create bot, create room, send a message, receive event
     // turn on it. Reading the blocked screen is itself a second async step after the status flips to
     // "blocked" (StatusMirror's own onChange fan-out), so poll a couple of refreshes rather than assume
     // one is always enough under load.
-    const approverBot = await client.call("bot.create", { name: "Approver", id: "approver", provider: "claude", cwd: "/tmp/repo" });
+    const approverBot = await client.call("bot.create", { name: "Approver", id: "approver", provider: "claude", model: "opus", reasoningEffort: "high", cwd: "/tmp/repo" });
     await host.roster.briefSettled(approverBot.chat.id);
     const state = fake.readState();
     fake.writeState({ ...state, agents: state.agents.map((a) => (a.name === "approver" ? { ...a, agent_status: "blocked" } : a)), screens: { approver: ASK_SINGLE_SCREEN } });

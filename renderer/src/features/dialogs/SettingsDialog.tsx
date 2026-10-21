@@ -7,6 +7,7 @@ import type { Terminal } from "../../data/types.ts";
 import { useT } from "../../i18n/TranslationProvider.tsx";
 import { Button, Select } from "../../primitives/index.ts";
 import { DirectoryField } from "./DirectoryField.tsx";
+import { PROVIDERS } from "./provider-catalog.ts";
 import styles from "./SettingsDialog.module.css";
 
 /** The Settings dialog: Language, Appearance, Defaults, and app version + "Check for updates" (there's
@@ -80,11 +81,7 @@ export function SettingsDialog() {
         onChange={(value) => void update({ defaultProvider: value.length > 0 ? value : null })}
         options={[
           { value: "", label: t("dialogs.new.model.default") },
-          { value: "claude", label: "Claude Code" },
-          { value: "codex", label: "Codex" },
-          { value: "grok", label: "Grok CLI" },
-          { value: "gemini", label: "Gemini CLI" },
-          { value: "opencode", label: "OpenCode" },
+          ...PROVIDERS.map((provider) => ({ value: provider.id, label: provider.label })),
         ]}
       />
       <Select

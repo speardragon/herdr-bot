@@ -25,6 +25,7 @@ const MAX_BUFFER = 4 * 1024 * 1024;
 // itself resolves to its current latest build. If a real list command is ever confirmed for either,
 // it should be queried in `queryProvider` below in preference to this hardcoded table.
 const CLAUDE_ALIASES: readonly ModelEntry[] = [
+  { id: "fable", label: "fable" },
   { id: "opus", label: "opus" },
   { id: "sonnet", label: "sonnet" },
   { id: "haiku", label: "haiku" },
@@ -67,6 +68,22 @@ export function parseGrokModelsOutput(stdout: string): ModelEntry[] {
     const match = /^\s*[*-]\s+(\S+)/.exec(rawLine);
     const id = match?.[1];
     if (id != null) entries.push({ id, label: id });
+  }
+  return dedupById(entries);
+}
+
+/**
+ * `agy models` prints one `id<TAB>display name` row per model, e.g.:
+ *   Fetching available models...
+ *   gemini-4-argon-medium	Gemini 4 Argon (Medium)
+ * Lines without a tab (the progress banner) are skipped.
+ */
+export function parseAgyModelsOutput(stdout: string): ModelEntry[] {
+  const entries: ModelEntry[] = [];
+  for (const rawLine of stdout.split("\n")) {
+    const [id, label] = rawLine.split("\t").map((part) => part.trim());
+    if (id == null || label == null || id.length === 0) continue;
+    entries.push({ id, label: label.length > 0 ? label : id });
   }
   return dedupById(entries);
 }
@@ -361,7 +378,8 @@ async function queryOneShotList(
   if (outcome.code !== 0) return fallbackOrUnavailable(kind, outcome.stderr.trim() || `${command} ${args.join(" ")} exited with ${outcome.code}`);
   const models = parse(outcome.stdout);
   if (models.length === 0) return fallbackOrUnavailable(kind, `${command} ${args.join(" ")} returned no models`);
-  return { models, source: "installed-cli" };
+  // Pinned user choices stay listed even when the installed CLI omits them.
+  return { models: dedupById([...userFallbackModels(kind), ...models]), source: "installed-cli" };
 }
 
 async function queryCodex(deps: ModelCatalogDeps, getSpawnEnv: SpawnEnvGetter): Promise<ModelCatalogResult> {
@@ -380,13 +398,15 @@ function aliasResult(kind: string, aliases: readonly ModelEntry[]): ModelCatalog
   return { models: dedupById([...aliases, ...userFallbackModels(kind)]), source: "latest-alias" };
 }
 
-/** `getSpawnEnv` is only consulted by the branches that actually spawn a process (grok/opencode/
+/** `getSpawnEnv` is only consulted by the branches that actually spawn a process (grok/agy/opencode/
  * codex) -- claude/gemini never spawn anything, so they must never pay for (or trigger) the login-
  * shell PATH probe. */
 async function queryProvider(kind: string, deps: ModelCatalogDeps, getSpawnEnv: SpawnEnvGetter): Promise<ModelCatalogResult> {
   switch (kind) {
     case "grok":
       return queryOneShotList("grok", "grok", ["models"], parseGrokModelsOutput, deps, getSpawnEnv);
+    case "agy":
+      return queryOneShotList("agy", "agy", ["models"], parseAgyModelsOutput, deps, getSpawnEnv);
     case "opencode":
       return queryOneShotList("opencode", "opencode", ["models"], parseOpencodeModelsOutput, deps, getSpawnEnv);
     case "codex":

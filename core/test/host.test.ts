@@ -18,8 +18,8 @@ test("host serves the control protocol end to end", async () => {
   await host.start();
   const sock = config.controlSocketPath;
   try {
-    await controlRequest(sock, "bot.create", { id: "a", name: "A" });
-    await controlRequest(sock, "bot.create", { id: "b", name: "B", kind: "codex", permissionMode: "auto" });
+    await controlRequest(sock, "bot.create", { kind: "claude", model: "opus", reasoningEffort: "high", id: "a", name: "A" });
+    await controlRequest(sock, "bot.create", { id: "b", name: "B", kind: "codex", model: "gpt-5.4", reasoningEffort: "high", permissionMode: "auto" });
     const room = (await controlRequest(sock, "room.create", { name: "Auth", memberIds: ["a", "b"] })) as { id: string };
     const sent = (await controlRequest(sock, "send", { chatId: room.id, text: "hello team" })) as { entryId: string };
     assert.equal(sent.entryId, "e1");
@@ -57,7 +57,7 @@ test("deleting and recreating a bot with the same id starts with an empty transc
   await host.start();
   const sock = config.controlSocketPath;
   try {
-    await controlRequest(sock, "bot.create", { id: "reviewer", name: "Reviewer" });
+    await controlRequest(sock, "bot.create", { kind: "claude", model: "opus", reasoningEffort: "high", id: "reviewer", name: "Reviewer" });
     await controlRequest(sock, "send", { chatId: "reviewer", text: "hello" });
     await new Promise((resolve) => setTimeout(resolve, 1_500));
     const before = (await controlRequest(sock, "read", { chatId: "reviewer" })) as { entries: unknown[] };
@@ -66,7 +66,7 @@ test("deleting and recreating a bot with the same id starts with an empty transc
     assert.equal(beforeAgents.agents.find((a) => a.id === "reviewer")?.hasUnread, true);
 
     await controlRequest(sock, "bot.delete", { id: "reviewer" });
-    await controlRequest(sock, "bot.create", { id: "reviewer", name: "Reviewer Again" });
+    await controlRequest(sock, "bot.create", { kind: "claude", model: "opus", reasoningEffort: "high", id: "reviewer", name: "Reviewer Again" });
 
     const after = (await controlRequest(sock, "read", { chatId: "reviewer" })) as { entries: unknown[] };
     assert.deepEqual(after.entries, []);
@@ -91,7 +91,7 @@ test("bot.create maps a failing agentStart to herdr_error, and a duplicate id to
   try {
     setLogSink(() => undefined);
     await assert.rejects(
-      controlRequest(config.controlSocketPath, "bot.create", { id: "boom", name: "Boom" }),
+      controlRequest(config.controlSocketPath, "bot.create", { kind: "claude", model: "opus", reasoningEffort: "high", id: "boom", name: "Boom" }),
       (e: unknown) => e instanceof ControlError && e.code === "herdr_error",
     );
   } finally {
@@ -102,9 +102,9 @@ test("bot.create maps a failing agentStart to herdr_error, and a duplicate id to
   const workingHost = createHost(config, { cli: baseCli, socketPath: null, ensureSession: null });
   await workingHost.start();
   try {
-    await controlRequest(config.controlSocketPath, "bot.create", { id: "a", name: "A" });
+    await controlRequest(config.controlSocketPath, "bot.create", { kind: "claude", model: "opus", reasoningEffort: "high", id: "a", name: "A" });
     await assert.rejects(
-      controlRequest(config.controlSocketPath, "bot.create", { id: "a", name: "A again" }),
+      controlRequest(config.controlSocketPath, "bot.create", { kind: "claude", model: "opus", reasoningEffort: "high", id: "a", name: "A again" }),
       (e: unknown) => e instanceof ControlError && e.code === "invalid_params",
     );
   } finally {

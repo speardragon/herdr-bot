@@ -48,7 +48,7 @@ async function expectError(promise: Promise<unknown>, code: string): Promise<voi
 test("bot.create / room.create / chat.list / chat.updateProfile / chat.delete round-trip", async () => {
   const h = await harness();
   try {
-    const bot = await h.call("bot.create", { name: "Reviewer", id: "reviewer", provider: "claude", permissionMode: "ask" });
+    const bot = await h.call("bot.create", { name: "Reviewer", id: "reviewer", provider: "claude", model: "opus", reasoningEffort: "high", permissionMode: "ask" });
     assert.equal(bot.chat.id, "reviewer");
     assert.equal(bot.chat.kind, "bot");
 
@@ -85,6 +85,8 @@ test("bot.create passes model/reasoningEffort to the launched agent and rejects 
     assert.deepEqual(launch?.slice(-4), ["--model", "gpt-5.4", "--config", 'model_reasoning_effort="high"']);
 
     await expectError(h.call("bot.create", { name: "Unsupported", id: "nope", provider: "not-a-provider" }), "unsupported_kind");
+    await expectError(h.call("bot.create", { name: "No provider", id: "nope" }), "invalid_launch_options");
+    await expectError(h.call("bot.create", { name: "No effort", id: "nope", provider: "claude", model: "fable" }), "invalid_launch_options");
   } finally {
     await h.cleanup();
   }
@@ -93,7 +95,7 @@ test("bot.create passes model/reasoningEffort to the launched agent and rejects 
 test("chat.updateProfile persists avatarShape/avatarColor, and \"\" resets them to null", async () => {
   const h = await harness();
   try {
-    await h.call("bot.create", { name: "Reviewer", id: "reviewer" });
+    await h.call("bot.create", { provider: "claude", model: "opus", reasoningEffort: "high", name: "Reviewer", id: "reviewer" });
     const colored = await h.call("chat.updateProfile", { chatId: "reviewer", avatarShape: "circle", avatarColor: "blue" });
     assert.equal(colored.avatarShape, "circle");
     assert.equal(colored.avatarColor, "blue");
@@ -108,7 +110,7 @@ test("chat.updateProfile persists avatarShape/avatarColor, and \"\" resets them 
 test("room.create is idempotent on a retried requestId and rejects a not-ready member", async () => {
   const h = await harness();
   try {
-    await h.call("bot.create", { name: "Reviewer", id: "reviewer" });
+    await h.call("bot.create", { provider: "claude", model: "opus", reasoningEffort: "high", name: "Reviewer", id: "reviewer" });
     const requestId = "11111111-1111-1111-1111-111111111111";
     const first = await h.call("room.create", { name: "Auth", memberIds: ["reviewer"], requestId });
     const retry = await h.call("room.create", { name: "Auth (retry copy)", memberIds: ["reviewer"], requestId });
@@ -123,7 +125,7 @@ test("room.create is idempotent on a retried requestId and rejects a not-ready m
 test("message.send + transcript.page round-trip; paging never marks read, chat.markRead is the only ack", async () => {
   const h = await harness();
   try {
-    await h.call("bot.create", { name: "Reviewer", id: "reviewer" });
+    await h.call("bot.create", { provider: "claude", model: "opus", reasoningEffort: "high", name: "Reviewer", id: "reviewer" });
     const sent = await h.call("message.send", { chatId: "reviewer", text: "hello team" });
     assert.ok(sent.entryId.length > 0);
 
@@ -143,9 +145,14 @@ test("bot.quickCreate reserves instantly and bot.retrySetup reuses the same prof
   const h = await harness();
   try {
     const requestId = "22222222-2222-2222-2222-222222222222";
-    const created = await h.call("bot.quickCreate", { requestId, locale: "en", name: "Nova" });
+    await expectError(h.call("bot.quickCreate", { requestId, locale: "en", name: "Nova" } as never), "invalid_launch_options");
+    await expectError(h.call("bot.quickCreate", { requestId, locale: "en", provider: "codex", model: "gpt-5.4", name: "Nova" }), "invalid_launch_options");
+    const created = await h.call("bot.quickCreate", { requestId, locale: "en", provider: "codex", model: "gpt-5.4", reasoningEffort: "high", name: "Nova" });
     assert.equal(created.chat.name, "Nova");
     assert.equal(created.chat.bot.onboarding?.stage, "provisioning");
+    assert.equal(created.chat.bot.provider, "codex");
+    assert.equal(created.chat.bot.model, "gpt-5.4");
+    assert.equal(created.chat.bot.reasoningEffort, "high");
     // Let the background spawn/brief/greeting provision finish before cleanup deletes the temp home.
     await h.host.onboarding.settled(created.chat.id);
   } finally {
@@ -170,8 +177,8 @@ test("settings.get/settings.update round-trip and reject an unsupported provider
 test("bot.create rejects a cwd that is exactly the home directory unless allowHomeCwd is set", async () => {
   const h = await harness();
   try {
-    await expectError(h.call("bot.create", { name: "Reviewer", id: "reviewer", cwd: homedir() }), "home_cwd_requires_confirmation");
-    const bot = await h.call("bot.create", { name: "Reviewer", id: "reviewer", cwd: homedir(), allowHomeCwd: true });
+    await expectError(h.call("bot.create", { provider: "claude", model: "opus", reasoningEffort: "high", name: "Reviewer", id: "reviewer", cwd: homedir() }), "home_cwd_requires_confirmation");
+    const bot = await h.call("bot.create", { provider: "claude", model: "opus", reasoningEffort: "high", name: "Reviewer", id: "reviewer", cwd: homedir(), allowHomeCwd: true });
     assert.equal(bot.chat.bot.cwd, homedir());
   } finally {
     await h.cleanup();
@@ -192,7 +199,7 @@ test("directory.list resolves relative to the host and flags the home directory"
 test("message.search finds a message body, not just a chat name", async () => {
   const h = await harness();
   try {
-    await h.call("bot.create", { name: "Reviewer", id: "reviewer" });
+    await h.call("bot.create", { provider: "claude", model: "opus", reasoningEffort: "high", name: "Reviewer", id: "reviewer" });
     await h.call("message.send", { chatId: "reviewer", text: "please check the auth flow" });
     const hits = await h.call("message.search", { query: "auth flow" });
     assert.equal(hits.length, 1);
@@ -216,7 +223,7 @@ test("bot.listModels forwards the provider to the model catalog", async () => {
 test("bot.updateLaunchSettings relaunches the bot and rejects a home-directory cwd without allowHomeCwd", async () => {
   const h = await harness();
   try {
-    await h.call("bot.create", { name: "Reviewer", id: "reviewer", cwd: "/tmp/repo" });
+    await h.call("bot.create", { provider: "claude", model: "opus", reasoningEffort: "high", name: "Reviewer", id: "reviewer", cwd: "/tmp/repo" });
     const updated = await h.call("bot.updateLaunchSettings", { botId: "reviewer", model: "opus" });
     assert.equal(updated.chat.bot.model, "opus");
     await expectError(h.call("bot.updateLaunchSettings", { botId: "reviewer", cwd: homedir() }), "home_cwd_requires_confirmation");
@@ -228,7 +235,7 @@ test("bot.updateLaunchSettings relaunches the bot and rejects a home-directory c
 test("bot.updateLaunchSettings: an explicit permissionMode null resets to the host's effective default; an omitted key keeps the bot's own pinned mode (\"agent's default\" over the wire)", async () => {
   const h = await harness();
   try {
-    await h.call("bot.create", { name: "Reviewer", id: "reviewer", cwd: "/tmp/repo", permissionMode: "auto" });
+    await h.call("bot.create", { provider: "claude", model: "opus", reasoningEffort: "high", name: "Reviewer", id: "reviewer", cwd: "/tmp/repo", permissionMode: "auto" });
     const untouched = await h.call("bot.updateLaunchSettings", { botId: "reviewer", model: "opus" });
     assert.equal(untouched.chat.bot.permissionMode, "auto");
     const reset = await h.call("bot.updateLaunchSettings", { botId: "reviewer", permissionMode: null });
@@ -241,7 +248,7 @@ test("bot.updateLaunchSettings: an explicit permissionMode null resets to the ho
 test("prompt.answer presses the blocked form's keys through herdr and refuses stale or impossible answers", async () => {
   const h = await harness();
   try {
-    await h.call("bot.create", { name: "Reviewer", id: "reviewer" });
+    await h.call("bot.create", { provider: "claude", model: "opus", reasoningEffort: "high", name: "Reviewer", id: "reviewer" });
     const state = h.fake.readState();
     h.fake.writeState({ ...state, agents: state.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "blocked" } : a)), screens: { reviewer: ASK_SINGLE_SCREEN } });
     await h.host.mirror.refresh();
@@ -266,7 +273,7 @@ test("prompt.answer presses the blocked form's keys through herdr and refuses st
 test("prompt.answer moves a multi-select question on with Tab", async () => {
   const h = await harness();
   try {
-    await h.call("bot.create", { name: "Reviewer", id: "reviewer" });
+    await h.call("bot.create", { provider: "claude", model: "opus", reasoningEffort: "high", name: "Reviewer", id: "reviewer" });
     const state = h.fake.readState();
     h.fake.writeState({ ...state, agents: state.agents.map((a) => (a.name === "reviewer" ? { ...a, agent_status: "blocked" } : a)), screens: { reviewer: ASK_MULTI_SELECT_SCREEN } });
     await h.host.mirror.refresh();
@@ -285,7 +292,7 @@ test("events: chat.listChanged, chat.changed, and transcript.entryAppended fire 
     const events: AppApiEvent[] = [];
     const unsubscribe = h.server.subscribe((event) => events.push(event));
 
-    await h.call("bot.create", { name: "Reviewer", id: "reviewer" });
+    await h.call("bot.create", { provider: "claude", model: "opus", reasoningEffort: "high", name: "Reviewer", id: "reviewer" });
     await h.call("message.send", { chatId: "reviewer", text: "hi" });
     unsubscribe();
 

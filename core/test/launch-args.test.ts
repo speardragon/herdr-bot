@@ -1,8 +1,23 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { SUPPORTED_KINDS, launchArgsFor, providerLaunchCapabilities } from "../src/bots/launch-args.ts";
+import { SUPPORTED_KINDS, launchArgsFor, missingLaunchChoices, providerLaunchCapabilities } from "../src/bots/launch-args.ts";
 
 const cli = "/Users/ray/.herdr-bot/bin/herdr-bot";
+
+test("agy (Antigravity CLI): takes --model, but its model ids carry the effort tier so there is no separate reasoning choice", () => {
+  assert.deepEqual(providerLaunchCapabilities("agy"), { model: true, reasoning: false });
+  assert.deepEqual(launchArgsFor("agy", "ask", cli, { model: "gemini-4-argon-high", reasoningEffort: null }), ["--model", "gemini-4-argon-high"]);
+  assert.throws(() => launchArgsFor("agy", "ask", cli, { model: null, reasoningEffort: "high" }));
+});
+
+test("missingLaunchChoices lists the provider first, then whichever of model/reasoning the provider supports", () => {
+  assert.deepEqual(missingLaunchChoices({}), ["provider"]);
+  assert.deepEqual(missingLaunchChoices({ kind: "  " }), ["provider"]);
+  assert.deepEqual(missingLaunchChoices({ kind: "claude" }), ["model", "reasoningEffort"]);
+  assert.deepEqual(missingLaunchChoices({ kind: "codex", model: "gpt-5.4" }), ["reasoningEffort"]);
+  assert.deepEqual(missingLaunchChoices({ kind: "opencode" }), ["model"]);
+  assert.deepEqual(missingLaunchChoices({ kind: "cursor" }), []);
+});
 
 test("claude: ask mode only pre-approves the herdr-bot CLI, auto bypasses permissions", () => {
   assert.deepEqual(launchArgsFor("claude", "ask", cli), ["--allowedTools", `Bash(${cli} *)`]);

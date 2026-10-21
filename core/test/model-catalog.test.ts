@@ -7,6 +7,7 @@ import { EventEmitter } from "node:events";
 import {
   createModelCatalog,
   listBotModels,
+  parseAgyModelsOutput,
   parseGrokModelsOutput,
   parseOpencodeModelsOutput,
   projectCodexModels,
@@ -122,6 +123,7 @@ test("claude and gemini expose their latest-version aliases without spawning any
   const catalog = createModelCatalog({ env: { PATH: "/definitely/not/a/real/path" } });
   assert.deepEqual(await catalog.listBotModels("claude"), {
     models: [
+      { id: "fable", label: "fable" },
       { id: "opus", label: "opus" },
       { id: "sonnet", label: "sonnet" },
       { id: "haiku", label: "haiku" },
@@ -137,6 +139,40 @@ test("claude and gemini expose their latest-version aliases without spawning any
     ],
     source: "latest-alias",
   });
+});
+
+const ARGON = [
+  { id: "gemini-4-argon-high", label: "Gemini 4 Argon (High)" },
+  { id: "gemini-4-argon-medium", label: "Gemini 4 Argon (Medium)" },
+  { id: "gemini-4-argon-low", label: "Gemini 4 Argon (Low)" },
+];
+
+test("parseAgyModelsOutput reads tab-separated id/name rows and skips the progress banner", () => {
+  const stdout = "Fetching available models...\ngemini-4-argon-medium\tGemini 4 Argon (Medium)\nclaude-opus-5-5-high\tClaude Opus 5.5 (High)\n\ngemini-4-argon-medium\tdup\n";
+  assert.deepEqual(parseAgyModelsOutput(stdout), [
+    { id: "gemini-4-argon-medium", label: "Gemini 4 Argon (Medium)" },
+    { id: "claude-opus-5-5-high", label: "Claude Opus 5.5 (High)" },
+  ]);
+});
+
+test("agy: the installed CLI's models are listed, always with Gemini 4 Argon pinned first", async () => {
+  const bin = makeFixtureBin();
+  try {
+    writeBin(bin.dir, "agy", `process.stdout.write(${JSON.stringify("Fetching available models...\ngemini-3.8-flash-high\tGemini 3.8 Flash (High)\ngemini-4-argon-low\tGemini 4 Argon (Low)\n")});`);
+    const catalog = createModelCatalog({ env: bin.env, platform: "linux" });
+    const result = await catalog.listBotModels("agy");
+    assert.equal(result.source, "installed-cli");
+    assert.deepEqual(result.models, [...ARGON, { id: "gemini-3.8-flash-high", label: "Gemini 3.8 Flash (High)" }]);
+  } finally {
+    bin.cleanup();
+  }
+});
+
+test("agy: a CLI missing from PATH still offers Gemini 4 Argon", async () => {
+  const catalog = createModelCatalog({ env: { PATH: "/definitely/not/a/real/path" }, platform: "linux" });
+  const result = await catalog.listBotModels("agy");
+  assert.equal(result.source, "user-fallback");
+  assert.deepEqual(result.models, ARGON);
 });
 
 test("a kind without model-selection capability returns unavailable immediately", async () => {

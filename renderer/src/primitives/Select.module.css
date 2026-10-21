@@ -25,6 +25,10 @@ button.hb-select-trigger {
   white-space: nowrap;
 }
 
+.hb-select-trigger-label--placeholder {
+  color: var(--hb-text-tertiary);
+}
+
 .hb-select-chevron {
   position: absolute;
   right: var(--hb-space-4);

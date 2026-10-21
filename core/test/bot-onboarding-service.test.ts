@@ -15,6 +15,7 @@ import { waitFor } from "./helpers/wait-for.ts";
 const REQ = "11111111-1111-1111-1111-111111111111";
 const ID = reservedBotId(REQ);
 const GREETING = greetingText("ko");
+const LAUNCH = { kind: "claude", model: "opus", reasoningEffort: "high" } as const;
 
 function greetingScript(say: string[] = [GREETING]): FakeHerdrState {
   return { agents: [], workspaces: [], onPrompt: { [ID]: { say, sayOnce: true } } };
@@ -39,7 +40,7 @@ test("quickCreate saves and returns the reserved profile before the spawn comple
   let starts = 0;
   const h = await harness({ wrapCli: (base) => ({ ...base, async agentStart(args) { starts += 1; await gate; return base.agentStart(args); } }) });
   try {
-    const reserved = h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    const reserved = h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH });
     // Responded with the reserved profile while agentStart is still blocked on the gate.
     assert.equal(reserved.onboarding?.stage, "provisioning");
     assert.equal(reserved.herdr.paneId, null);
@@ -55,12 +56,29 @@ test("quickCreate saves and returns the reserved profile before the spawn comple
   }
 });
 
+test("quick create launches the provider, model and reasoning effort the user picked", async () => {
+  const started: { kind: string; agentArgs: readonly string[] }[] = [];
+  const h = await harness({ wrapCli: (base) => ({ ...base, async agentStart(args) { started.push({ kind: args.kind, agentArgs: args.agentArgs }); return base.agentStart(args); } }) });
+  try {
+    const reserved = h.host.onboarding.create({ requestId: REQ, locale: "ko", kind: "codex", model: "gpt-5.4", reasoningEffort: "xhigh" });
+    assert.equal(reserved.kind, "codex");
+    assert.equal(reserved.model, "gpt-5.4");
+    assert.equal(reserved.reasoningEffort, "xhigh");
+    await h.host.onboarding.settled(ID);
+    assert.equal(started.length, 1);
+    assert.equal(started[0]!.kind, "codex");
+    assert.deepEqual(started[0]!.agentArgs.slice(-4), ["--model", "gpt-5.4", "--config", 'model_reasoning_effort="xhigh"']);
+  } finally {
+    await h.cleanup();
+  }
+});
+
 test("the same request UUID (double-click / retry) makes one profile and spawns once", async () => {
   let starts = 0;
   const h = await harness({ wrapCli: (base) => ({ ...base, async agentStart(args) { starts += 1; return base.agentStart(args); } }) });
   try {
-    const a = h.host.onboarding.create({ requestId: REQ, locale: "ko" });
-    const b = h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    const a = h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH });
+    const b = h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH });
     assert.equal(a.id, b.id);
     await h.host.onboarding.settled(ID);
     assert.equal(starts, 1);
@@ -74,7 +92,7 @@ test("the same request UUID (double-click / retry) makes one profile and spawns 
 test("retry only runs on a failed, not-in-flight bot; a ready bot is a guarded error", async () => {
   const h = await harness();
   try {
-    h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH });
     await h.host.onboarding.settled(ID);
     assert.equal(h.stage(), "ready");
     // A retry on a ready bot must be refused, never re-provisioned.
@@ -99,7 +117,7 @@ test("retry only runs on a failed, not-in-flight bot; a ready bot is a guarded e
 test("a successful onboarding stores exactly one greeting and never a user message", async () => {
   const h = await harness();
   try {
-    h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH });
     await h.host.onboarding.settled(ID);
     const entries = h.host.chat.transcript(ID).readAll();
     assert.equal(entries.filter((e) => e.kind === "message").length, 0);
@@ -115,7 +133,7 @@ test("a successful onboarding stores exactly one greeting and never a user messa
 test("onboarding writes the app-owned greeting without prompting the terminal agent", async () => {
   const h = await harness();
   try {
-    h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH });
     await h.host.onboarding.settled(ID);
     assert.equal(h.stage(), "ready");
     const prompts = (h.fake.readState().prompts ?? []).filter((p) => p.target === ID);
@@ -128,7 +146,7 @@ test("onboarding writes the app-owned greeting without prompting the terminal ag
 test("onboarding stores the canonical localized greeting regardless of agent prompt behavior", async () => {
   const accept = await harness({ state: { agents: [], workspaces: [], onPrompt: { [ID]: { say: ["unexpected"], finalStatus: "blocked" } } } });
   try {
-    accept.host.onboarding.create({ requestId: REQ, locale: "en" });
+    accept.host.onboarding.create({ requestId: REQ, locale: "en", ...LAUNCH });
     await accept.host.onboarding.settled(ID);
     assert.equal(accept.stage(), "ready");
     assert.equal(accept.greetings().length, 1);
@@ -142,7 +160,7 @@ test("onboarding stores the canonical localized greeting regardless of agent pro
 test("a greeting said twice during setup is idempotent (one entry)", async () => {
   const h = await harness({ state: greetingScript([GREETING, GREETING]) });
   try {
-    h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH });
     await h.host.onboarding.settled(ID);
     assert.equal(h.greetings().length, 1);
     assert.equal(h.stage(), "ready");
@@ -154,7 +172,7 @@ test("a greeting said twice during setup is idempotent (one entry)", async () =>
 test("restart recovers to ready when the greeting is stored, and to failed when it is not", async () => {
   const h = await harness();
   try {
-    h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH });
     await h.host.onboarding.settled(ID);
     const profiles = new ProfileStore(h.config.home);
     // Simulate a crash after the greeting landed but before the stage flipped to ready.
@@ -179,7 +197,7 @@ test("restart recovers to ready when the greeting is stored, and to failed when 
 test("an avatarColor picked before the first bot exists persists on the reserved profile and its summary", async () => {
   const h = await harness();
   try {
-    h.host.onboarding.create({ requestId: REQ, locale: "ko", avatarColor: "blue" });
+    h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH, avatarColor: "blue" });
     assert.equal(h.host.chat.summary(ID)?.avatarColor, "blue");
     await h.host.onboarding.settled(ID);
     assert.equal(h.host.chat.summary(ID)?.avatarColor, "blue");
@@ -191,7 +209,7 @@ test("an avatarColor picked before the first bot exists persists on the reserved
 test("quick create assigns an avatar color when none is specified", async () => {
   const h = await harness();
   try {
-    h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH });
     assert.match(h.host.chat.summary(ID)?.avatarColor ?? "", /^(brown|red|orange|yellow|green|cyan|blue|violet|magenta|gray)$/);
   } finally {
     await h.cleanup();
@@ -201,7 +219,7 @@ test("quick create assigns an avatar color when none is specified", async () => 
 test("a bot still in setup may only greet its own DM", async () => {
   const h = await harness();
   try {
-    h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH });
     await h.host.onboarding.settled(ID);
     const profiles = new ProfileStore(h.config.home);
     const ready = profiles.get(ID)!;
@@ -221,7 +239,7 @@ test("quick create refuses to spawn when no safe default working folder exists",
   const host = createHost(config, { cli: createHerdrCli(fake.binPath, fake.env), socketPath: null, ensureSession: null });
   await host.start();
   try {
-    assert.throws(() => host.onboarding.create({ requestId: REQ, locale: "ko" }), (e: unknown) => e instanceof RosterError && e.code === "missing_cwd");
+    assert.throws(() => host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH }), (e: unknown) => e instanceof RosterError && e.code === "missing_cwd");
     assert.equal(host.chat.summary(ID), null, "no profile should be reserved when the quick-create guard refuses");
   } finally {
     await host.stop();
@@ -238,7 +256,7 @@ test("quick create refuses to spawn into the home directory even when it is the 
   try {
     const { homedir } = await import("node:os");
     host.roster.updateAppSettings({ defaultWorkingFolder: homedir() });
-    assert.throws(() => host.onboarding.create({ requestId: REQ, locale: "ko" }), (e: unknown) => e instanceof RosterError && e.code === "home_cwd_requires_confirmation");
+    assert.throws(() => host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH }), (e: unknown) => e instanceof RosterError && e.code === "home_cwd_requires_confirmation");
     assert.equal(host.chat.summary(ID), null);
   } finally {
     await host.stop();
@@ -251,7 +269,7 @@ test("deleting a bot mid-provision does not resurrect it once the async spawn re
   const gate = new Promise<void>((resolve) => { release = resolve; });
   const h = await harness({ wrapCli: (base) => ({ ...base, async agentStart(args) { await gate; return base.agentStart(args); } }) });
   try {
-    h.host.onboarding.create({ requestId: REQ, locale: "ko" });
+    h.host.onboarding.create({ requestId: REQ, locale: "ko", ...LAUNCH });
     // Wait until provisioning has created + persisted the pane and is blocked on the gated agentStart
     // (its paneId is now on the profile) -- the actual race we want to exercise, not a fixed sleep.
     await waitFor(() => h.host.chat.summary(ID)?.herdrBot?.paneId != null, { message: "reserved pane was never persisted" });

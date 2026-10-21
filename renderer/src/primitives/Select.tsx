@@ -22,6 +22,8 @@ export interface SelectProps {
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly options: readonly SelectOption[];
+  /** Shown on the trigger while `value` matches no option (e.g. `""` before a required pick). */
+  readonly placeholder?: string;
   readonly disabled?: boolean;
   /** "trigger" (default): the listbox is as wide as the trigger button, like a native `<select>` --
    * every plain text dropdown in the app (Settings' Language/Appearance/Defaults, New Bot's Permissions/
@@ -46,7 +48,7 @@ export interface SelectProps {
  * above the trigger when there's no room below (`Popover`'s `autoFlip`). `ProviderSelect` is a thin
  * wrapper over this (an icon per option, `panelWidth="content"`) rather than its own popover.
  */
-export function Select({ label, helperText, value, onChange, options, disabled = false, panelWidth = "trigger", layout = "stacked", ...rest }: SelectProps) {
+export function Select({ label, helperText, value, onChange, options, placeholder, disabled = false, panelWidth = "trigger", layout = "stacked", ...rest }: SelectProps) {
   const id = useId();
   const helperId = helperText != null ? `${id}-helper` : undefined;
   const ariaLabel = rest["aria-label"] ?? label;
@@ -171,8 +173,10 @@ export function Select({ label, helperText, value, onChange, options, disabled =
       >
         {selected?.icon}
         {/* Falls back to the raw value (not blank) if it isn't among `options` yet -- e.g. the New Bot
-         * model picker while `bot.listModels` is still loading. */}
-        <span className={styles["hb-select-trigger-label"]}>{selected?.label ?? value}</span>
+         * model picker while `bot.listModels` is still loading -- or to `placeholder` when nothing is picked. */}
+        {selected == null && value === "" && placeholder != null
+          ? <span className={`${styles["hb-select-trigger-label"]} ${styles["hb-select-trigger-label--placeholder"]}`}>{placeholder}</span>
+          : <span className={styles["hb-select-trigger-label"]}>{selected?.label ?? value}</span>}
         <ChevronDown size={16} className={styles["hb-select-chevron"]} aria-hidden />
       </button>
       {helperText != null && (

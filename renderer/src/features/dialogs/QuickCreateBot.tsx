@@ -6,7 +6,10 @@ import { DEFAULT_PERSONA_COLOR } from "../../data/avatar-colors.ts";
 import type { PersonaColor } from "../../data/avatar-colors.ts";
 import { toAppApiError } from "../../data/types.ts";
 import { Avatar, Button, TextField } from "../../primitives/index.ts";
+import { EMPTY_LAUNCH_CHOICE, isLaunchChoiceComplete } from "./bot-form.ts";
+import type { LaunchChoice } from "./bot-form.ts";
 import { ColorSwatches } from "./ColorSwatches.tsx";
+import { LaunchChoiceFields } from "./LaunchChoiceFields.tsx";
 import styles from "./QuickCreateBot.module.css";
 
 export interface QuickCreateBotProps {
@@ -18,7 +21,8 @@ export interface QuickCreateBotProps {
   readonly onDone?: () => void;
 }
 
-/** The quick-create flow: color + name + Start, backed by `bot.quickCreate`. The exact same flow as the
+/** The quick-create flow: color + name + provider/model/reasoning + Start, backed by `bot.quickCreate`.
+ * Start stays disabled until the launch choice is complete -- quick create never picks a provider for you. The exact same flow as the
  * sidebar's "+" button. Shared by the onboarding empty state and the "+"
  * menu's "Create a new Bot" action. */
 export function QuickCreateBot({ showExplainer = false, onAdvanced, onDone }: QuickCreateBotProps) {
@@ -27,6 +31,7 @@ export function QuickCreateBot({ showExplainer = false, onAdvanced, onDone }: Qu
   const { t, locale } = useT();
   const [color, setColor] = useState<PersonaColor>(DEFAULT_PERSONA_COLOR);
   const [name, setName] = useState("");
+  const [launch, setLaunch] = useState<LaunchChoice>(EMPTY_LAUNCH_CHOICE);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +42,9 @@ export function QuickCreateBot({ showExplainer = false, onAdvanced, onDone }: Qu
       const { chat } = await client.call("bot.quickCreate", {
         requestId: crypto.randomUUID(),
         locale,
+        provider: launch.provider,
+        model: launch.model ?? undefined,
+        reasoningEffort: launch.reasoningEffort ?? undefined,
         name: name.trim().length > 0 ? name.trim() : undefined,
         avatarColor: color,
       });
@@ -68,10 +76,17 @@ export function QuickCreateBot({ showExplainer = false, onAdvanced, onDone }: Qu
         <ColorSwatches value={color} onChange={setColor} aria-label={t("dialogs.botInfo.changeColor")} />
         <div className={styles["hb-quick-create-field"]}>
           <TextField label={t("dialogs.new.name")} placeholder={t("dialogs.onboarding.namePlaceholder")} value={name} onChange={(event) => setName(event.target.value)} />
+          <LaunchChoiceFields
+            value={launch}
+            onChange={(next) => {
+              setLaunch(next);
+              setError(null);
+            }}
+          />
         </div>
         {error != null && <div className={styles["hb-quick-create-error"]}>{error}</div>}
         <div className={styles["hb-quick-create-start"]}>
-          <Button variant="primary" size="lg" disabled={busy} onClick={start}>
+          <Button variant="primary" size="lg" disabled={busy || !isLaunchChoiceComplete(launch)} onClick={start}>
             {t("dialogs.onboarding.start")}
           </Button>
         </div>

@@ -37,8 +37,8 @@ test("read/rooms/whoami/status/send map to control methods", () => {
 });
 
 test("bot and room admin commands", () => {
-  assert.deepEqual(parseCliArgs(["bot", "create", "reviewer", "--name", "Code Reviewer", "--kind", "claude", "--cwd", "/repo", "--permission", "auto"], env),
-    { kind: "control", method: "bot.create", params: { id: "reviewer", name: "Code Reviewer", kind: "claude", cwd: "/repo", permissionMode: "auto" }, output: "json" });
+  assert.deepEqual(parseCliArgs(["bot", "create", "reviewer", "--name", "Code Reviewer", "--kind", "claude", "--model", "fable", "--reasoning", "max", "--cwd", "/repo", "--permission", "auto"], env),
+    { kind: "control", method: "bot.create", params: { id: "reviewer", name: "Code Reviewer", kind: "claude", cwd: "/repo", permissionMode: "auto", model: "fable", reasoningEffort: "max" }, output: "json" });
   assert.deepEqual(parseCliArgs(["bot", "adopt", "w7:p3", "scout"], env), { kind: "control", method: "bot.adopt", params: { paneId: "w7:p3", id: "scout", name: "scout" }, output: "json" });
   assert.deepEqual(parseCliArgs(["bot", "list"], env), { kind: "control", method: "bot.list", params: {}, output: "json" });
   assert.deepEqual(parseCliArgs(["bot", "adoptable"], env), { kind: "control", method: "bot.adoptable", params: {}, output: "json" });
@@ -56,6 +56,14 @@ test("bot create accepts working directory and launch selections", () => {
   assert.deepEqual(parseCliArgs(["bot", "create", "reviewer", "--model", "--reasoning", "high"], env),
     { error: "--model needs a non-empty value" });
   assert.ok("error" in parseCliArgs(["bot", "adopt", "w7:p3", "scout", "--model", "gpt-5.4"], env));
+});
+
+test("bot create requires an explicit provider, plus a model and reasoning effort wherever the provider takes them", () => {
+  assert.deepEqual(parseCliArgs(["bot", "create", "reviewer"], env), { error: "bot create needs --kind" });
+  assert.deepEqual(parseCliArgs(["bot", "create", "reviewer", "--kind", "claude"], env), { error: "bot create needs --model and --reasoning" });
+  assert.deepEqual(parseCliArgs(["bot", "create", "reviewer", "--kind", "codex", "--model", "gpt-5.4"], env), { error: "bot create needs --reasoning" });
+  assert.deepEqual(parseCliArgs(["bot", "create", "scout", "--kind", "agy", "--model", "gemini-4-argon-high"], env),
+    { kind: "control", method: "bot.create", params: { id: "scout", name: "scout", kind: "agy", model: "gemini-4-argon-high" }, output: "json" });
   assert.ok("error" in parseCliArgs(["bot", "adopt", "w7:p3", "scout", "--reasoning", "high"], env));
 });
 

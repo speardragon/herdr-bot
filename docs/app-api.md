@@ -137,7 +137,7 @@ format. Common `kind`s:
 | Method | Params | Result |
 |---|---|---|
 | `bot.create` | `CreateBotParams` (below) | `{ chat: ChatSummary }` |
-| `bot.quickCreate` | `{ requestId: string (uuid), locale: "ko"\|"en", name?, avatarColor? }` | `{ chat: ChatSummary }` -- reserves instantly; spawn/brief/greeting finish in the background (`chat.bot.onboarding.stage` tracks progress via `chat.changed`) |
+| `bot.quickCreate` | `{ requestId: string (uuid), locale: "ko"\|"en", provider, model?, reasoningEffort?, name?, avatarColor? }` | `{ chat: ChatSummary }` -- reserves instantly; spawn/brief/greeting finish in the background (`chat.bot.onboarding.stage` tracks progress via `chat.changed`) |
 | `bot.retrySetup` | `{ botId }` | `{ chat: ChatSummary }` -- only from a `failed` onboarding stage |
 | `bot.updateLaunchSettings` | `{ botId, cwd?, permissionMode?: "ask"\|"auto"\|null, model?: string\|null, reasoningEffort?: Reasoning\|null, allowHomeCwd? }` | `{ chat: ChatSummary }` -- relaunches the bot's agent |
 | `bot.focus` | `{ botId }` | `void` -- focuses the bot's pane in herdr, then brings forward a terminal tab already attached to the bots' herdr session, or opens one |
@@ -149,6 +149,13 @@ format. Common `kind`s:
 avatarShape?, avatarColor?, adoptPaneId?, allowHomeCwd? }`. Set `adoptPaneId` to adopt an existing herdr
 pane as this bot instead of spawning a new one (an adopted bot has no `bot.updateLaunchSettings` of its
 own after that).
+
+Every new (non-adopted) bot states its launch choice explicitly: `provider` is required, and so are
+`model` (whenever the provider supports model selection) and `reasoningEffort` (whenever it supports a
+reasoning effort) -- on `bot.create` and `bot.quickCreate` alike. A missing one rejects with
+`invalid_launch_options`; nothing falls back to `bot.defaults().provider` or the CLI's own default model.
+When `id` is omitted it is derived from `name`, with a random suffix if that id is already taken (every
+non-ASCII name derives the same base id, `bot`).
 
 `cwd`/`allowHomeCwd`: if the resolved working directory is exactly the user's home directory,
 `bot.create`/`bot.updateLaunchSettings`/`bot.quickCreate` all reject with

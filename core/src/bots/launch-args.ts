@@ -23,11 +23,25 @@ export interface ProviderLaunchCapabilities {
   readonly reasoning: boolean;
 }
 
+/** `agy` (Antigravity CLI) takes `--model` but no separate reasoning choice: its model ids already carry
+ * the effort tier (`gemini-4-argon-high`), so a second `--effort` pick could only contradict it. */
 export function providerLaunchCapabilities(kind: string): ProviderLaunchCapabilities {
   return {
-    model: ["claude", "codex", "grok", "gemini", "opencode"].includes(kind),
+    model: ["claude", "codex", "grok", "gemini", "agy", "opencode"].includes(kind),
     reasoning: ["claude", "codex", "grok"].includes(kind),
   };
+}
+
+/** What a new bot is still missing before it may be created: every create picks its provider, and its
+ * model/reasoning effort wherever that provider supports choosing one -- nothing falls back to a default. */
+export function missingLaunchChoices(choice: { readonly kind?: string | null; readonly model?: string | null; readonly reasoningEffort?: string | null }): string[] {
+  const kind = choice.kind?.trim() ?? "";
+  if (kind.length === 0) return ["provider"];
+  const capabilities = providerLaunchCapabilities(kind);
+  return [
+    ...(capabilities.model && (choice.model?.trim() ?? "").length === 0 ? ["model"] : []),
+    ...(capabilities.reasoning && choice.reasoningEffort == null ? ["reasoningEffort"] : []),
+  ];
 }
 
 export function launchArgsFor(
